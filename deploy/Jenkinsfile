@@ -7,9 +7,9 @@
 // ---------------------------------------------------------------------------
 
 // Credentials registered in Jenkins (Jenkins > Manage > Credentials):
-//   mzt-github  -> "GitHub/SSH" credential, username 'git' + private key, or
-//                  a "Username with password" for https.
-//   mzt-docker  -> (optional) registry login if you later push images off-host.
+//   github-jenkins-key -> "GitHub/SSH" or "Username with password" credential
+//   dockerhub/mzt-docker -> (optional) registry login, only if you later push
+//                          images off-host.
 
 pipeline {
     // Runs on any agent that has the Docker client + compose. On a standalone
@@ -29,7 +29,6 @@ pipeline {
         // Repos. Prefer SSH for the private key credential:
         FRONTEND_REPO  = "git@github.com:Misyad/maziltu-design-studio.git"
         BACKEND_REPO   = "git@github.com:Misyad/laravel-mzt.git"
-        GIT_CREDS      = credentials('mzt-github')
     }
 
     stages {
@@ -51,7 +50,7 @@ pipeline {
             steps {
                 // Clone/pull both repos into the persistent deploy dir.
                 withCredentials([sshUserPrivateKey(
-                    credentialsId: 'mzt-github',
+                    credentialsId: 'github-jenkins-key',
                     keyFileVariable: 'GIT_KEY',
                     usernameVariable: 'GIT_USER'
                 )]) {
@@ -142,7 +141,7 @@ pipeline {
             echo "Pipeline finished: ${currentBuild.currentResult}"
         }
         failure {
-            echo "Deploy failed. Check: http://127.0.0.1:${PUBLIC_PORT} and /opt/mzt (.env, db/init, storage)."
+            echo "Deploy failed. Check /opt/mzt (.env, db/init, storage) and the console output."
             // Optionally notify: slackSend / emailext ... (uncomment as needed)
         }
     }
