@@ -7,17 +7,15 @@ interface RevealProps {
   className?: string;
   delay?: number;
   y?: number;
-  as?: "div" | "section" | "li" | "article";
 }
 
 /** Fades and lifts content into view once. Respects reduced motion via Motion. */
-export function Reveal({ children, className, delay = 0, y = 24, as = "div" }: RevealProps) {
+export function Reveal({ children, className, delay = 0, y = 24 }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
-  const Comp = motion[as];
 
   return (
-    <Comp
+    <motion.div
       ref={ref}
       initial={{ opacity: 0, y }}
       animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y }}
@@ -25,9 +23,10 @@ export function Reveal({ children, className, delay = 0, y = 24, as = "div" }: R
       className={cn(className)}
     >
       {children}
-    </Comp>
+    </motion.div>
   );
 }
+
 
 /** Staggers direct children as they enter the viewport. */
 export function RevealGroup({
