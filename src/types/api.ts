@@ -20,6 +20,23 @@ export type AppRole =
   | "id_card"
   | "prisensi";
 
+/** Shape of the `data_users` row embedded in GET /user (`user.data`). */
+export interface UserProfileData {
+  id: number;
+  id_users: number;
+  no_hp: string | null;
+  barcode: string | null;
+  alamat: string | null;
+  pekerjaan: string | null;
+  niqobah: string | null;
+  tanggal_lahir: string | null;
+  tahun_masuk: string | null;
+  tahun_keluar: string | null;
+  tempat_lahir: string | null;
+  foto: string | null;
+  is_active: number | string;
+}
+
 export interface AuthUser {
   id: number;
   id_anggota: string;
@@ -27,6 +44,8 @@ export interface AuthUser {
   email: string | null;
   roles: AppRole[] | string[];
   foto: string | null;
+  /** Only present on GET /user (not on login). Holds `barcode` for ID cards. */
+  data?: UserProfileData | null;
 }
 
 export interface LoginRequest {
@@ -113,7 +132,8 @@ export interface NewsItem {
 
 export interface AttendanceRecord {
   id: number;
-  id_anggota: string;
+  /** Stores the member's `users.id` (int), not the string `id_anggota`. */
+  id_anggota: number | string;
   id_event: number;
   id_tanggal: number;
   created_at: string;

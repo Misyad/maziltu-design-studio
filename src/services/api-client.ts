@@ -39,6 +39,21 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Expired / revoked tokens come back as 401. Drop the stale token and send the
+// user to the login screen so the next request is authenticated.
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      setStoredToken(null);
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        window.location.assign("/login");
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+
 export class ApiError extends Error {
   status: number | undefined;
   errors: Record<string, string[]> | undefined;
@@ -50,7 +65,6 @@ export class ApiError extends Error {
     this.errors = errors;
   }
 }
-
 
 function toApiError(error: unknown): ApiError {
   if (axios.isAxiosError(error)) {
@@ -66,11 +80,32 @@ function toApiError(error: unknown): ApiError {
   return new ApiError(error instanceof Error ? error.message : "Unknown error");
 }
 
+/** GET returning the raw envelope, without requiring a `data` field. */
+export async function apiGetRaw<T>(url: string): Promise<T> {
+  try {
+    const response = await apiClient.get<T>(url);
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+function assertEnvelope<T>(payload: ApiEnvelope<T> | undefined): payload is ApiEnvelope<T> {
+  return !!payload && typeof payload === "object";
+}
+
 /** GET returning the `data` field of the `{ success, message, data }` envelope. */
 export async function apiGet<T>(url: string): Promise<T> {
   try {
     const response = await apiClient.get<ApiEnvelope<T>>(url);
-    return (response.data?.data ?? (response.data as unknown)) as T;
+    const payload = response.data;
+    if (!assertEnvelope(payload) || payload.success === false) {
+      throw new ApiError(payload?.message ?? "Request failed", undefined, payload?.errors);
+    }
+    if (payload.data === undefined) {
+      throw new ApiError("API response is missing the `data` field", undefined);
+    }
+    return payload.data as T;
   } catch (error) {
     throw toApiError(error);
   }
@@ -91,16 +126,22 @@ export async function apiPostRaw<T>(url: string, body?: unknown): Promise<T> {
   }
 }
 
-
 export async function apiPost<T>(url: string, body?: unknown): Promise<T> {
   const payload = await apiPostRaw<ApiEnvelope<T>>(url, body);
+  if (!assertEnvelope(payload) || payload.success === false) {
+    throw new ApiError(payload?.message ?? "Request failed", undefined, payload?.errors);
+  }
   return (payload?.data ?? (payload as unknown)) as T;
 }
 
 export async function apiDelete<T>(url: string): Promise<T> {
   try {
     const response = await apiClient.delete<ApiEnvelope<T>>(url);
-    return (response.data?.data ?? (response.data as unknown)) as T;
+    const payload = response.data;
+    if (!assertEnvelope(payload) || payload.success === false) {
+      throw new ApiError(payload?.message ?? "Request failed", undefined, payload?.errors);
+    }
+    return (payload?.data ?? (payload as unknown)) as T;
   } catch (error) {
     throw toApiError(error);
   }

@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost, apiPostRaw, setStoredToken } from "./api-client";
+import { apiDelete, apiGet, apiGetRaw, apiPost, apiPostRaw, setStoredToken } from "./api-client";
 import type {
   ActivityLogEntry,
   AttendanceRecord,
@@ -25,8 +25,10 @@ export async function login(payload: LoginRequest): Promise<LoginResponse> {
   return result;
 }
 
+// GET /user returns `{ success, user: {...} }` (no `data` key), so it must be
+// read with the raw helper instead of apiGet.
 export function fetchCurrentUser() {
-  return apiGet<AuthUser>("/user");
+  return apiGetRaw<{ user: AuthUser }>("/user").then((res) => res.user);
 }
 
 export async function logout() {
@@ -40,8 +42,7 @@ export async function logout() {
 /* ------------------------------------------------------------- dashboard */
 
 export const fetchDashboardStats = () => apiGet<DashboardStats>("/dashboard/stats");
-export const fetchDashboardCalendar = () =>
-  apiGet<DashboardCalendarEntry[]>("/dashboard/calendar");
+export const fetchDashboardCalendar = () => apiGet<DashboardCalendarEntry[]>("/dashboard/calendar");
 export const fetchDashboardEvents = () => apiGet<DashboardEvent[]>("/dashboard/events");
 
 /* --------------------------------------------------------------- members */
@@ -52,8 +53,7 @@ export const fetchMember = (idUsers: number | string) => apiGet<Member>(`/member
 export const createMember = (form: FormData) => apiPost<Member>("/members", form);
 export const updateMember = (idUsers: number | string, form: FormData) =>
   apiPost<Member>(`/members/${idUsers}`, form);
-export const deleteMember = (idUsers: number | string) =>
-  apiDelete<unknown>(`/members/${idUsers}`);
+export const deleteMember = (idUsers: number | string) => apiDelete<unknown>(`/members/${idUsers}`);
 
 /* ---------------------------------------------------------------- events */
 
@@ -77,6 +77,9 @@ export const deleteNews = (id: number | string) => apiDelete<unknown>(`/news/${i
 
 export const fetchAttendance = (eventId: number | string, tanggalId: number | string) =>
   apiGet<AttendanceRecord[]>(`/attendance/${eventId}/${tanggalId}`);
+// Backend replies 400 with `{ success: false, message }` when the member is
+// already present today. Axios turns that into an ApiError, so callers must
+// wrap this in try/catch instead of checking `.success`.
 export const submitAttendance = (payload: AttendanceRequest) =>
   apiPostRaw<{ success: boolean; message?: string }>("/attendance", payload);
 
