@@ -26,9 +26,9 @@ pipeline {
     environment {
         DEPLOY_DIR     = "/opt/mzt"
         PUBLIC_PORT    = "3015"
-        // Repos. Prefer SSH for the private key credential:
-        FRONTEND_REPO  = "git@github.com:Misyad/maziltu-design-studio.git"
-        BACKEND_REPO   = "git@github.com:Misyad/laravel-mzt.git"
+        // Public HTTPS clones — no credentials needed.
+        FRONTEND_REPO  = "https://github.com/Misyad/maziltu-design-studio.git"
+        BACKEND_REPO   = "https://github.com/Misyad/laravel-mzt.git"
     }
 
     stages {
@@ -48,30 +48,23 @@ pipeline {
 
         stage('Sync source') {
             steps {
-                // Clone/pull both repos into the persistent deploy dir.
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: 'github-jenkins-key',
-                    keyFileVariable: 'GIT_KEY',
-                    usernameVariable: 'GIT_USER'
-                )]) {
-                    sh '''
-                        set -e
-                        export GIT_SSH_COMMAND="ssh -i '$GIT_KEY' -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
+                // Clone/pull both public repos into the persistent deploy dir.
+                // HTTPS is used so no GitHub credentials are required.
+                sh '''
+                    set -e
+                    clone() {
+                        repo="$1"; dir="$2"
+                        if [ -d "$dir/.git" ]; then
+                            (cd "$dir" && git pull --ff-only) || git -C "$dir" reset --hard '@{u}'
+                        else
+                            git clone --depth 1 "$repo" "$dir"
+                        fi
+                        git -C "$dir" describe --always >/dev/null
+                    }
 
-                        clone() {
-                            repo="$1"; dir="$2"
-                            if [ -d "$dir/.git" ]; then
-                                (cd "$dir" && git pull --ff-only) || git -C "$dir" reset --hard '@{u}'
-                            else
-                                git clone "$repo" "$dir"
-                            fi
-                            git -C "$dir" describe --always >/dev/null
-                        }
-
-                        clone "$FRONTEND_REPO" "$DEPLOY_DIR/frontend"
-                        clone "$BACKEND_REPO"  "$DEPLOY_DIR/backend"
-                    '''
-                }
+                    clone "$FRONTEND_REPO" "$DEPLOY_DIR/frontend"
+                    clone "$BACKEND_REPO"  "$DEPLOY_DIR/backend"
+                '''
 
                 // Refresh the orchestration files the pipeline owns.
                 sh '''
