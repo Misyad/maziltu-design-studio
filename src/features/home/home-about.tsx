@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/shared/reveal";
 import { SectionTitle } from "@/components/shared/section-title";
 import { StatCard } from "@/components/shared/stat-card";
-import { IMAGES, ORG_VALUES, STATISTICS } from "@/constants/content";
+import { IMAGES, ORG_VALUES } from "@/constants/content";
+import { usePublicStatistics } from "@/services/public-content";
 
 const HIGHLIGHTS = [
   "Verified member records across every branch",
@@ -82,6 +83,7 @@ export function HomeAbout() {
 }
 
 export function HomeStatistics() {
+  const statistics = usePublicStatistics();
   return (
     <section className="border-y border-border bg-surface py-20 lg:py-24">
       <div className="container-page">
@@ -94,7 +96,7 @@ export function HomeStatistics() {
           />
         </Reveal>
         <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {STATISTICS.map((stat, index) => (
+          {statistics.map((stat, index) => (
             <Reveal key={stat.label} delay={index * 0.08}>
               <StatCard icon={stat.icon} value={stat.value} label={stat.label} suffix="+" />
             </Reveal>

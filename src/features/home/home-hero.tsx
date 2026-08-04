@@ -3,15 +3,21 @@ import { motion } from "motion/react";
 import { MoveUpRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
-import { IMAGES, ORG, STATISTICS } from "@/constants/content";
+import { IMAGES, ORG } from "@/constants/content";
+import { mediaUrl } from "@/services/api-client";
+import { usePublicCarousel, usePublicStatistics } from "@/services/public-content";
 
 const easing = [0.22, 1, 0.36, 1] as const;
 
 export function HomeHero() {
+  const carousel = usePublicCarousel();
+  const statistics = usePublicStatistics();
+  const heroImage = mediaUrl(carousel?.[0]?.foto) ?? IMAGES.hero.src;
+
   return (
     <section className="relative isolate overflow-hidden">
       <img
-        src={IMAGES.hero.src}
+        src={heroImage}
         alt="Members of Maziltu Tholiban gathered together at a community event"
         width={IMAGES.hero.width}
         height={IMAGES.hero.height}
@@ -66,7 +72,7 @@ export function HomeHero() {
           transition={{ duration: 0.7, delay: 0.25, ease: easing }}
           className="mt-16 grid max-w-3xl grid-cols-2 gap-x-8 gap-y-6 border-t border-white/20 pt-8 sm:grid-cols-4"
         >
-          {STATISTICS.map((stat) => (
+          {statistics.map((stat) => (
             <div key={stat.label}>
               <dt className="sr-only">{stat.label}</dt>
               <dd>

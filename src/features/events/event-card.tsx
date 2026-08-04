@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PlaceholderEvent } from "@/constants/content";
 import { cn } from "@/lib/utils";
-
 const STATUS_LABEL: Record<PlaceholderEvent["status"], string> = {
   Upcomming: "Upcoming",
   Ongoing: "Happening now",
@@ -54,7 +53,15 @@ export function EventCard({ event, className }: { event: PlaceholderEvent; class
       </div>
 
       <div className="flex flex-1 flex-col p-6">
-        <h3 className="font-display text-xl leading-snug font-semibold">{event.judul_event}</h3>
+        <h3 className="font-display text-xl leading-snug font-semibold">
+          <Link
+            to="/events/$id"
+            params={{ id: String(event.id) }}
+            className="transition-colors hover:text-primary"
+          >
+            {event.judul_event}
+          </Link>
+        </h3>
         <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
           {event.deskripsi}
         </p>
@@ -80,8 +87,8 @@ export function EventCard({ event, className }: { event: PlaceholderEvent; class
         </dl>
 
         <Button asChild variant="outline" className="mt-6 w-full rounded-full">
-          <Link to="/contact">
-            Register interest
+          <Link to="/events/$id" params={{ id: String(event.id) }}>
+            View details
             <MoveUpRight className="size-4" aria-hidden />
           </Link>
         </Button>

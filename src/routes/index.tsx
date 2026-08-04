@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { HomeHero } from "@/features/home/home-hero";
 import { HomeAbout, HomeStatistics } from "@/features/home/home-about";
+import { HomePrograms } from "@/features/home/home-programs";
+import { HomeEvents } from "@/features/home/home-events";
+import { HomeNews } from "@/features/home/home-news";
+import { HomeGallery } from "@/features/home/home-gallery";
+import { HomeTestimonials } from "@/features/home/home-testimonials";
+import { HomeCTA } from "@/features/home/home-cta";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,6 +35,12 @@ function Index() {
       <HomeHero />
       <HomeAbout />
       <HomeStatistics />
+      <HomePrograms />
+      <HomeEvents />
+      <HomeNews />
+      <HomeGallery />
+      <HomeTestimonials />
+      <HomeCTA />
     </>
   );
 }

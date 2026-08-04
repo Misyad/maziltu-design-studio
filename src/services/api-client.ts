@@ -4,6 +4,22 @@ import type { ApiEnvelope } from "@/types/api";
 export const API_BASE_URL =
   (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ?? "http://localhost:8000/api";
 
+/**
+ * Internal base URL used for API calls made during server-side rendering. In a
+ * containerised deployment the browser cannot resolve the private network, so
+ * the SSR runtime reaches the backend through `host.docker.internal` which the
+ * host routes back to the public entrypoint. Defaults to the public base.
+ */
+export const SSR_API_BASE_URL =
+  (import.meta.env["SSR_API_BASE_URL"] as string | undefined) ?? API_BASE_URL;
+
+/**
+ * True when this module is evaluated inside a server (Node/Nitro) runtime.
+ * `typeof window` diverges between the browser and the server bundle, so this
+ * is computed once at module load.
+ */
+export const IS_SERVER = typeof window === "undefined";
+
 /** Origin of the Laravel app, used to build `{ORIGIN}/storage/{path}` media URLs. */
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
@@ -28,7 +44,7 @@ export function mediaUrl(path?: string | null): string | null {
 }
 
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: IS_SERVER ? SSR_API_BASE_URL : API_BASE_URL,
   headers: { Accept: "application/json" },
   timeout: 20000,
 });

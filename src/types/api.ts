@@ -120,13 +120,24 @@ export interface EventItem {
   is_active: number | boolean;
 }
 
+/** Attendance day for an event (Tanggal_event row). */
+export interface EventTanggal {
+  id: number;
+  id_event: number;
+  tanggal: string;
+  jam_mulai: string | null;
+  jam_selesai: string | null;
+  set_jam: "seharian" | "dijam";
+}
+
 export interface NewsItem {
   id: number;
   judul: string;
   slug: string;
   deskripsi: string;
   foto: string | null;
-  pembuat: string;
+  /** Backend `beritas` has no `pembuat` column, so this may be absent. */
+  pembuat?: string;
   created_at: string;
 }
 
@@ -178,4 +189,19 @@ export interface ActivityLogEntry {
   aktivitas: string;
   created_at: string;
   dataUser?: Member;
+}
+
+/** Shape of GET /public/stats (PUBLIC). */
+export interface PublicStats {
+  event: number;
+  event_selesai: number;
+  event_mendatang: number;
+  total_anggota: number;
+}
+
+/** Payload for POST /public/contact (PUBLIC). */
+export interface ContactRequest {
+  nama: string;
+  email: string;
+  pesan: string;
 }

@@ -9,12 +9,19 @@ import {
   fetchDashboardStats,
   fetchEvent,
   fetchEvents,
+  fetchEventTanggal,
   fetchMember,
   fetchMembers,
   fetchMztInfo,
   fetchNews,
   fetchNewsItem,
   fetchPesantrenInfo,
+  fetchPublicCarousel,
+  fetchPublicEvent,
+  fetchPublicEvents,
+  fetchPublicNews,
+  fetchPublicNewsItem,
+  fetchPublicStats,
   fetchTransactions,
 } from "@/services/mzt-api";
 
@@ -27,6 +34,7 @@ export const queryKeys = {
   member: (idUsers: number | string) => ["members", idUsers] as const,
   events: ["events"] as const,
   event: (id: number | string) => ["events", id] as const,
+  eventTanggal: (id: number | string) => ["events", id, "tanggal"] as const,
   news: ["news"] as const,
   newsItem: (id: number | string) => ["news", id] as const,
   attendance: (eventId: number | string, tanggalId: number | string) =>
@@ -36,6 +44,12 @@ export const queryKeys = {
   infoMzt: ["info", "mzt"] as const,
   infoPesantren: ["info", "pesantren"] as const,
   activityLog: ["activity-log"] as const,
+  publicEvents: ["public", "events"] as const,
+  publicEvent: (id: number | string) => ["public", "events", id] as const,
+  publicNews: ["public", "news"] as const,
+  publicNewsItem: (id: number | string) => ["public", "news", id] as const,
+  publicCarousel: ["public", "carousel"] as const,
+  publicStats: ["public", "stats"] as const,
 };
 
 export const currentUserQuery = () =>
@@ -60,6 +74,9 @@ export const eventsQuery = () => queryOptions({ queryKey: queryKeys.events, quer
 
 export const eventQuery = (id: number | string) =>
   queryOptions({ queryKey: queryKeys.event(id), queryFn: () => fetchEvent(id) });
+
+export const eventTanggalQuery = (id: number | string) =>
+  queryOptions({ queryKey: queryKeys.eventTanggal(id), queryFn: () => fetchEventTanggal(id) });
 
 export const newsQuery = () => queryOptions({ queryKey: queryKeys.news, queryFn: fetchNews });
 
@@ -91,3 +108,35 @@ export const pesantrenInfoQuery = () =>
 
 export const activityLogQuery = () =>
   queryOptions({ queryKey: queryKeys.activityLog, queryFn: fetchActivityLog });
+
+/** PUBLIC — safe to use on the marketing site. */
+export const publicEventsQuery = () =>
+  queryOptions({ queryKey: queryKeys.publicEvents, queryFn: fetchPublicEvents, retry: 0 });
+
+/** PUBLIC — safe to use on the marketing site. */
+export const publicEventQuery = (id: number | string) =>
+  queryOptions({
+    queryKey: queryKeys.publicEvent(id),
+    queryFn: () => fetchPublicEvent(id),
+    retry: 0,
+  });
+
+/** PUBLIC — safe to use on the marketing site. */
+export const publicNewsQuery = () =>
+  queryOptions({ queryKey: queryKeys.publicNews, queryFn: fetchPublicNews, retry: 0 });
+
+/** PUBLIC — safe to use on the marketing site. */
+export const publicNewsItemQuery = (id: number | string) =>
+  queryOptions({
+    queryKey: queryKeys.publicNewsItem(id),
+    queryFn: () => fetchPublicNewsItem(id),
+    retry: 0,
+  });
+
+/** PUBLIC — safe to use on the marketing site. */
+export const publicCarouselQuery = () =>
+  queryOptions({ queryKey: queryKeys.publicCarousel, queryFn: fetchPublicCarousel, retry: 0 });
+
+/** PUBLIC — safe to use on the marketing site. */
+export const publicStatsQuery = () =>
+  queryOptions({ queryKey: queryKeys.publicStats, queryFn: fetchPublicStats, retry: 0 });

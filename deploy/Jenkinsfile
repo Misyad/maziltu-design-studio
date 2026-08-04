@@ -1,0 +1,60 @@
+// MZT APPS pipeline: build the frontend+backend images and start the stack.
+//
+// Runs on the same Proxmox host that runs Docker. It keeps a persistent
+// deployment dir ($DEPLOY_DIR) where it refreshes the source and recreates
+// the containers. `.env`, `db/init/*.sql` and `storage/` are NOT owned by the
+// pipeline — the operator maintains them on the host.
+
+pipeline {
+    agent any
+
+    options {
+        skipDefaultCheckout true
+        buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '10'))
+    }
+
+    environment {
+        DEPLOY_DIR     = '/opt/mzt'
+        FRONTEND_REPO  = 'https://github.com/Misyad/maziltu-design-studio.git'
+        BACKEND_REPO   = 'https://github.com/Misyad/laravel-mzt.git'
+    }
+
+    stages {
+        stage('Sync source') {
+            steps {
+                sh '''
+                    set -e
+                    mkdir -p "$DEPLOY_DIR"
+
+                    clone() {
+                        repo="$1"; dir="$2"
+                        if [ -d "$dir/.git" ]; then
+                            (cd "$dir" && git pull --ff-only)
+                        else
+                            git clone --depth 1 "$repo" "$dir"
+                        fi
+                    }
+                    clone "$FRONTEND_REPO" "$DEPLOY_DIR/frontend"
+                    clone "$BACKEND_REPO"  "$DEPLOY_DIR/backend"
+
+                    # Orchestration files live in the frontend repo under deploy/.
+                    cp "$DEPLOY_DIR/frontend/deploy/docker-compose.yml" "$DEPLOY_DIR/docker-compose.yml"
+                    cp "$DEPLOY_DIR/frontend/deploy/Caddyfile"          "$DEPLOY_DIR/Caddyfile"
+                    cp "$DEPLOY_DIR/frontend/deploy/db/init/.gitkeep"   "$DEPLOY_DIR/db/init/.gitkeep"
+
+                    # Preserve the operator's env + data across runs.
+                    [ -f "$DEPLOY_DIR/.env" ] || cp "$DEPLOY_DIR/frontend/deploy/.env.example" "$DEPLOY_DIR/.env"
+                    mkdir -p "$DEPLOY_DIR/storage"
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                dir("$DEPLOY_DIR") {
+                    sh 'docker compose up -d --build'
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,2 @@
+# MariaDB imports every *.sql / *.sh in this directory only on first boot of an
+# empty volume. Place your dump here (e.g. mazw9983_alvinade_maziltu.sql).

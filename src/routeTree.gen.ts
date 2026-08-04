@@ -10,33 +10,285 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
+import { Route as EventsRouteImport } from './routes/events'
+import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as NewsRouteImport } from './routes/news'
+import { Route as ProgramsRouteImport } from './routes/programs'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as EventsIdRouteImport } from './routes/events.$id'
+import { Route as NewsIdRouteImport } from './routes/news.$id'
+import { Route as DashboardActivityIndexRouteImport } from './routes/dashboard/activity/index'
+import { Route as DashboardAttendanceIndexRouteImport } from './routes/dashboard/attendance/index'
+import { Route as DashboardContentIndexRouteImport } from './routes/dashboard/content/index'
+import { Route as DashboardEventsIndexRouteImport } from './routes/dashboard/events/index'
+import { Route as DashboardIdCardIndexRouteImport } from './routes/dashboard/id-card/index'
+import { Route as DashboardMembersIndexRouteImport } from './routes/dashboard/members/index'
+import { Route as DashboardNewsIndexRouteImport } from './routes/dashboard/news/index'
+import { Route as DashboardProfileIndexRouteImport } from './routes/dashboard/profile/index'
+import { Route as DashboardTransactionsIndexRouteImport } from './routes/dashboard/transactions/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRouteRoute = DashboardRouteRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsRoute = NewsRouteImport.update({
+  id: '/news',
+  path: '/news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgramsRoute = ProgramsRouteImport.update({
+  id: '/programs',
+  path: '/programs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const EventsIdRoute = EventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => EventsRoute,
+} as any)
+const NewsIdRoute = NewsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => NewsRoute,
+} as any)
+const DashboardActivityIndexRoute = DashboardActivityIndexRouteImport.update({
+  id: '/activity/',
+  path: '/activity/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardAttendanceIndexRoute =
+  DashboardAttendanceIndexRouteImport.update({
+    id: '/attendance/',
+    path: '/attendance/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardContentIndexRoute = DashboardContentIndexRouteImport.update({
+  id: '/content/',
+  path: '/content/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardEventsIndexRoute = DashboardEventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardIdCardIndexRoute = DashboardIdCardIndexRouteImport.update({
+  id: '/id-card/',
+  path: '/id-card/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardMembersIndexRoute = DashboardMembersIndexRouteImport.update({
+  id: '/members/',
+  path: '/members/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardNewsIndexRoute = DashboardNewsIndexRouteImport.update({
+  id: '/news/',
+  path: '/news/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardProfileIndexRoute = DashboardProfileIndexRouteImport.update({
+  id: '/profile/',
+  path: '/profile/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardTransactionsIndexRoute =
+  DashboardTransactionsIndexRouteImport.update({
+    id: '/transactions/',
+    path: '/transactions/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/about': typeof AboutRoute
+  '/contact': typeof ContactRoute
+  '/events': typeof EventsRouteWithChildren
+  '/gallery': typeof GalleryRoute
+  '/login': typeof LoginRoute
+  '/news': typeof NewsRouteWithChildren
+  '/programs': typeof ProgramsRoute
+  '/events/$id': typeof EventsIdRoute
+  '/news/$id': typeof NewsIdRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/activity/': typeof DashboardActivityIndexRoute
+  '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
+  '/dashboard/content/': typeof DashboardContentIndexRoute
+  '/dashboard/events/': typeof DashboardEventsIndexRoute
+  '/dashboard/id-card/': typeof DashboardIdCardIndexRoute
+  '/dashboard/members/': typeof DashboardMembersIndexRoute
+  '/dashboard/news/': typeof DashboardNewsIndexRoute
+  '/dashboard/profile/': typeof DashboardProfileIndexRoute
+  '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/contact': typeof ContactRoute
+  '/events': typeof EventsRouteWithChildren
+  '/gallery': typeof GalleryRoute
+  '/login': typeof LoginRoute
+  '/news': typeof NewsRouteWithChildren
+  '/programs': typeof ProgramsRoute
+  '/events/$id': typeof EventsIdRoute
+  '/news/$id': typeof NewsIdRoute
+  '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/activity': typeof DashboardActivityIndexRoute
+  '/dashboard/attendance': typeof DashboardAttendanceIndexRoute
+  '/dashboard/content': typeof DashboardContentIndexRoute
+  '/dashboard/events': typeof DashboardEventsIndexRoute
+  '/dashboard/id-card': typeof DashboardIdCardIndexRoute
+  '/dashboard/members': typeof DashboardMembersIndexRoute
+  '/dashboard/news': typeof DashboardNewsIndexRoute
+  '/dashboard/profile': typeof DashboardProfileIndexRoute
+  '/dashboard/transactions': typeof DashboardTransactionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/about': typeof AboutRoute
+  '/contact': typeof ContactRoute
+  '/events': typeof EventsRouteWithChildren
+  '/gallery': typeof GalleryRoute
+  '/login': typeof LoginRoute
+  '/news': typeof NewsRouteWithChildren
+  '/programs': typeof ProgramsRoute
+  '/events/$id': typeof EventsIdRoute
+  '/news/$id': typeof NewsIdRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/activity/': typeof DashboardActivityIndexRoute
+  '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
+  '/dashboard/content/': typeof DashboardContentIndexRoute
+  '/dashboard/events/': typeof DashboardEventsIndexRoute
+  '/dashboard/id-card/': typeof DashboardIdCardIndexRoute
+  '/dashboard/members/': typeof DashboardMembersIndexRoute
+  '/dashboard/news/': typeof DashboardNewsIndexRoute
+  '/dashboard/profile/': typeof DashboardProfileIndexRoute
+  '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/about'
+    | '/contact'
+    | '/events'
+    | '/gallery'
+    | '/login'
+    | '/news'
+    | '/programs'
+    | '/events/$id'
+    | '/news/$id'
+    | '/dashboard/'
+    | '/dashboard/activity/'
+    | '/dashboard/attendance/'
+    | '/dashboard/content/'
+    | '/dashboard/events/'
+    | '/dashboard/id-card/'
+    | '/dashboard/members/'
+    | '/dashboard/news/'
+    | '/dashboard/profile/'
+    | '/dashboard/transactions/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/events'
+    | '/gallery'
+    | '/login'
+    | '/news'
+    | '/programs'
+    | '/events/$id'
+    | '/news/$id'
+    | '/dashboard'
+    | '/dashboard/activity'
+    | '/dashboard/attendance'
+    | '/dashboard/content'
+    | '/dashboard/events'
+    | '/dashboard/id-card'
+    | '/dashboard/members'
+    | '/dashboard/news'
+    | '/dashboard/profile'
+    | '/dashboard/transactions'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/about'
+    | '/contact'
+    | '/events'
+    | '/gallery'
+    | '/login'
+    | '/news'
+    | '/programs'
+    | '/events/$id'
+    | '/news/$id'
+    | '/dashboard/'
+    | '/dashboard/activity/'
+    | '/dashboard/attendance/'
+    | '/dashboard/content/'
+    | '/dashboard/events/'
+    | '/dashboard/id-card/'
+    | '/dashboard/members/'
+    | '/dashboard/news/'
+    | '/dashboard/profile/'
+    | '/dashboard/transactions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  ContactRoute: typeof ContactRoute
+  EventsRoute: typeof EventsRouteWithChildren
+  GalleryRoute: typeof GalleryRoute
+  LoginRoute: typeof LoginRoute
+  NewsRoute: typeof NewsRouteWithChildren
+  ProgramsRoute: typeof ProgramsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +300,210 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/news': {
+      id: '/news'
+      path: '/news'
+      fullPath: '/news'
+      preLoaderRoute: typeof NewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/programs': {
+      id: '/programs'
+      path: '/programs'
+      fullPath: '/programs'
+      preLoaderRoute: typeof ProgramsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/events/$id': {
+      id: '/events/$id'
+      path: '/$id'
+      fullPath: '/events/$id'
+      preLoaderRoute: typeof EventsIdRouteImport
+      parentRoute: typeof EventsRoute
+    }
+    '/news/$id': {
+      id: '/news/$id'
+      path: '/$id'
+      fullPath: '/news/$id'
+      preLoaderRoute: typeof NewsIdRouteImport
+      parentRoute: typeof NewsRoute
+    }
+    '/dashboard/activity/': {
+      id: '/dashboard/activity/'
+      path: '/activity'
+      fullPath: '/dashboard/activity/'
+      preLoaderRoute: typeof DashboardActivityIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/attendance/': {
+      id: '/dashboard/attendance/'
+      path: '/attendance'
+      fullPath: '/dashboard/attendance/'
+      preLoaderRoute: typeof DashboardAttendanceIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/content/': {
+      id: '/dashboard/content/'
+      path: '/content'
+      fullPath: '/dashboard/content/'
+      preLoaderRoute: typeof DashboardContentIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/events/': {
+      id: '/dashboard/events/'
+      path: '/events'
+      fullPath: '/dashboard/events/'
+      preLoaderRoute: typeof DashboardEventsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/id-card/': {
+      id: '/dashboard/id-card/'
+      path: '/id-card'
+      fullPath: '/dashboard/id-card/'
+      preLoaderRoute: typeof DashboardIdCardIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/members/': {
+      id: '/dashboard/members/'
+      path: '/members'
+      fullPath: '/dashboard/members/'
+      preLoaderRoute: typeof DashboardMembersIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/news/': {
+      id: '/dashboard/news/'
+      path: '/news'
+      fullPath: '/dashboard/news/'
+      preLoaderRoute: typeof DashboardNewsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/profile/': {
+      id: '/dashboard/profile/'
+      path: '/profile'
+      fullPath: '/dashboard/profile/'
+      preLoaderRoute: typeof DashboardProfileIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/transactions/': {
+      id: '/dashboard/transactions/'
+      path: '/transactions'
+      fullPath: '/dashboard/transactions/'
+      preLoaderRoute: typeof DashboardTransactionsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
   }
 }
 
+interface DashboardRouteRouteChildren {
+  DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardActivityIndexRoute: typeof DashboardActivityIndexRoute
+  DashboardAttendanceIndexRoute: typeof DashboardAttendanceIndexRoute
+  DashboardContentIndexRoute: typeof DashboardContentIndexRoute
+  DashboardEventsIndexRoute: typeof DashboardEventsIndexRoute
+  DashboardIdCardIndexRoute: typeof DashboardIdCardIndexRoute
+  DashboardMembersIndexRoute: typeof DashboardMembersIndexRoute
+  DashboardNewsIndexRoute: typeof DashboardNewsIndexRoute
+  DashboardProfileIndexRoute: typeof DashboardProfileIndexRoute
+  DashboardTransactionsIndexRoute: typeof DashboardTransactionsIndexRoute
+}
+
+const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
+  DashboardIndexRoute: DashboardIndexRoute,
+  DashboardActivityIndexRoute: DashboardActivityIndexRoute,
+  DashboardAttendanceIndexRoute: DashboardAttendanceIndexRoute,
+  DashboardContentIndexRoute: DashboardContentIndexRoute,
+  DashboardEventsIndexRoute: DashboardEventsIndexRoute,
+  DashboardIdCardIndexRoute: DashboardIdCardIndexRoute,
+  DashboardMembersIndexRoute: DashboardMembersIndexRoute,
+  DashboardNewsIndexRoute: DashboardNewsIndexRoute,
+  DashboardProfileIndexRoute: DashboardProfileIndexRoute,
+  DashboardTransactionsIndexRoute: DashboardTransactionsIndexRoute,
+}
+
+const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
+  DashboardRouteRouteChildren,
+)
+
+interface EventsRouteChildren {
+  EventsIdRoute: typeof EventsIdRoute
+}
+
+const EventsRouteChildren: EventsRouteChildren = {
+  EventsIdRoute: EventsIdRoute,
+}
+
+const EventsRouteWithChildren =
+  EventsRoute._addFileChildren(EventsRouteChildren)
+
+interface NewsRouteChildren {
+  NewsIdRoute: typeof NewsIdRoute
+}
+
+const NewsRouteChildren: NewsRouteChildren = {
+  NewsIdRoute: NewsIdRoute,
+}
+
+const NewsRouteWithChildren = NewsRoute._addFileChildren(NewsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  AboutRoute: AboutRoute,
+  ContactRoute: ContactRoute,
+  EventsRoute: EventsRouteWithChildren,
+  GalleryRoute: GalleryRoute,
+  LoginRoute: LoginRoute,
+  NewsRoute: NewsRouteWithChildren,
+  ProgramsRoute: ProgramsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

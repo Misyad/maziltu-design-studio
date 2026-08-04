@@ -1,0 +1,21 @@
+# Single public entrypoint for MZT APPS. Currently HTTP on a bare port (no
+# domain yet); /api and /storage are proxied to Laravel so everything is
+# same-origin and no CORS config is needed.
+#
+# When a domain is available, replace `http://:80` with the domain and Caddy
+# will provision HTTPS automatically (e.g.  app.example.com).
+
+http://:80 {
+	# WebSocket-less API + uploaded media -> Laravel backend
+	handle /api/* {
+		reverse_proxy backend:80
+	}
+	handle /storage/* {
+		reverse_proxy backend:80
+	}
+
+	# Everything else -> the Nitro (node-server) frontend
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

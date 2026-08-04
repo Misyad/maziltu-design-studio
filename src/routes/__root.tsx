@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -15,7 +16,6 @@ import { ThemeProvider } from "@/providers/theme-provider";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
-
 
 function NotFoundComponent() {
   return (
@@ -125,6 +125,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isAppShell = useRouterState({
+    select: (state) => {
+      const { pathname } = state.location;
+      return pathname.startsWith("/dashboard") || pathname.startsWith("/login");
+    },
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -136,16 +142,15 @@ function RootComponent() {
           >
             Skip to content
           </a>
-          <SiteHeader />
+          {isAppShell ? null : <SiteHeader />}
           <main id="main-content" className="flex-1">
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
           </main>
-          <SiteFooter />
+          {isAppShell ? null : <SiteFooter />}
         </div>
         <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
   );
 }
-

@@ -1,4 +1,5 @@
 import { CalendarDays, UserRound } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import type { PlaceholderNews } from "@/constants/content";
 import { cn } from "@/lib/utils";
 
@@ -39,8 +40,14 @@ export function NewsCard({ item, className }: { item: PlaceholderNews; className
             {item.pembuat}
           </span>
         </div>
-        <h3 className="mt-3 font-display text-lg leading-snug font-semibold group-hover:text-primary">
-          {item.judul}
+        <h3 className="mt-3 font-display text-lg leading-snug font-semibold">
+          <Link
+            to="/news/$id"
+            params={{ id: String(item.id) }}
+            className="transition-colors group-hover:text-primary"
+          >
+            {item.judul}
+          </Link>
         </h3>
         <p className="mt-2.5 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
           {item.deskripsi}
@@ -66,7 +73,13 @@ export function FeaturedNewsCard({ item }: { item: PlaceholderNews }) {
       <div className="flex flex-col justify-center p-8 lg:p-12">
         <span className="eyebrow">Featured story</span>
         <h3 className="mt-4 font-display text-2xl leading-tight font-semibold sm:text-3xl">
-          {item.judul}
+          <Link
+            to="/news/$id"
+            params={{ id: String(item.id) }}
+            className="transition-colors group-hover:text-primary"
+          >
+            {item.judul}
+          </Link>
         </h3>
         <p className="mt-4 text-base leading-relaxed text-muted-foreground">{item.deskripsi}</p>
         <p className="mt-6 text-xs text-muted-foreground">

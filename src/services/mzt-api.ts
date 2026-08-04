@@ -5,15 +5,18 @@ import type {
   AttendanceRequest,
   AuthUser,
   CarouselSlide,
+  ContactRequest,
   DashboardCalendarEntry,
   DashboardEvent,
   DashboardStats,
   EventItem,
+  EventTanggal,
   LoginRequest,
   LoginResponse,
   Member,
   NewsItem,
   OrgInfo,
+  PublicStats,
   TransactionRecord,
 } from "@/types/api";
 
@@ -59,6 +62,8 @@ export const deleteMember = (idUsers: number | string) => apiDelete<unknown>(`/m
 
 export const fetchEvents = () => apiGet<EventItem[]>("/events");
 export const fetchEvent = (id: number | string) => apiGet<EventItem>(`/events/${id}`);
+export const fetchEventTanggal = (id: number | string) =>
+  apiGet<EventTanggal[]>(`/events/${id}/tanggal`);
 export const createEvent = (form: FormData) => apiPost<EventItem>("/events", form);
 export const updateEvent = (id: number | string, form: FormData) =>
   apiPost<EventItem>(`/events/${id}`, form);
@@ -101,6 +106,24 @@ export const fetchMztInfo = () => apiGet<OrgInfo>("/info/mzt");
 
 export const updatePesantrenInfo = (form: FormData) => apiPost<OrgInfo>("/info/pesantren", form);
 export const updateMztInfo = (form: FormData) => apiPost<OrgInfo>("/info/mzt", form);
+
+/* ----------------------------------------------------- public marketing API */
+
+/** PUBLIC */
+export const fetchPublicEvents = () => apiGet<EventItem[]>("/public/events");
+/** PUBLIC */
+export const fetchPublicEvent = (id: number | string) => apiGet<EventItem>(`/public/events/${id}`);
+/** PUBLIC */
+export const fetchPublicNews = () => apiGet<NewsItem[]>("/public/news");
+/** PUBLIC */
+export const fetchPublicNewsItem = (id: number | string) => apiGet<NewsItem>(`/public/news/${id}`);
+/** PUBLIC */
+export const fetchPublicCarousel = () => apiGet<CarouselSlide[]>("/public/carousel");
+/** PUBLIC */
+export const fetchPublicStats = () => apiGet<PublicStats>("/public/stats");
+/** PUBLIC */
+export const submitContact = (payload: ContactRequest) =>
+  apiPostRaw<{ success: boolean; message?: string }>("/public/contact", payload);
 
 /* ---------------------------------------------------------- activity log */
 
