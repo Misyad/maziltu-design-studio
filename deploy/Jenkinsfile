@@ -12,9 +12,10 @@
 //   mzt-docker  -> (optional) registry login if you later push images off-host.
 
 pipeline {
-    // Any agent that has the Docker client + compose. If you only have one
-    // host, label it 'docker' in Manage Jenkins > Nodes.
-    agent { label 'docker' }
+    // Runs on any agent that has the Docker client + compose. On a standalone
+    // Jenkins the built-in node works as-is; if you add remote agents, either
+    // label them 'docker' here or keep 'any'.
+    agent any
 
     options {
         timestamps()                        // readable build log timestamps
