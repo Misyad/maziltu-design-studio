@@ -40,8 +40,8 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export class ApiError extends Error {
-  status?: number;
-  errors?: Record<string, string[]>;
+  status: number | undefined;
+  errors: Record<string, string[]> | undefined;
 
   constructor(message: string, status?: number, errors?: Record<string, string[]>) {
     super(message);
@@ -50,6 +50,7 @@ export class ApiError extends Error {
     this.errors = errors;
   }
 }
+
 
 function toApiError(error: unknown): ApiError {
   if (axios.isAxiosError(error)) {
