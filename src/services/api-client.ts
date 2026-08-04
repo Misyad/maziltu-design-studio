@@ -80,14 +80,17 @@ export async function apiGet<T>(url: string): Promise<T> {
 export async function apiPostRaw<T>(url: string, body?: unknown): Promise<T> {
   try {
     const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
-    const response = await apiClient.post<T>(url, body, {
-      headers: isFormData ? { "Content-Type": "multipart/form-data" } : undefined,
-    });
+    const response = await apiClient.post<T>(
+      url,
+      body,
+      isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {},
+    );
     return response.data;
   } catch (error) {
     throw toApiError(error);
   }
 }
+
 
 export async function apiPost<T>(url: string, body?: unknown): Promise<T> {
   const payload = await apiPostRaw<ApiEnvelope<T>>(url, body);
