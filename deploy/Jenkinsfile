@@ -23,6 +23,12 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '10'))
     }
 
+    triggers {
+        // Auto-build when a commit lands on main (the SCM is the frontend repo;
+        // backend changes are pulled during Sync, so they don't need their own job).
+        pollSCM('H/5 * * * *')
+    }
+
     environment {
         DEPLOY_DIR     = "/opt/mzt"
         PUBLIC_PORT    = "3015"
@@ -79,6 +85,14 @@ pipeline {
                     cp "$DEPLOY_DIR/frontend/deploy/docker-compose.yml" "$DEPLOY_DIR/docker-compose.yml"
                     cp "$DEPLOY_DIR/frontend/deploy/Caddyfile"          "$DEPLOY_DIR/Caddyfile"
                     cp "$DEPLOY_DIR/frontend/deploy/db/init/.gitkeep"   "$DEPLOY_DIR/db/init/.gitkeep"
+
+                    # Seed the DB dump from the backend repo on first boot only;
+                    # never overwrite a dump the operator has dropped in here.
+                    if [ -f "$DEPLOY_DIR/backend/deploy/db/mazw9983_alvinade_maziltu.sql" ] \
+                        && [ ! -f "$DEPLOY_DIR/db/init/mazw9983_alvinade_maziltu.sql" ]; then
+                        cp "$DEPLOY_DIR/backend/deploy/db/mazw9983_alvinade_maziltu.sql" \
+                           "$DEPLOY_DIR/db/init/mazw9983_alvinade_maziltu.sql"
+                    fi
 
                     # Seed .env once; never overwrite operator edits afterwards.
                     [ -f "$DEPLOY_DIR/.env" ] || cp "$DEPLOY_DIR/frontend/deploy/.env.example" "$DEPLOY_DIR/.env"
