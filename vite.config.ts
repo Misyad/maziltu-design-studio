@@ -12,4 +12,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Deploy as a self-contained Node HTTP server (the Dockerfile runs
+  // `.output/server/index.mjs` directly) instead of the Cloudflare workerd
+  // preset that Lovable's config defaults to.
+  nitro: { preset: "node-server" },
 });
