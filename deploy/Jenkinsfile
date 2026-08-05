@@ -76,8 +76,8 @@ pipeline {
                     # Seed .env once; never overwrite operator edits afterwards.
                     [ -f "$DEPLOY_DIR/.env" ] || cp "$DEPLOY_DIR/frontend/deploy/.env.example" "$DEPLOY_DIR/.env"
 
-                    # Data dir the backend bind-mounts as storage/app.
-                    mkdir -p "$DEPLOY_DIR/storage"
+                    # Data dirs the operator owns (media + DB import on first boot).
+                    mkdir -p "$DEPLOY_DIR/storage" "$DEPLOY_DIR/db/init"
                 '''
             }
         }
