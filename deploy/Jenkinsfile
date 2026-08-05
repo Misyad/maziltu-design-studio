@@ -69,15 +69,15 @@ pipeline {
                 // Refresh the orchestration files the pipeline owns.
                 sh '''
                     set -e
+                    # Data dirs the operator owns (media + DB import on first boot).
+                    mkdir -p "$DEPLOY_DIR/storage" "$DEPLOY_DIR/db/init"
+
                     cp "$DEPLOY_DIR/frontend/deploy/docker-compose.yml" "$DEPLOY_DIR/docker-compose.yml"
                     cp "$DEPLOY_DIR/frontend/deploy/Caddyfile"          "$DEPLOY_DIR/Caddyfile"
                     cp "$DEPLOY_DIR/frontend/deploy/db/init/.gitkeep"   "$DEPLOY_DIR/db/init/.gitkeep"
 
                     # Seed .env once; never overwrite operator edits afterwards.
                     [ -f "$DEPLOY_DIR/.env" ] || cp "$DEPLOY_DIR/frontend/deploy/.env.example" "$DEPLOY_DIR/.env"
-
-                    # Data dirs the operator owns (media + DB import on first boot).
-                    mkdir -p "$DEPLOY_DIR/storage" "$DEPLOY_DIR/db/init"
                 '''
             }
         }
