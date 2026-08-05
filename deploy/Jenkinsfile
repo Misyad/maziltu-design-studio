@@ -26,6 +26,10 @@ pipeline {
     environment {
         DEPLOY_DIR     = "/opt/mzt"
         PUBLIC_PORT    = "3015"
+        // IP of this Docker host, reachable from the Jenkins agent. The health
+        // check runs inside the Jenkins container, which has no mapping for the
+        // stack's published port, so it must hit the host over the network.
+        HOST_IP        = "192.168.1.60"
         // Public HTTPS clones — no credentials needed.
         FRONTEND_REPO  = "https://github.com/Misyad/maziltu-design-studio.git"
         BACKEND_REPO   = "https://github.com/Misyad/laravel-mzt.git"
@@ -108,7 +112,7 @@ pipeline {
                             sleep 10
                             docker compose -f "$DEPLOY_DIR/docker-compose.yml" ps
                             api=$(curl -sS -o /dev/null -w "%{http_code}" \
-                                "http://127.0.0.1:${PUBLIC_PORT}/api/public/stats")
+                                "http://${HOST_IP}:${PUBLIC_PORT}/api/public/stats")
                             echo "  /api/public/stats -> $api"
                             [ "$api" = "200" ] || exit 1
                         '''
