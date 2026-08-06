@@ -1,9 +1,9 @@
 # Audit &amp; Gap Analysis — EMS (Event Management System)
 
 **Modul** : Phase 2 — Event Management System (EMS)
-**Versi** : 0.1.0 (Draft)
-**Status** : Audit selesai; menunggu persetujuan sebelum implementasi
-**Pendahulu** : `docs/PRD-Event Management System.md` (v2.1.0, Final Draft)
+**Versi** : 0.2.0 (Aligned to Phase 2A)
+**Status** : Disetujui — mendasar implementasi v2.1.0-alpha1 (Event Core + Registration + Order)
+**Pendahulu** : `docs/PRD-Event Management System.md` (v2.1.0, Final PRD)
 
 > Prinsip: **evolusi, bukan membangun ulang sistem**. Sama seperti Phase 1,
 > seluruh perubahan skema bersifat **aditif** dan **non-destruktif**: tidak ada
@@ -26,17 +26,17 @@ Terkait EMS, DB memiliki 5 objek inti:
 
 | Tabel | Klasifikasi | Perubahan |
 |---|---|---|
-| `events` | MIGRATE | + `kuota`, `registrasi_dibuka`, `registrasi_ditutup`, `harga_amount` |
+| `events` | MIGRATE | + `kuota`, `venue`, `visibility`, `registrasi_dibuka`, `registrasi_ditutup`, `harga_amount` |
 | `tanggal_events` | REUSE | tanpa perubahan |
 | `event_status` (VIEW) | REUSE | diformalisasi menjadi migration idempotent |
 | `m_transaksi_events` | MIGRATE (index) + RETIRE (write-path) | UNIQUE `id_anggota` → UNIQUE `(id_event, id_anggota)`; tidak lagi ditulis oleh sistem baru |
-| `prisensi_kehadiran` | MIGRATE | tambah `gate`; `id_user` = petugas check-in |
+| `prisensi_kehadiran` | MIGRATE (2C) | tambah `id_ticket` + `gate` (fase 2C, bukan 2A) |
 | `users`, `data_users`, dll. | REUSE | tidak disentuh |
 
-Konsep baru yang harus **ditambah**: `orders`, `tickets`, `payments`
-(Order/Ticket/Payment belum ada sama sekali).
+**ADD (Phase 2A):** tabel `orders` — root aggregate dari seluruh modul EMS.
+**ADD (fase berikutnya):** `payments`, `tickets` (2B); atribut attendance (2C); dashboard/finance/reporting (2D).
 
-Lima anomali data ditemukan (lihat §4) yang harus ditangani sebelum migrasi.
+Empat standar arsitektur proyek (lihat §10) berlaku untuk semua entitas baru: **UUID publik**, **pola audit `created_by`/`updated_by`**, **snapshot order immutable**, dan **status VARCHAR + konstanta enum**.
 
 ---
 
@@ -176,21 +176,30 @@ Tambahkan kolom (semua baru, tidak menghapus yang ada):
 
 | Kolom baru | Tipe | Keperluan |
 |---|---|---|
-| `kuota` | int unsigned nullable | PRD field "Kuota" |
-| `registrasi_dibuka` | datetime nullable | PRD field |
-| `registrasi_ditutup` | datetime nullable | PRD field |
+| `kuota` | int unsigned nullable | kapasitas maksimum |
+| `venue` | varchar nullable | nama venue/gedung |
+| `visibility` | varchar(20) default `'public'` | `public` / `internal` / `private` |
+| `registrasi_dibuka` | datetime nullable | window buka |
+| `registrasi_ditutup` | datetime nullable | window tutup |
 | `harga_amount` | decimal(12,2) nullable | backfill dari `harga` untuk kalkulasi |
+
+Semantik `visibility`:
+| Nilai | Siapa yang melihat | Perilaku Stage 2A |
+|---|---|---|
+| `public` | Semua alumni | Tampil publik + bisa didaftarkan |
+| `internal` | Alumni yang login | Hanya tampil saat login; bisa didaftarkan |
+| `private` | Whitelist/undangan (2B+) | Placeholder; tidak bisa didaftarkan di 2A |
 
 `is_active` tetap sebagai saklar **publish/arsip** (PRD §5: Publish, Arsip).
 
 ### `m_transaksi_events`
-- Drop UNIQUE `id_anggota` → UNIQUE `(id_event, id_anggota)` (index).
+- Drop UNIQUE `id_anggota` → UNIQUE `(id_event, id_anggota)` (index — protokol ketat §7).
 - **Retire write-path**: sistem baru (Phase 2) memakai `orders` + `payments`,
   BUKAN menulis `m_transaksi_events`. Data 832 baris tetap riwayat terbaca.
 
-### `prisensi_kehadiran`
-- Tambah `gate` varchar nullable (PRD §14: petugas + gate).
-- Konfirmasi: `id_user` = id petugas HRD yang melakukan check-in.
+### `prisensi_kehadiran` — (ditunda ke Phase 2C, lihat §10)
+- Tambah `id_ticket` nullable + `gate` varchar nullable.
+- Konfirmasi: `id_user` = id petugas yang melakukan check-in.
 
 ### VIEW `event_status`
 - Formalize sebagai migration idempotent (cek keberadaan view → create) agar
@@ -205,50 +214,61 @@ Tambahkan kolom (semua baru, tidak menghapus yang ada):
 
 ## 5.5 ADD (tabel baru)
 
-### `orders`
+### `orders` — root aggregate (Phase 2A)
 Inti sistem (PRD §8). Satu anggota dapat punya banyak order di event berbeda.
+Seluruh modul berikutnya (Payment/Ticket/Attendance/Certificate) mengacu ke Order.
 
-| Kolom | Tipe |
-|---|---|
-| `id` | int unsigned PK |
-| `nomor_order` | varchar, UNIQUE |
-| `id_event` | FK → `events.id` |
-| `id_anggota` | FK → `users.id_anggota` |
-| `total_amount` | decimal(12,2) |
-| `status_registrasi` | enum('draft','registered','confirmed','checked_in','finished','cancelled') |
-| `payment_status` | enum('belum_bayar','menunggu_verifikasi','lunas','ditolak','refund') |
-| `ticket_status` | enum('belum','terbit','used','cancelled') |
-| `created_at` / `updated_at` | |
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | int unsigned PK | internal |
+| `uuid` | varchar(36) UNIQUE | identitas publik (QR, link, API eksternal) |
+| `nomor_order` | varchar(20) UNIQUE | `MZT-YYYY-NNNNNN`, global (nomor admin) |
+| `id_event` | bigint (index) | referensi event |
+| `id_anggota` | varchar(255) (index) | referensi alumni |
+| `created_by` | bigint nullable | audit (Walk-In dibuat panitia) |
+| `updated_by` | bigint nullable | audit |
+| `event_name` | varchar(255) | **snapshot immutable** pada saat daftar |
+| `event_price` | decimal(12,2) default 0 | **snapshot immutable** |
+| `event_start_at` | date nullable | **snapshot immutable** |
+| `total_amount` | decimal(12,2) default 0 | |
+| `status_registrasi` | varchar(30) default `'draft'` | konstanta `OrderStatus` (bukan enum DB) |
+| `payment_status` | varchar(30) default `'pending'` | konstanta `PaymentStatus` (bukan enum DB) |
+| `created_at` / `updated_at` | | |
 
-Index: UNIQUE `(id_event, id_anggota)`.
+Index: UNIQUE `(id_event, id_anggota)`; UNIQUE `uuid`; UNIQUE `nomor_order`.
 
 Status registrasi **tidak bergantung pada pembayaran** (PRD §7) →
 `status_registrasi` dan `payment_status` kolom terpisah.
+`ticket_status`/`ticket_id` **tidak** ada di 2A — ditambahkan bersama tabel `tickets` pada 2B.
 
-### `tickets`
+### `tickets` (Phase 2B)
 PRD §12. Dibuat setelah order status `confirmed`/order selesai.
 
 | Kolom | Tipe |
 |---|---|
 | `id` | int unsigned PK |
+| `uuid` | varchar(36) UNIQUE (standar proyek) |
 | `id_order` | FK → `orders.id` |
 | `nomor_ticket` | varchar, UNIQUE |
 | `token` | varchar UNIQUE (isi QR; berupa ticket id, BUKAN id card) |
 | `id_event` | bigint (denormalized) |
-| `status` | enum('issued','used','cancelled') |
+| `status` | varchar(30) (const: issued/used/cancelled) |
+| `created_by` / `updated_by` | bigint nullable (standar proyek) |
 | `created_at` / `updated_at` |
 
-### `payments`
+### `payments` (Phase 2B)
 
 | Kolom | Tipe |
 |---|---|
 | `id` | int unsigned PK |
+| `uuid` | varchar(36) UNIQUE (standar proyek) |
 | `id_order` | FK → `orders.id` |
-| `metode` | enum('transfer','qris','cash') |
+| `metode` | varchar(30) (const: transfer/qris/cash) |
 | `nominal` | decimal(12,2) |
 | `bukti_path` | varchar nullable (upload bukti) |
-| `status` | enum('belum_bayar','menunggu_verifikasi','lunas','ditolak','refund') |
+| `status` | varchar(30) (const: pending/waiting_verification/paid/rejected/refund) |
 | `verified_by` / `verified_at` | int / datetime nullable |
+| `created_by` / `updated_by` | bigint nullable (standar proyek) |
 | `transaction_id_midtrans` | varchar nullable (tautan ke `m_transaksi_events`) |
 | `created_at` / `updated_at` |
 
@@ -267,20 +287,27 @@ PRD §12. Dibuat setelah order status `confirmed`/order selesai.
 | POST /attendance | `POST /attendance` (`attendanceStore`) | ✔ eksisting (check-in manual) |
 | GET /attendance | `GET /attendance/{event}/{tanggal}` | ✔ eksisting (`attendanceIndex`) |
 
-## 6.2 Endpoint BARU (Phase 2)
+## 6.2 Endpoint BARU (Phase 2A)
 
 | PRD § | Endpoint | Kontroller |
 |---|---|---|
 | POST /events/{id}/register | buat `orders` + status `registered` | baru `EventRegister` |
-| GET /my-events | daftar event yang diikuti anggota | baru (`myEvents`) |
-| GET /my-orders | daftar order anggota | baru |
-| GET /my-ticket/{id} | data ticket + QR | baru |
-| POST /payments | buat payment (transfer/qris/cash) | baru |
-| GET /payments | riwayat payment | baru |
+| GET /my-orders | daftar order anggota | baru (`myOrders`) |
+| GET /orders/{uuid} | detail order by UUID | baru (`orderShow`) |
+
+### Endpoint ditunda (Phase 2B+):
+
+| PRD § | Endpoint | Kontroller |
+|---|---|---|
+| GET /my-events | daftar event yang diikuti anggota | `myEvents` (2B) |
+| GET /my-ticket/{id} | data ticket + QR | baru (2B) |
+| POST /payments | buat payment (transfer/qris/cash) | baru (2B) |
+| GET /payments | riwayat payment | baru (2B) |
 
 Semua endpoint baru di bawah middleware `auth:sanctum` (authenticated), mengacu
 ke **single identity** (token dari `users`). Hanya data milik sendiri
-yang dapat dilihat (PRD §20).
+yang dapat dilihat (PRD §20). Endpoint `GET /orders/{uuid}` memakai **UUID**
+(standar S1), bukan integer.
 
 ## 6.3 Frontend
 
@@ -306,16 +333,17 @@ yang dapat dilihat (PRD §20).
 1. **Backup DB** (logical `mariadb-dump`) — dibuat & disimpan di `/opt/mzt/backups/`.
 2. **Verifikasi pra-migrasi**: pastikan tidak ada baris duplikat
    `(id_event, id_anggota)` pada `m_transaksi_events` (jika ada → resolusi dulu).
-3. **Skema aditif**: buat migration untuk kolom baru `events` (kuota,
-   registrasi_dibuka, registrasi_ditutup, harga_amount backfill), `prisensi`
-   `gate`, formalisasi VIEW `event_status`, drop/rebuild index
-   `m_transaksi_events`.
-4. **Tabel baru**: migration untuk `orders`, `tickets`, `payments`.
+3. **Skema aditif (2A)**: migration untuk kolom baru `events` (kuota, venue,
+   visibility, registrasi_dibuka, registrasi_ditutup, harga_amount backfill),
+   drop/rebuild index `m_transaksi_events`, formalisasi VIEW `event_status`.
+4. **Tabel baru (2A)**: migration untuk `orders`.
 5. **Backfill**: parse `harga` → `harga_amount` (pastikan semua nilai valid).
-6. **Migrasi backend**: kontroller + route PHP.
-7. **Migrasi frontend**: api-client, query, types, portal & dashboard pages.
+6. **Migrasi backend (2A)**: enums + services + kontroller + route PHP.
+7. **Migrasi frontend (2A)**: api-client, query, types, portal & dashboard pages.
 8. **Verifikasi akhir**: API & kedua admin (dashboard React + admin web lama)
    masih berfungsi, `GET /api/public/stats`, per event baru (Reuni Akbar).
+9. **Fase berikutnya (2B)**: tabel `tickets` + `payments`;
+   **2C**: kolom attendance (`id_ticket`, `gate`); **2D**: dashboard/finance/reporting.
 
 ---
 
@@ -327,6 +355,22 @@ yang dapat dilihat (PRD §20).
   UNIQUE `(id_event, id_anggota)` untuk mendukung multi-event.
 - **Admin web lama** masih dipakai sebagian → setiap perubahan skema harus
   tetap kompatibel (aditif).
+- **Status** memakai **VARCHAR + konstanta PHP enum** (bukan ENUM database)
+  agar perubahan status masa depan tidak memerlukan ALTER TABLE.
+- **`ticket_status` di tunda ke 2B** — atribut tiket hidup di tabel `tickets`,
+  bukan `orders`.
+- **Pembayaran** disarankan menempel ke **vendor penyedia pembayaran** yang
+  sudah dipakai (`m_transaksi_events`/Midtrans legacy); Order diarahkan ke
+  vendor tersebut sebagai tautan.
+- **Order adalah root aggregate**: Payment/Ticket/Attendance/Certificate
+  mengacu ke `orders`, bukan ke `events`.
+- **ID publik memakai UUID** (`orders.uuid`), endpoint eksternal memakai UUID;
+  ID integer hanya untuk internal.
+- **Snapshot immutable pada Order** (`event_name`, `event_price`,
+  `event_start_at`): nilai diambil saat order dibuat; perubahan data event
+  tidak mengubah order lama.
+- **Audit `created_by`/`updated_by`** wajib pada semua entitas baru (orders,
+  payments, dst.).
 - Keluaran fase ini adalah dokumen ini (bukan implementasi).
 
 ---
@@ -337,3 +381,34 @@ yang dapat dilihat (PRD §20).
 - **Tanggal**: `[YYYY-MM-DD]`
 - **Data diambil dari**: DB produksi `mazw9983_alvinade_maziltu` (live) + codebase.
 - **Referensi**: `docs/PRD-Event Management System.md`
+
+---
+
+# 10. Standar Arsitektur (berlaku untuk seluruh EMS)
+
+Empat standar ini sudah disepakati dan wajib diikuti di setiap implementasi:
+
+| # | Standar | Penerapan |
+|---|---|---|
+| S1 | **UUID untuk identitas publik** | `orders.uuid` (Phase 2A); `payments.uuid`, `tickets.token` (2B). Endpoint publik memakai UUID; integer hanya internal. |
+| S2 | **Status = VARCHAR + konstanta PHP enum** | Bukan ENUM database. `app/Enums/OrderStatus.php`, `PaymentStatus.php`. Menghindari ALTER TABLE saat status baru. |
+| S3 | **Snapshot immutable pada Order** | `event_name`, `event_price`, `event_start_at` disalin saat order dibuat; tidak berubah walau event diubah. |
+| S4 | **Audit `created_by` / `updated_by`** | Semua entitas baru menyimpan siapa pembuat/editor. Walk-In: petugas sebagai pembuat. |
+
+Catatan fase:
+
+- **2A**: enums `OrderStatus`, `PaymentStatus`; service `OrderNumberService`
+  (nomor `MZT-YYYY-NNNNNN` global), `EventCapacityService` (kuota + window
+  registrasi + visibility), `RegistrationService`; API register + my-orders +
+  order by UUID.
+- **2B**: `PaymentStatus` mulai dipakai penuh; tabel `payments` + `tickets`.
+- **2C**: `prisensi_kehadiran` ditambah `id_ticket`, `gate`.
+- **2D**: dashboard, finance, reporting (export Excel/PDF).
+
+---
+
+## 11. Logbook
+
+| Tanggal | Entri |
+|---|---|
+| 2026-08-06 | Sinkronisasi ulang dengan PRD v2.1.0 final. Penyesuaian Phase 2A: `orders` diperluas (uuid, snapshot, audit, status VARCHAR); `tickets`/`payments` ditunda ke 2B dan dipatuh standar S1–S4; `prisensi` perubahan pindah ke 2C. Standar arsitektur S1–S4 ditambahkan. Status dokumen: Disetujui — dasar implementasi v2.1.0-alpha1. |

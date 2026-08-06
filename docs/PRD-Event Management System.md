@@ -1,75 +1,119 @@
 # PRD — MZT Apps v2.1
-# Phase 2 — Event Management System (EMS)
+# Event Management System (EMS)
 
-**Version** : 2.1.0  
-**Status** : Final Draft  
+**Project** : MZT Apps (Maziltutholiban Members Platform)
+**Version** : 2.1.0
+**Status** : Final PRD
 **Depends On** : Phase 1 — Digital Identity Foundation (Completed)
+**Primary Use Case** : Reuni Akbar Internasional Maziltutholiban
 
 ---
 
-# 1. Latar Belakang
+# 1. Executive Summary
 
-MZT Apps telah memiliki Digital Identity Foundation pada Phase 1.
+Event Management System (EMS) merupakan modul inti MZT Apps yang digunakan untuk mengelola seluruh kegiatan Maziltutholiban secara terintegrasi.
 
-Seluruh alumni kini memiliki akun, Portal Alumni, Digital ID Card, serta autentikasi yang terintegrasi.
+Modul ini dibangun di atas Digital Identity Foundation (Phase 1), sehingga seluruh peserta menggunakan akun alumni yang telah dimiliki tanpa perlu registrasi ulang.
 
-Tahap berikutnya adalah membangun **Event Management System (EMS)** yang mampu mengelola seluruh kegiatan organisasi secara digital.
-
-EMS dirancang sebagai sistem permanen yang dapat digunakan untuk seluruh kegiatan Maziltutholiban.
-
-Implementasi pertama adalah **Reuni Akbar Internasional**.
+Implementasi pertama EMS adalah **Reuni Akbar Internasional**, namun arsitektur dirancang agar dapat digunakan kembali untuk seluruh kegiatan MZT di masa depan.
 
 ---
 
-# 2. Tujuan
+# 2. Background
 
-Menyediakan platform terpadu untuk mengelola seluruh siklus kegiatan organisasi.
+Saat ini proses penyelenggaraan kegiatan masih melibatkan banyak pekerjaan manual, seperti:
 
-Mulai dari:
+- Registrasi peserta
+- Verifikasi pembayaran
+- Presensi
+- Check-in
+- Rekap kehadiran
+- Rekap pembayaran
 
-- Publikasi Event
-- Registrasi Peserta
-- Order
-- Pembayaran
+Selain itu, data kegiatan sebelumnya telah tersimpan di database MZT dan perlu dipertahankan sebagai aset organisasi.
+
+Oleh karena itu EMS dikembangkan menggunakan prinsip **evolusi sistem**, bukan membangun ulang.
+
+---
+
+# 3. Objectives
+
+EMS harus mampu mengelola seluruh siklus event mulai dari publikasi hingga pelaporan.
+
+Target utama:
+
+- Digital Registration
+- Order Management
+- Payment Management
 - Ticketing
-- Check In
-- Kehadiran
-- Dashboard Panitia
-- Laporan
+- QR Check-In
+- Attendance
+- Finance
+- Reporting
 
 ---
 
-# 3. Prinsip Pengembangan
+# 4. Design Principles
 
 ## Single Identity
 
-Semua peserta menggunakan akun Alumni MZT.
+Seluruh peserta menggunakan akun alumni.
 
 Tidak ada akun baru.
 
 ---
 
-## Reusable
+## Event Agnostic
 
-EMS harus dapat digunakan untuk seluruh event MZT.
+EMS tidak dibuat khusus untuk Reuni Akbar.
 
-Bukan hanya Reuni Akbar.
+Harus dapat digunakan untuk:
+
+- Reuni
+- Seminar
+- Pelatihan
+- Kajian
+- Musyawarah
+- Halal Bihalal
+- Event lainnya
 
 ---
 
-## Modular
+## Evolution First
 
-Setiap modul dapat dikembangkan secara independen.
+Menggunakan struktur database yang sudah ada.
+
+Prioritas:
+
+Reuse
+
+↓
+
+Migrate
+
+↓
+
+Add
+
+↓
+
+Retire
 
 ---
 
 ## Backward Compatible
 
-Tidak mengubah modul Phase 1.
+Tidak merusak modul yang sudah berjalan.
 
 ---
 
-# 4. Scope
+## Modular
+
+Setiap modul dapat dikembangkan secara terpisah.
+
+---
+
+# 5. Scope
 
 ## In Scope
 
@@ -77,53 +121,100 @@ Tidak mengubah modul Phase 1.
 - Registration
 - Order
 - Payment
-- Ticketing
-- QR Check In
+- Ticket
+- QR Check-In
 - Attendance
 - Dashboard Panitia
 - Dashboard Peserta
+- Finance
 - Reporting
 
 ---
 
 ## Out of Scope
 
+- Live Streaming
 - Marketplace
 - Donasi
-- Forum
 - Voting
-- Live Streaming
+- Forum
+- Mobile Apps
 
 ---
 
-# 5. Event Management
+# 6. Business Flow
+
+```
+Event Diterbitkan
+
+↓
+
+Registrasi
+
+↓
+
+Order Dibuat
+
+↓
+
+Pembayaran
+
+↓
+
+Pembayaran Terverifikasi
+
+↓
+
+Ticket Dibuat
+
+↓
+
+Check-In
+
+↓
+
+Kehadiran
+
+↓
+
+Event Selesai
+```
+
+---
+
+# 7. Core Modules
+
+## 7.1 Event Management
 
 Admin dapat:
 
 - Membuat Event
-- Edit Event
-- Publish Event
-- Tutup Registrasi
-- Arsip Event
+- Mengubah Event
+- Publish
+- Unpublish
+- Menutup Registrasi
+- Membatalkan Event
+- Mengarsipkan Event
 
 Field:
 
-- Nama Event
+- Nama
 - Banner
 - Deskripsi
 - Lokasi
+- Venue
 - Tanggal
 - Kuota
-- Biaya
+- Harga
 - Registrasi Dibuka
 - Registrasi Ditutup
-- Status Event
+- Status
 
 ---
 
-# 6. Registration
+## 7.2 Registration
 
-Alumni login.
+Peserta login menggunakan akun alumni.
 
 ↓
 
@@ -137,13 +228,32 @@ Klik Daftar.
 
 Order otomatis dibuat.
 
-Tidak perlu mengisi ulang data profil.
+Profil peserta otomatis diambil dari Portal Alumni.
 
-Semua data diambil dari Portal Alumni.
+Tidak ada input data ulang.
 
 ---
 
-# 7. Registration Workflow
+## 7.3 Order Management
+
+Order merupakan pusat seluruh transaksi.
+
+Satu alumni dapat memiliki banyak Order.
+
+Satu Order hanya dimiliki satu Event.
+
+Order menyimpan:
+
+- Order Number
+- Event
+- Alumni
+- Total
+- Registration Status
+- Ticket Status
+
+---
+
+## 7.4 Registration Status
 
 Status Registrasi
 
@@ -169,31 +279,13 @@ Finished
 
 Cancelled
 
-Status registrasi tidak bergantung pada pembayaran.
+Status registrasi terpisah dari status pembayaran.
 
 ---
 
-# 8. Order
+# 8. Payment
 
-Order merupakan inti sistem.
-
-Satu peserta dapat memiliki beberapa order pada event yang berbeda.
-
-Order menyimpan:
-
-- Nomor Order
-- Event
-- Peserta
-- Total Tagihan
-- Status
-- Payment Status
-- Ticket Status
-
----
-
-# 9. Payment
-
-EMS mendukung dua metode pembayaran.
+EMS mendukung pembayaran:
 
 ## Online
 
@@ -210,7 +302,7 @@ Upload Bukti
 
 ↓
 
-Verifikasi Admin
+Verifikasi
 
 ↓
 
@@ -220,7 +312,7 @@ Lunas
 
 ## Offline
 
-Pembayaran dilakukan pada hari acara.
+Pembayaran dilakukan saat hari acara.
 
 Flow
 
@@ -228,15 +320,11 @@ Registrasi
 
 ↓
 
-Datang
+Bayar
 
 ↓
 
-Bayar di Meja Registrasi
-
-↓
-
-Panitia Konfirmasi
+Panitia Verifikasi
 
 ↓
 
@@ -244,21 +332,43 @@ Lunas
 
 ---
 
-# 10. Payment Status
+## Walk-In
 
-Belum Bayar
-
-↓
-
-Menunggu Verifikasi
+Peserta datang langsung.
 
 ↓
 
-Lunas
+Panitia membuat Order.
 
 ↓
 
-Ditolak
+Dibayarkan.
+
+↓
+
+Ticket dibuat.
+
+↓
+
+Check-In.
+
+---
+
+# 9. Payment Status
+
+Pending
+
+↓
+
+Waiting Verification
+
+↓
+
+Paid
+
+↓
+
+Rejected
 
 ↓
 
@@ -266,28 +376,27 @@ Refund
 
 ---
 
-# 11. Payment Method
+# 10. Payment Method
 
-Transfer
+- Transfer
+- QRIS
+- Cash
 
-QRIS
-
-Cash
-
-Metode lain dapat ditambahkan tanpa mengubah arsitektur.
+Mudah ditambahkan tanpa mengubah arsitektur.
 
 ---
 
-# 12. Ticket
+# 11. Ticketing
 
-Ticket dibuat setelah Order berhasil.
+Ticket dibuat setelah Order valid.
 
 Ticket memiliki:
 
 - Ticket Number
 - QR Ticket
 - Event
-- Nama Peserta
+- Peserta
+- Status
 
 QR Ticket menggunakan Ticket ID.
 
@@ -295,13 +404,13 @@ Bukan QR Digital ID Card.
 
 ---
 
-# 13. Check In
+# 12. QR Check-In
 
-Panitia membuka Scanner.
+Petugas membuka Scanner.
 
 ↓
 
-Scan QR Ticket.
+Scan Ticket.
 
 ↓
 
@@ -313,53 +422,66 @@ Status
 
 Valid
 
-Sudah Check In
+Sudah Check-In
 
 Tidak Valid
 
 ↓
 
-Attendance dibuat.
+Kehadiran dibuat.
 
 ---
 
-# 14. Attendance
+# 13. Attendance
 
-Setiap Check In menyimpan:
+Kehadiran menyimpan:
 
 - Event
-- Peserta
-- Waktu Masuk
-- Petugas
+- Ticket
+- Alumni
 - Gate
+- Petugas
+- Waktu Check-In
 
-Tidak boleh Check In dua kali.
+Satu Ticket hanya dapat check-in satu kali.
 
 ---
 
-# 15. Dashboard Peserta
+# 14. Dashboard Peserta
 
-Portal Alumni mendapat menu baru.
+Menu baru Portal Alumni:
 
 - Event Saya
+- Order Saya
 - Ticket Saya
 - Pembayaran
 - Kehadiran
 
 ---
 
-# 16. Dashboard Panitia
+# 15. Dashboard Panitia
 
-Menampilkan:
+Statistik realtime:
 
 - Total Registrasi
 - Total Hadir
 - Belum Hadir
-- Pembayaran
 - Pendapatan
+- Pembayaran Pending
+- Pembayaran Lunas
 - Kuota Tersisa
 
-Realtime.
+---
+
+# 16. Finance
+
+Laporan:
+
+- Total Pendapatan
+- Pendapatan Online
+- Pendapatan Offline
+- Refund
+- Outstanding
 
 ---
 
@@ -375,112 +497,264 @@ Laporan:
 - Peserta
 - Kehadiran
 - Pembayaran
+- Keuangan
 - Statistik Event
 
 ---
 
-# 18. Database
+# 18. Notification
 
-Prioritaskan menggunakan struktur database yang sudah tersedia.
+Notifikasi:
 
-Gunakan apabila memungkinkan:
+- Registrasi Berhasil
 
-- events
-- tanggal_events
-- transaksi_events
-- prisensi_kehadiran
-- event_status
+- Pembayaran Diterima
 
-Tabel baru hanya dibuat apabila benar-benar diperlukan.
+- Pembayaran Ditolak
+
+- Ticket Aktif
+
+- Pengingat Event
+
+Media:
+
+- Email
+
+- WhatsApp (fase berikutnya)
 
 ---
 
-# 19. API
+# 19. Existing Database Strategy
+
+## REUSE
+
+- users
+- data_users
+- tanggal_events
+- hak_akses_role
+- role_user
+
+---
+
+## MIGRATE
+
+- events
+- prisensi_kehadiran
+- event_status
+
+---
+
+## ADD
+
+- orders
+- payments
+- tickets
+
+---
+
+## RETIRE
+
+Jalur lama penulisan transaksi.
+
+Tetap dipertahankan sebagai histori.
+
+---
+
+# 20. Domain Model
+
+```
+Alumni
+↓
+Orders
+↓
+Payments
+↓
+Tickets
+↓
+Attendance
+↓
+Events
+```
+
+Relationship
+
+Event
+
+↓
+
+hasMany Orders
+
+Order
+
+↓
+
+belongsTo Event
+
+↓
+
+belongsTo Alumni
+
+↓
+
+hasMany Payments
+
+↓
+
+hasOne Ticket
+
+Ticket
+
+↓
+
+belongsTo Order
+
+↓
+
+hasMany Attendance
+
+Attendance
+
+↓
+
+belongsTo Ticket
+
+↓
+
+belongsTo Event
+
+Payment
+
+↓
+
+belongsTo Order
+
+---
+
+Order adalah **root aggregate** dari seluruh modul berikutnya (Payment, Ticket, Attendance, Certificate pada Phase 3). Semua modul mengacu ke Order, bukan ke Event.
+
+---
+
+# 21. API
+
+Event
 
 GET /events
 
 GET /events/{id}
 
+POST /events
+
+PUT /events/{id}
+
+DELETE /events/{id}
+
+Registration
+
 POST /events/{id}/register
 
-GET /my-events
+Order
 
 GET /my-orders
 
-GET /my-ticket/{id}
+GET /orders/{uuid}
+
+Payment
 
 POST /payments
 
 GET /payments
 
+PUT /payments/{id}/verify
+
+Ticket
+
+GET /tickets/{id}
+
+Attendance
+
 POST /check-in
 
 GET /attendance
 
----
+Dashboard
 
-# 20. Security
-
-Ticket hanya berlaku untuk satu event.
-
-QR Ticket hanya dapat digunakan sekali untuk Check In.
-
-Peserta hanya dapat melihat data miliknya sendiri.
-
-Check In hanya dapat dilakukan oleh petugas.
+GET /dashboard/event-summary
 
 ---
 
-# 21. Acceptance Criteria
+# 22. Security
 
-Admin dapat membuat Event.
-
-Alumni dapat mendaftar Event.
-
-Order otomatis terbentuk.
-
-Pembayaran Online berjalan.
-
-Pembayaran Offline berjalan.
-
-QR Ticket berhasil dibuat.
-
-Check In berhasil.
-
-Attendance tercatat.
-
-Dashboard Panitia aktif.
-
-Laporan dapat diekspor.
+- Semua endpoint menggunakan Sanctum.
+- Peserta hanya dapat melihat data miliknya.
+- QR Ticket hanya berlaku satu event.
+- Ticket hanya dapat digunakan satu kali.
+- Check-In hanya dapat dilakukan petugas.
+- Semua aktivitas tercatat pada audit log.
 
 ---
 
-# 22. Definition of Done
+# 23. Acceptance Criteria (Phase 2A)
 
-Phase 2 dinyatakan selesai apabila:
+- Admin dapat mempublikasikan event (kapasitas / venue / visibility).
+- Admin dapat mengubah event.
+- Alumni dapat mendaftar event yang terbuka.
+- Order otomatis dibuat saat pendaftaran.
+- Registrasi ganda, event penuh/tertutup menolak.
+
+---
+
+# 24. Definition of Done — Phase 2A
+
+EMD dinyatakan selesai (Phase 2A) apabila:
 
 - Event dapat dipublikasikan.
-- Alumni dapat mendaftar.
-- Order berhasil dibuat.
-- Pembayaran Online berjalan.
-- Pembayaran Offline berjalan.
-- Ticket berhasil dibuat.
-- Check In berjalan.
-- Attendance tercatat.
-- Dashboard Panitia aktif.
-- Reporting berjalan.
+- Registrasi berjalan.
+- Order terbentuk otomatis.
+- Status registrasi tersimpan.
+- Tidak ada perubahan yang bersifat destructive terhadap fase sebelumnya.
+
+Fase 2B+ menanggani pembayaran/tiket — dimulai setelah 2A selesai dan direview.
 
 ---
 
-# 23. Roadmap
+# 25. Roadmap
 
-Phase 3
+## Phase 2A (v2.1.0-alpha1)
+
+Event Core
+
+Registration
+
+Order
+
+## Phase 2B (v2.1.0-beta1)
+
+Payment Tunai
+
+Ticket
+
+## Phase 2C (v2.1.0-rc1)
+
+QR Check-in
+
+Attendance
+
+## Phase 2D (v2.1.0)
+
+Dashboard
+
+Finance
+
+Reporting
+
+## Phase 3
 
 - Digital Certificate
+- Volunteer
 - Merchandise
 - Konsumsi
-- Volunteer
-- Multi Gate Scanner
 - Mobile Scanner
+- Multi Gate Check-In
 - WhatsApp Notification
-- Dashboard Realtime
+- Real-Time Monitoring
+- Multi Event Analytics
