@@ -107,6 +107,13 @@ export interface Member {
   tahun_keluar: string;
   tempat_lahir: string | null;
   tanggal_lahir: string;
+  // Phase 1 UX: account status fields exposed by the members endpoint (from
+  // existing users.login_count / users.last_login / users.is_active). Additive
+  // only; absent for older clients.
+  has_account?: boolean;
+  account_is_active?: number | boolean;
+  login_count?: number;
+  last_login?: string | null;
 }
 
 export interface EventItem {

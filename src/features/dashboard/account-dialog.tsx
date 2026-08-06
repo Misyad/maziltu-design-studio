@@ -13,6 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { generateAccount, resetAccount, setAccountStatus } from "@/services/mzt-api";
 import { queryKeys } from "@/services/queries";
+import { memberHasAccount } from "@/lib/account-status";
 import type { Member } from "@/types/api";
 
 interface AccountDialogProps {
@@ -41,7 +42,10 @@ export function AccountDialog({ member, onOpenChange }: AccountDialogProps) {
   } | null>(null);
 
   const generate = useMutation({
-    mutationFn: () => generateAccount(member!.id_users),
+    mutationFn: () => {
+      if (!member?.id_users) throw new Error("ID akun tidak valid.");
+      return generateAccount(member.id_users);
+    },
     onSuccess: (res) => {
       setResult({ label: "Akun berhasil dibuat", password: res.password });
       queryClient.invalidateQueries({ queryKey: queryKeys.members });
@@ -52,7 +56,10 @@ export function AccountDialog({ member, onOpenChange }: AccountDialogProps) {
   });
 
   const reset = useMutation({
-    mutationFn: () => resetAccount(member!.id_users),
+    mutationFn: () => {
+      if (!member?.id_users) throw new Error("ID akun tidak valid.");
+      return resetAccount(member.id_users);
+    },
     onSuccess: (res) => {
       setResult({ label: "Password berhasil di-reset", password: res.password });
       queryClient.invalidateQueries({ queryKey: queryKeys.members });
@@ -63,7 +70,10 @@ export function AccountDialog({ member, onOpenChange }: AccountDialogProps) {
   });
 
   const activate = useMutation({
-    mutationFn: (active: "1" | "0") => setAccountStatus(member!.id_users, active),
+    mutationFn: (active: "1" | "0") => {
+      if (!member?.id_users) throw new Error("ID akun tidak valid.");
+      return setAccountStatus(member.id_users, active);
+    },
     onSuccess: (res) => {
       toast.success(res.message ?? "Berhasil");
       queryClient.invalidateQueries({ queryKey: queryKeys.members });
@@ -74,6 +84,7 @@ export function AccountDialog({ member, onOpenChange }: AccountDialogProps) {
   });
 
   const isLoading: boolean = generate.isPending || reset.isPending || activate.isPending;
+  const hasAccount = member ? memberHasAccount(member) : false;
 
   return (
     <Dialog
@@ -97,11 +108,19 @@ export function AccountDialog({ member, onOpenChange }: AccountDialogProps) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {hasAccount ? (
+            <p className="rounded-xl border border-border/70 bg-muted p-3 text-sm text-muted-foreground">
+              Akun sudah tersedia. Gunakan <span className="font-semibold">Reset Password</span>{" "}
+              apabila anggota lupa password.
+            </p>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
               className="rounded-full"
-              disabled={isLoading}
+              disabled={isLoading || hasAccount}
+              title={hasAccount ? "Akun sudah tersedia — gunakan Reset Password" : undefined}
               onClick={() => generate.mutate()}
             >
               {generate.isPending ? (
@@ -114,7 +133,8 @@ export function AccountDialog({ member, onOpenChange }: AccountDialogProps) {
             <Button
               variant="outline"
               className="rounded-full"
-              disabled={isLoading}
+              disabled={isLoading || !hasAccount}
+              title={hasAccount ? undefined : "Belum ada akun yang bisa di-reset"}
               onClick={() => reset.mutate()}
             >
               {reset.isPending ? (

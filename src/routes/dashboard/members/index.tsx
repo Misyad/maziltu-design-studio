@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
@@ -24,6 +25,7 @@ import { PageHeader } from "@/features/dashboard/page-header";
 import { mediaUrl } from "@/services/api-client";
 import { bulkGenerateAccounts, deleteMember } from "@/services/mzt-api";
 import { membersQuery, queryKeys } from "@/services/queries";
+import { accountStatus } from "@/lib/account-status";
 import type { Member } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/members/")({
@@ -101,6 +103,20 @@ function MembersPage() {
           {row.alamat || "—"}
         </span>
       ),
+    },
+    {
+      key: "status",
+      header: "Status Akun",
+      sortable: true,
+      sortValue: (row) => accountStatus(row).label,
+      cell: (row) => {
+        const status = accountStatus(row);
+        return (
+          <Badge variant={status.variant} title={row.last_login ?? undefined}>
+            {status.label}
+          </Badge>
+        );
+      },
     },
     {
       key: "actions",
