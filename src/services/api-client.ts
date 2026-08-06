@@ -150,6 +150,25 @@ export async function apiPost<T>(url: string, body?: unknown): Promise<T> {
   return (payload?.data ?? (payload as unknown)) as T;
 }
 
+/** PUT returning the raw envelope (some Phase 1 endpoints use PUT). */
+export async function apiPutRaw<T>(url: string, body?: unknown): Promise<T> {
+  try {
+    const response = await apiClient.put<T>(url, body);
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+/** PUT returning the `data` field of the `{ success, message, data }` envelope. */
+export async function apiPut<T>(url: string, body?: unknown): Promise<T> {
+  const payload = await apiPutRaw<ApiEnvelope<T>>(url, body);
+  if (!assertEnvelope(payload) || payload.success === false) {
+    throw new ApiError(payload?.message ?? "Request failed", undefined, payload?.errors);
+  }
+  return (payload?.data ?? (payload as unknown)) as T;
+}
+
 export async function apiDelete<T>(url: string): Promise<T> {
   try {
     const response = await apiClient.delete<ApiEnvelope<T>>(url);

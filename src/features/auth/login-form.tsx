@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { ApiError } from "@/services/api-client";
 import { login } from "@/services/mzt-api";
 import { queryKeys } from "@/services/queries";
+import { homePathFor } from "@/lib/roles";
 import type { LoginRequest } from "@/types/api";
 
 const loginSchema = z.object({
@@ -40,7 +41,7 @@ export function LoginForm() {
       const payload: LoginRequest = { id_anggota: values.id_anggota, password: values.password };
       const result = await login(payload);
       queryClient.setQueryData(queryKeys.currentUser, result.user);
-      await router.navigate({ to: "/dashboard" });
+      await router.navigate({ to: homePathFor(result.user) });
     } catch (error) {
       setServerError(error instanceof ApiError ? error.message : "Login failed. Try again.");
     }

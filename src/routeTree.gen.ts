@@ -17,6 +17,7 @@ import { Route as EventsRouteImport } from './routes/events'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NewsRouteImport } from './routes/news'
+import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as ProgramsRouteImport } from './routes/programs'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as EventsIdRouteImport } from './routes/events.$id'
@@ -69,6 +70,11 @@ const LoginRoute = LoginRouteImport.update({
 const NewsRoute = NewsRouteImport.update({
   id: '/news',
   path: '/news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRouteRoute = PortalRouteRouteImport.update({
+  id: '/portal',
+  path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgramsRoute = ProgramsRouteImport.update({
@@ -142,6 +148,7 @@ const DashboardTransactionsIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/portal': typeof PortalRouteRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
@@ -164,6 +171,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/portal': typeof PortalRouteRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/portal': typeof PortalRouteRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/portal'
     | '/about'
     | '/contact'
     | '/events'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/portal'
     | '/about'
     | '/contact'
     | '/events'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/portal'
     | '/about'
     | '/contact'
     | '/events'
@@ -282,6 +294,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  PortalRouteRoute: typeof PortalRouteRoute
   AboutRoute: typeof AboutRoute
   ContactRoute: typeof ContactRoute
   EventsRoute: typeof EventsRouteWithChildren
@@ -347,6 +360,13 @@ declare module '@tanstack/react-router' {
       path: '/news'
       fullPath: '/news'
       preLoaderRoute: typeof NewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/programs': {
@@ -497,6 +517,7 @@ const NewsRouteWithChildren = NewsRoute._addFileChildren(NewsRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  PortalRouteRoute: PortalRouteRoute,
   AboutRoute: AboutRoute,
   ContactRoute: ContactRoute,
   EventsRoute: EventsRouteWithChildren,

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { KeyRound, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -19,9 +19,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
 import { IdCardDialog } from "@/features/dashboard/id-card";
 import { MemberFormDialog } from "@/features/dashboard/member-form";
+import { AccountDialog } from "@/features/dashboard/account-dialog";
 import { PageHeader } from "@/features/dashboard/page-header";
 import { mediaUrl } from "@/services/api-client";
-import { deleteMember } from "@/services/mzt-api";
+import { bulkGenerateAccounts, deleteMember } from "@/services/mzt-api";
 import { membersQuery, queryKeys } from "@/services/queries";
 import type { Member } from "@/types/api";
 
@@ -36,6 +37,18 @@ function MembersPage() {
   const [editing, setEditing] = useState<Member | null>(null);
   const [deleting, setDeleting] = useState<Member | null>(null);
   const [printing, setPrinting] = useState<Member | null>(null);
+  const [accountMember, setAccountMember] = useState<Member | null>(null);
+
+  const bulkMutation = useMutation({
+    mutationFn: () => bulkGenerateAccounts(),
+    onSuccess: (result) => {
+      toast.success(`Bulk generate selesai: ${result.created} dibuat, ${result.skipped} dilewati`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.members });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Bulk generate gagal");
+    },
+  });
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteMember(deleting!.id_users),
@@ -122,6 +135,16 @@ function MembersPage() {
             type="button"
             variant="ghost"
             size="icon"
+            className="rounded-lg"
+            aria-label={`Manage account for ${row.nama}`}
+            onClick={() => setAccountMember(row)}
+          >
+            <KeyRound aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             className="rounded-lg text-destructive hover:text-destructive"
             aria-label={`Delete ${row.nama}`}
             onClick={() => setDeleting(row)}
@@ -139,16 +162,29 @@ function MembersPage() {
         title="Members"
         description="Manage the member registry across all branches."
         actions={
-          <Button
-            className="rounded-full"
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <Plus aria-hidden />
-            New member
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              disabled={bulkMutation.isPending}
+              onClick={() => bulkMutation.mutate()}
+            >
+              {bulkMutation.isPending ? (
+                <Skeleton className="size-4 rounded-full bg-primary-foreground/40" />
+              ) : null}
+              Bulk generate account
+            </Button>
+            <Button
+              className="rounded-full"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <Plus aria-hidden />
+              New member
+            </Button>
+          </>
         }
       />
 
@@ -204,6 +240,11 @@ function MembersPage() {
       </AlertDialog>
 
       <IdCardDialog member={printing} onOpenChange={(open) => !open && setPrinting(null)} />
+
+      <AccountDialog
+        member={accountMember}
+        onOpenChange={(open) => !open && setAccountMember(null)}
+      />
     </div>
   );
 }

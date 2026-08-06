@@ -1,12 +1,20 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { LoginForm } from "@/features/auth/login-form";
 import { getStoredToken } from "@/services/api-client";
+import { homePathFor } from "@/lib/roles";
+import type { AuthUser } from "@/types/api";
 import { ORG } from "@/constants/content";
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: ({ location }) => {
+  beforeLoad: ({ context, location }) => {
     if (getStoredToken()) {
-      throw redirect({ to: "/dashboard", replace: true, from: location.href });
+      const cached = context.queryClient.getQueryData<{ user?: AuthUser }>(["current-user"]);
+      const user = cached?.user;
+      throw redirect({
+        to: user ? homePathFor(user) : "/portal",
+        replace: true,
+        from: location.href,
+      });
     }
   },
   head: () => ({

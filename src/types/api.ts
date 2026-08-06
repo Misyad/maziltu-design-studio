@@ -46,6 +46,8 @@ export interface AuthUser {
   foto: string | null;
   /** Only present on GET /user (not on login). Holds `barcode` for ID cards. */
   data?: UserProfileData | null;
+  /** Phase 1 — force a password change on first login. */
+  must_change_password?: boolean;
 }
 
 export interface LoginRequest {
@@ -204,4 +206,57 @@ export interface ContactRequest {
   nama: string;
   email: string;
   pesan: string;
+}
+
+/* ------------------------------------------------------------ portal (Phase 1) */
+
+/** Shape of GET /api/profile (Portal Alumni). */
+export interface AlumniProfile {
+  id: number;
+  name: string;
+  id_anggota: string;
+  email: string | null;
+  no_hp: string | null;
+  alamat: string | null;
+  pekerjaan: string | null;
+  tempat_lahir: string | null;
+  niqobah: string | null;
+  tahun_masuk: string | null;
+  tahun_keluar: string | null;
+  foto: string | null;
+  status: number | string;
+  barcode: string | null;
+}
+
+/** Editable fields for PUT /profile (Phase 1). */
+export interface ProfileUpdateRequest {
+  no_hp?: string;
+  email?: string;
+  alamat?: string;
+  pekerjaan?: string;
+  tempat_lahir?: string;
+}
+
+/** Payload for PUT /password. */
+export interface PasswordChangeRequest {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}
+
+/** Shape of GET /id-card (QR encodes id_anggota). */
+export interface IdCardData {
+  id: number;
+  id_anggota: string;
+  name: string;
+  foto: string | null;
+  niqobah: string | null;
+  status: number | string;
+  barcode: string | null;
+}
+
+/** Result of POST /members/bulk-account. */
+export interface BulkGenerateResult {
+  created: number;
+  skipped: number;
 }

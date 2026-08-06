@@ -10,12 +10,15 @@ import {
   fetchEvent,
   fetchEvents,
   fetchEventTanggal,
+  fetchIdCard,
   fetchMember,
   fetchMembers,
+  fetchMe,
   fetchMztInfo,
   fetchNews,
   fetchNewsItem,
   fetchPesantrenInfo,
+  fetchProfile,
   fetchPublicCarousel,
   fetchPublicEvent,
   fetchPublicEvents,
@@ -50,6 +53,8 @@ export const queryKeys = {
   publicNewsItem: (id: number | string) => ["public", "news", id] as const,
   publicCarousel: ["public", "carousel"] as const,
   publicStats: ["public", "stats"] as const,
+  profile: ["profile"] as const,
+  idCard: ["id-card"] as const,
 };
 
 export const currentUserQuery = () =>
@@ -140,3 +145,13 @@ export const publicCarouselQuery = () =>
 /** PUBLIC — safe to use on the marketing site. */
 export const publicStatsQuery = () =>
   queryOptions({ queryKey: queryKeys.publicStats, queryFn: fetchPublicStats, retry: 0 });
+
+/** PORTAL — current authenticated identity (Phase 1). */
+export const meQuery = () => queryOptions({ queryKey: queryKeys.currentUser, queryFn: fetchMe });
+
+/** PORTAL — authenticated member profile (Phase 1). */
+export const profileQuery = () =>
+  queryOptions({ queryKey: queryKeys.profile, queryFn: fetchProfile });
+
+/** PORTAL — authenticated ID card (Phase 1). */
+export const idCardQuery = () => queryOptions({ queryKey: queryKeys.idCard, queryFn: fetchIdCard });

@@ -1,9 +1,20 @@
-import { apiDelete, apiGet, apiGetRaw, apiPost, apiPostRaw, setStoredToken } from "./api-client";
+import {
+  apiDelete,
+  apiGet,
+  apiGetRaw,
+  apiPost,
+  apiPostRaw,
+  apiPut,
+  apiPutRaw,
+  setStoredToken,
+} from "./api-client";
 import type {
   ActivityLogEntry,
+  AlumniProfile,
   AttendanceRecord,
   AttendanceRequest,
   AuthUser,
+  BulkGenerateResult,
   CarouselSlide,
   ContactRequest,
   DashboardCalendarEntry,
@@ -11,11 +22,14 @@ import type {
   DashboardStats,
   EventItem,
   EventTanggal,
+  IdCardData,
   LoginRequest,
   LoginResponse,
   Member,
   NewsItem,
   OrgInfo,
+  PasswordChangeRequest,
+  ProfileUpdateRequest,
   PublicStats,
   TransactionRecord,
 } from "@/types/api";
@@ -135,3 +149,31 @@ export const fetchUserActivityLog = (userId: number | string) =>
 /* Backend note: POST /profile currently writes columns that don't exist on
    data_users. Prefer updateMember(id_users, form) until that is fixed. */
 export const updateProfile = (form: FormData) => apiPost<Member>("/profile", form);
+
+/* -------------------------------------------------- portal (Phase 1) */
+
+export function fetchMe() {
+  return apiGetRaw<{ user: AuthUser }>("/me").then((res) => res.user);
+}
+
+export const fetchProfile = () => apiGet<AlumniProfile>("/profile");
+export const fetchIdCard = () => apiGet<IdCardData>("/id-card");
+export const updateProfileJson = (payload: ProfileUpdateRequest | FormData) =>
+  apiPut<AlumniProfile>("/profile", payload);
+export const changePassword = (payload: PasswordChangeRequest) =>
+  apiPutRaw<{ success: boolean; message?: string }>("/password", payload);
+
+export const generateAccount = (idUsers: number | string) =>
+  apiPostRaw<{ success: boolean; message?: string; password?: string }>(
+    `/members/${idUsers}/account`,
+  );
+
+export const bulkGenerateAccounts = () => apiPost<BulkGenerateResult>("/members/bulk-account");
+export const resetAccount = (idUsers: number | string) =>
+  apiPutRaw<{ success: boolean; message?: string; password?: string }>(
+    `/members/${idUsers}/account`,
+  );
+export const setAccountStatus = (idUsers: number | string, isActive: "1" | "0") =>
+  apiPutRaw<{ success: boolean; message?: string }>(`/members/${idUsers}/account/status`, {
+    is_active: isActive,
+  });

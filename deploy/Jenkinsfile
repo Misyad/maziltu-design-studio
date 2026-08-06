@@ -116,19 +116,50 @@ pipeline {
             }
         }
 
+        stage('Migrate DB') {
+            steps {
+                // Apply additive schema changes after the stack is up and verify
+                // them against information_schema (single source of truth), BEFORE
+                // the health check gates the build. `migrate --force` is idempotent
+                // (adds only the missing nullable columns). No grep on migration
+                // names: columns are the ground truth.
+                sh '''
+                    set -e
+                    cd "$DEPLOY_DIR"
+                    echo "== run migration =="
+                    timeout 180 docker compose exec -T backend \
+                        php artisan migrate --force --no-interaction
+
+                    echo "== verify audit columns exist (information_schema) =="
+                    timeout 120 docker compose exec -T db sh -c '
+                        exec mysql -uroot -p"$MARIADB_ROOT_PASSWORD" -N -e \
+                        "SELECT GROUP_CONCAT(COLUMN_NAME) \
+                           FROM information_schema.COLUMNS \
+                          WHERE TABLE_SCHEMA=\"$MARIADB_DATABASE\" \
+                            AND TABLE_NAME=\"users\" \
+                            AND COLUMN_NAME IN (\"last_login\",\"password_changed_at\",\"login_count\");"'
+                '''
+            }
+        }
+
         stage('Health check') {
             steps {
-                // Give containers a moment, then probe the public endpoints.
+                // Give containers a moment, then probe /api/public/stats. This
+                // endpoint reads the database (Event/event_status/DataUser counts)
+                // and returns 200 + success:true only when the DB is reachable, so
+                // the gate exercises a real DB round-trip.
                 script {
                     timeout(time: 2, unit: 'MINUTES') {
                         sh '''
                             set +e
                             sleep 10
                             docker compose -f "$DEPLOY_DIR/docker-compose.yml" ps
-                            api=$(curl -sS -o /dev/null -w "%{http_code}" \
+                            code=$(curl -sS -o /tmp/mzt_health.json -w "%{http_code}" \
                                 "http://${HOST_IP}:${PUBLIC_PORT}/api/public/stats")
-                            echo "  /api/public/stats -> $api"
-                            [ "$api" = "200" ] || exit 1
+                            echo "  /api/public/stats -> code=$code"
+                            echo "  body: $(cat /tmp/mzt_health.json)"
+                            [ "$code" = "200" ] || exit 1
+                            grep -q '"success":true' /tmp/mzt_health.json || exit 1
                         '''
                     }
                 }

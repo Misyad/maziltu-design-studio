@@ -128,7 +128,11 @@ function RootComponent() {
   const isAppShell = useRouterState({
     select: (state) => {
       const { pathname } = state.location;
-      return pathname.startsWith("/dashboard") || pathname.startsWith("/login");
+      return (
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/portal") ||
+        pathname.startsWith("/login")
+      );
     },
   });
 
