@@ -142,17 +142,10 @@ pipeline {
                          WHERE TABLE_SCHEMA='$DB' AND TABLE_NAME='users' \
                            AND COLUMN_NAME IN ('last_login','password_changed_at','login_count');"
 
-                    echo "== verify Phase 2A EMS schema (orders table + events columns) =="
-                    timeout 120 docker compose exec -T db mariadb -uroot -p"$PW" -N -e \
-                        "SELECT CONCAT(
-                           (SELECT COUNT(*) FROM information_schema.TABLES
-                             WHERE TABLE_SCHEMA='$DB' AND TABLE_NAME='orders'),
-                           '|',
-                           (SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY COLUMN_NAME) FROM information_schema.COLUMNS
-                             WHERE TABLE_SCHEMA='$DB' AND TABLE_NAME='events'
-                               AND COLUMN_NAME IN ('kuota','venue','visibility','registrasi_dibuka','registrasi_ditutup','harga_amount'))) AS phase2a;" \
-                        | grep -qE '^1\|harga_amount,kuota,registrasi_dibuka,registrasi_ditutup,venue,visibility$' \
-                        || { echo "Phase 2A schema missing (orders table or events columns)"; exit 1; }
+echo "== verify Phase 2A EMS schema (orders table + events columns) =="
+                    phase2a=$(timeout 120 docker compose exec -T db mariadb -uroot -p"$PW" -N -e "SELECT CONCAT((SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB' AND TABLE_NAME='orders'),'|',(SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY COLUMN_NAME) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$DB' AND TABLE_NAME='events' AND COLUMN_NAME IN ('kuota','venue','visibility','registrasi_dibuka','registrasi_ditutup','harga_amount')))" | tr -d '\r')
+                    echo "phase2a => ${phase2a}"
+                    if [ "$phase2a" != "1|harga_amount,kuota,registrasi_dibuka,registrasi_ditutup,venue,visibility" ]; then echo "Phase 2A schema missing (orders table or events columns)"; exit 1; fi
                 '''
             }
         }
