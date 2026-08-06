@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { changePassword } from "@/services/mzt-api";
-import { queryKeys } from "@/services/queries";
+import { meQuery, queryKeys } from "@/services/queries";
+import { homePathFor } from "@/lib/roles";
 import { PageHeader } from "@/features/dashboard/page-header";
 
 const schema = z
@@ -53,7 +54,8 @@ function PortalChangePassword() {
     onSuccess: async () => {
       toast.success("Password berhasil diubah");
       await queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
-      await router.navigate({ to: "/portal" });
+      const user = await queryClient.fetchQuery(meQuery());
+      await router.navigate({ to: homePathFor(user) });
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Gagal mengubah password");
