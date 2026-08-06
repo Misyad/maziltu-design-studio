@@ -131,13 +131,16 @@ pipeline {
                         php artisan migrate --force --no-interaction
 
                     echo "== verify audit columns exist (information_schema) =="
-                    timeout 120 docker compose exec -T db sh -c '
-                        exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -N -e \
-                        "SELECT GROUP_CONCAT(COLUMN_NAME) \
-                           FROM information_schema.COLUMNS \
-                          WHERE TABLE_SCHEMA=\"$MARIADB_DATABASE\" \
-                            AND TABLE_NAME=\"users\" \
-                            AND COLUMN_NAME IN (\"last_login\",\"password_changed_at\",\"login_count\");"'
+                    # Credentials are read from the host .env (not the container env)
+                    # so we can run `mariadb` directly without a nested `sh -c`, which
+                    # previously mangled the SQL quoting. MariaDB 11.4 ships the
+                    # `mariadb` client (no `mysql` binary).
+                    DB=$(sed -n 's/^MYSQL_DATABASE=//p' "$DEPLOY_DIR/.env" | tr -d '\r')
+                    PW=$(sed -n 's/^MYSQL_ROOT_PASSWORD=//p' "$DEPLOY_DIR/.env" | tr -d '\r')
+                    timeout 120 docker compose exec -T db mariadb -uroot -p"$PW" -N -e \
+                        "SELECT GROUP_CONCAT(COLUMN_NAME) FROM information_schema.COLUMNS \
+                         WHERE TABLE_SCHEMA='$DB' AND TABLE_NAME='users' \
+                           AND COLUMN_NAME IN ('last_login','password_changed_at','login_count');"
                 '''
             }
         }
