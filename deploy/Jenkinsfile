@@ -108,6 +108,75 @@ pipeline {
             }
         }
 
+        stage('Backup database') {
+            steps {
+                // ADR-014: a DB backup is a deployment precondition, not a manual
+                // step. Run the dump from the `db` container (mariadb-dump) BEFORE
+                // any schema change, so a failed migration can always be rolled
+                // back to a known-good state. If this fails the pipeline stops and
+                // does NOT proceed to Migrate DB.
+                // Outputs a .sql.gz + a .json metadata sidecar (format ADR-014).
+                sh '''
+                    set -eu
+                    ENV_FILE="$DEPLOY_DIR/.env"
+                    BK_DIR="$DEPLOY_DIR/backups"
+                    DB_CONTAINER="mzt-db-1"
+
+                    [ -f "$ENV_FILE" ] || { echo "missing $ENV_FILE"; exit 1; }
+                    mkdir -p "$BK_DIR"
+
+                    # Read credentials from the host .env (never hardcoded).
+                    db=$(sed -n 's/^MYSQL_DATABASE=//p' "$ENV_FILE" | tr -d '\r' | tr -d '"' | tr -d "'" || true)
+                    user=$(sed -n 's/^MYSQL_USER=//p' "$ENV_FILE" | tr -d '\r' | tr -d '"' | tr -d "'" || true)
+                    pw=$(sed -n 's/^MYSQL_PASSWORD=//p' "$ENV_FILE" | tr -d '\r' | tr -d '"' | tr -d "'" || true)
+                    [ -n "$db" ] && [ -n "$user" ] && [ -n "$pw" ] || { echo "cannot read DB credentials from $ENV_FILE"; exit 1; }
+
+                    stamp=$(TZ=Asia/Jakarta date +%Y%m%d_%H%M%S)
+                    out="$BK_DIR/mzt_pre_migrate_${stamp}.sql.gz"
+                    meta="$BK_DIR/mzt_pre_migrate_${stamp}.json"
+                    tmp="$BK_DIR/.mzt_pre_migrate.tmp.sql"
+
+                    echo "== pre-migrate dump from db container =="
+                    docker exec "$DB_CONTAINER" sh -c "mariadb-dump -u'$user' -p'$pw' --single-transaction --routines '$db'" > "$tmp"
+                    rc=$?
+                    if [ "$rc" -ne 0 ]; then
+                        rm -f "$tmp"
+                        echo "mariadb-dump failed (rc=$rc) - aborting deploy"
+                        exit 1
+                    fi
+
+                    gzip -c "$tmp" > "$out"
+                    rm -f "$tmp"
+
+                    echo "== validate backup =="
+                    if [ -s "$out" ] && gzip -t "$out" && gzip -dc "$out" | grep -q 'event_status'; then
+                        echo "backup OK: $out ($(du -h "$out" | cut -f1))"
+                    else
+                        echo "backup invalid or missing expected view (event_status)"
+                        exit 1
+                    fi
+
+                    echo "== write metadata sidecar =="
+                    git_be=$(cd "$DEPLOY_DIR/backend" && git rev-parse --short HEAD 2>/dev/null || echo unknown)
+                    git_fe=$(cd "$DEPLOY_DIR/frontend" && git rev-parse --short HEAD 2>/dev/null || echo unknown)
+                    ts=$(TZ=Asia/Jakarta date "+%Y-%m-%dT%H:%M:%S%:z")
+                    printf '{"created_at":"%s","pipeline":"mzt-deploy","git_backend":"%s","git_frontend":"%s","reason":"pre-migrate","database":"%s","compressed":true}\n' "$ts" "$git_be" "$git_fe" "$db" > "$meta"
+
+                    if [ -s "$meta" ] && grep -q '"git_backend"' "$meta"; then
+                        echo "metadata OK: $meta"
+                    else
+                        echo "metadata invalid or empty"
+                        exit 1
+                    fi
+
+                    echo "== retention: prune backups older than 14 days =="
+                    find "$BK_DIR" -name 'mzt_pre_migrate_*.sql.gz' -mtime +14 -delete
+                    find "$BK_DIR" -name 'mzt_pre_migrate_*.json' -mtime +14 -delete
+                    echo "pruned backups older than 14 days"
+                '''
+            }
+        }
+
         stage('Deploy stack') {
             steps {
                 dir("$DEPLOY_DIR") {
@@ -118,25 +187,35 @@ pipeline {
 
         stage('Migrate DB') {
             steps {
-                // Apply additive schema changes after the stack is up and verify
-                // them against information_schema (single source of truth), BEFORE
-                // the health check gates the build. `migrate --force` is idempotent
-                // (adds only the missing nullable columns). No grep on migration
-                // names: columns are the ground truth.
+                // Apply additive schema changes after the stack is up. `migrate
+                // --force` is idempotent (adds only the missing nullable columns).
+                // Schema verification is a separate stage (Verify schema).
                 sh '''
                     set -e
                     cd "$DEPLOY_DIR"
                     echo "== run migration =="
                     timeout 180 docker compose exec -T backend \
                         php artisan migrate --force --no-interaction
+                '''
+            }
+        }
 
-                    echo "== verify audit columns exist (information_schema) =="
+        stage('Verify schema') {
+            steps {
+                // Schema-only verification via information_schema (single source
+                // of truth). Checks tables/columns/migrations only — NO endpoint
+                // or business-logic tests (those live in Health check / E2E).
+                sh '''
+                    set -e
+                    cd "$DEPLOY_DIR"
                     # Credentials are read from the host .env (not the container env)
                     # so we can run `mariadb` directly without a nested `sh -c`, which
                     # previously mangled the SQL quoting. MariaDB 11.4 ships the
                     # `mariadb` client (no `mysql` binary).
                     DB=$(sed -n 's/^MYSQL_DATABASE=//p' "$DEPLOY_DIR/.env" | tr -d '\r')
                     PW=$(sed -n 's/^MYSQL_ROOT_PASSWORD=//p' "$DEPLOY_DIR/.env" | tr -d '\r')
+
+                    echo "== verify audit columns exist (information_schema) =="
                     timeout 120 docker compose exec -T db mariadb -uroot -p"$PW" -N -e \
                         "SELECT GROUP_CONCAT(COLUMN_NAME) FROM information_schema.COLUMNS \
                          WHERE TABLE_SCHEMA='$DB' AND TABLE_NAME='users' \
@@ -152,21 +231,26 @@ pipeline {
 
         stage('Health check') {
             steps {
-                // Give containers a moment, then probe /api/public/stats. This
-                // endpoint reads the database (Event/event_status/DataUser counts)
-                // and returns 200 + success:true only when the DB is reachable, so
-                // the gate exercises a real DB round-trip.
+                // Two-level health check (separate from Verify schema, which is
+                // schema-only):
+                //   Level 1 (infrastructure): containers running + HTTP 200.
+                //   Level 2 (application): /api/public/stats -> success:true, which
+                //   only holds when the DB is readable, so it exercises a real DB
+                //   round-trip.
                 script {
                     timeout(time: 2, unit: 'MINUTES') {
                         sh '''
                             set +e
                             sleep 10
+                            echo "== [Level 1] containers + HTTP status =="
                             docker compose -f "$DEPLOY_DIR/docker-compose.yml" ps
                             code=$(curl -sS -o /tmp/mzt_health.json -w "%{http_code}" \
                                 "http://${HOST_IP}:${PUBLIC_PORT}/api/public/stats")
                             echo "  /api/public/stats -> code=$code"
-                            echo "  body: $(cat /tmp/mzt_health.json)"
                             [ "$code" = "200" ] || exit 1
+
+                            echo "== [Level 2] application (DB readable, success:true) =="
+                            echo "  body: $(cat /tmp/mzt_health.json)"
                             grep -q '"success":true' /tmp/mzt_health.json || exit 1
                         '''
                     }
