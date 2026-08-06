@@ -127,6 +127,39 @@ export interface EventItem {
   tanggal_mulai: string;
   tanggal_selesai: string;
   is_active: number | boolean;
+  /** Phase 2A — registration/capacity fields (additive). */
+  kuota?: number | null;
+  venue?: string | null;
+  visibility?: "public" | "internal" | "private";
+  registrasi_dibuka?: string | null;
+  registrasi_ditutup?: string | null;
+  harga_amount?: number | string | null;
+}
+
+/** Order status (S2 — VARCHAR + constants, mirrors app/Enums/OrderStatus.php). */
+export type OrderStatus =
+  "draft" | "registered" | "confirmed" | "checked_in" | "finished" | "cancelled";
+
+/** Payment status (mirrors app/Enums/PaymentStatus.php). */
+export type PaymentStatus = "pending" | "waiting_verification" | "paid" | "rejected" | "refund";
+
+/** Shape of an `orders` row (Phase 2A — root aggregate of EMS). */
+export interface Order {
+  id: number;
+  uuid: string;
+  nomor_order: string;
+  id_event: number;
+  id_anggota: string;
+  created_by: number | null;
+  updated_by: number | null;
+  event_name: string;
+  event_price: number | string;
+  event_start_at: string | null;
+  total_amount: number | string;
+  status_registrasi: OrderStatus;
+  payment_status: PaymentStatus;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Attendance day for an event (Tanggal_event row). */

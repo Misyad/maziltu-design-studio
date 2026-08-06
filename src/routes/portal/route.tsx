@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   LogOut,
   Newspaper,
+  Ticket,
   UserRound,
 } from "lucide-react";
 import { Suspense, useEffect } from "react";
@@ -73,6 +74,7 @@ const NAV_ITEMS: readonly PortalNavItem[] = [
   { to: "/portal/profil", label: "Profil Saya", icon: UserRound },
   { to: "/portal/id-card", label: "ID Card", icon: CreditCard },
   { to: "/portal/event", label: "Event", icon: CalendarDays },
+  { to: "/portal/orders", label: "Order Saya", icon: Ticket },
   { to: "/portal/berita", label: "Berita", icon: Newspaper },
   { to: "/portal/ubah-password", label: "Ubah Password", icon: KeyRound },
 ];

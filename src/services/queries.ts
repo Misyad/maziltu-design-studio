@@ -15,8 +15,10 @@ import {
   fetchMembers,
   fetchMe,
   fetchMztInfo,
+  fetchMyOrders,
   fetchNews,
   fetchNewsItem,
+  fetchOrder,
   fetchPesantrenInfo,
   fetchProfile,
   fetchPublicCarousel,
@@ -49,6 +51,8 @@ export const queryKeys = {
   activityLog: ["activity-log"] as const,
   publicEvents: ["public", "events"] as const,
   publicEvent: (id: number | string) => ["public", "events", id] as const,
+  myOrders: ["my-orders"] as const,
+  order: (uuid: string) => ["orders", uuid] as const,
   publicNews: ["public", "news"] as const,
   publicNewsItem: (id: number | string) => ["public", "news", id] as const,
   publicCarousel: ["public", "carousel"] as const,
@@ -155,3 +159,11 @@ export const profileQuery = () =>
 
 /** PORTAL — authenticated ID card (Phase 1). */
 export const idCardQuery = () => queryOptions({ queryKey: queryKeys.idCard, queryFn: fetchIdCard });
+
+/** PORTAL — my orders (Phase 2A). */
+export const myOrdersQuery = () =>
+  queryOptions({ queryKey: queryKeys.myOrders, queryFn: fetchMyOrders });
+
+/** PORTAL — single order by UUID (Phase 2A). */
+export const orderQuery = (uuid: string) =>
+  queryOptions({ queryKey: queryKeys.order(uuid), queryFn: () => fetchOrder(uuid) });

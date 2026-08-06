@@ -26,6 +26,7 @@ import { Route as PortalIndexRouteImport } from './routes/portal/index'
 import { Route as PortalBeritaRouteImport } from './routes/portal/berita'
 import { Route as PortalEventRouteImport } from './routes/portal/event'
 import { Route as PortalIdCardRouteImport } from './routes/portal/id-card'
+import { Route as PortalOrdersRouteImport } from './routes/portal/orders'
 import { Route as PortalProfilRouteImport } from './routes/portal/profil'
 import { Route as PortalUbahPasswordRouteImport } from './routes/portal/ubah-password'
 import { Route as DashboardActivityIndexRouteImport } from './routes/dashboard/activity/index'
@@ -37,6 +38,7 @@ import { Route as DashboardMembersIndexRouteImport } from './routes/dashboard/me
 import { Route as DashboardNewsIndexRouteImport } from './routes/dashboard/news/index'
 import { Route as DashboardProfileIndexRouteImport } from './routes/dashboard/profile/index'
 import { Route as DashboardTransactionsIndexRouteImport } from './routes/dashboard/transactions/index'
+import { Route as PortalOrdersUuidRouteImport } from './routes/portal/orders.$uuid'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -123,6 +125,11 @@ const PortalIdCardRoute = PortalIdCardRouteImport.update({
   path: '/id-card',
   getParentRoute: () => PortalRouteRoute,
 } as any)
+const PortalOrdersRoute = PortalOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PortalProfilRoute = PortalProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -180,6 +187,11 @@ const DashboardTransactionsIndexRoute =
     path: '/transactions/',
     getParentRoute: () => DashboardRouteRoute,
   } as any)
+const PortalOrdersUuidRoute = PortalOrdersUuidRouteImport.update({
+  id: '/$uuid',
+  path: '/$uuid',
+  getParentRoute: () => PortalOrdersRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -197,10 +209,12 @@ export interface FileRoutesByFullPath {
   '/portal/berita': typeof PortalBeritaRoute
   '/portal/event': typeof PortalEventRoute
   '/portal/id-card': typeof PortalIdCardRoute
+  '/portal/orders': typeof PortalOrdersRouteWithChildren
   '/portal/profil': typeof PortalProfilRoute
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
   '/dashboard/content/': typeof DashboardContentIndexRoute
@@ -225,10 +239,12 @@ export interface FileRoutesByTo {
   '/portal/berita': typeof PortalBeritaRoute
   '/portal/event': typeof PortalEventRoute
   '/portal/id-card': typeof PortalIdCardRoute
+  '/portal/orders': typeof PortalOrdersRouteWithChildren
   '/portal/profil': typeof PortalProfilRoute
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard': typeof DashboardIndexRoute
   '/portal': typeof PortalIndexRoute
+  '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity': typeof DashboardActivityIndexRoute
   '/dashboard/attendance': typeof DashboardAttendanceIndexRoute
   '/dashboard/content': typeof DashboardContentIndexRoute
@@ -256,10 +272,12 @@ export interface FileRoutesById {
   '/portal/berita': typeof PortalBeritaRoute
   '/portal/event': typeof PortalEventRoute
   '/portal/id-card': typeof PortalIdCardRoute
+  '/portal/orders': typeof PortalOrdersRouteWithChildren
   '/portal/profil': typeof PortalProfilRoute
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
   '/dashboard/content/': typeof DashboardContentIndexRoute
@@ -288,10 +306,12 @@ export interface FileRouteTypes {
     | '/portal/berita'
     | '/portal/event'
     | '/portal/id-card'
+    | '/portal/orders'
     | '/portal/profil'
     | '/portal/ubah-password'
     | '/dashboard/'
     | '/portal/'
+    | '/portal/orders/$uuid'
     | '/dashboard/activity/'
     | '/dashboard/attendance/'
     | '/dashboard/content/'
@@ -316,10 +336,12 @@ export interface FileRouteTypes {
     | '/portal/berita'
     | '/portal/event'
     | '/portal/id-card'
+    | '/portal/orders'
     | '/portal/profil'
     | '/portal/ubah-password'
     | '/dashboard'
     | '/portal'
+    | '/portal/orders/$uuid'
     | '/dashboard/activity'
     | '/dashboard/attendance'
     | '/dashboard/content'
@@ -346,10 +368,12 @@ export interface FileRouteTypes {
     | '/portal/berita'
     | '/portal/event'
     | '/portal/id-card'
+    | '/portal/orders'
     | '/portal/profil'
     | '/portal/ubah-password'
     | '/dashboard/'
     | '/portal/'
+    | '/portal/orders/$uuid'
     | '/dashboard/activity/'
     | '/dashboard/attendance/'
     | '/dashboard/content/'
@@ -495,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalIdCardRouteImport
       parentRoute: typeof PortalRouteRoute
     }
+    '/portal/orders': {
+      id: '/portal/orders'
+      path: '/orders'
+      fullPath: '/portal/orders'
+      preLoaderRoute: typeof PortalOrdersRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/portal/profil': {
       id: '/portal/profil'
       path: '/profil'
@@ -572,6 +603,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardTransactionsIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/portal/orders/$uuid': {
+      id: '/portal/orders/$uuid'
+      path: '/$uuid'
+      fullPath: '/portal/orders/$uuid'
+      preLoaderRoute: typeof PortalOrdersUuidRouteImport
+      parentRoute: typeof PortalOrdersRoute
+    }
   }
 }
 
@@ -605,10 +643,23 @@ const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
   DashboardRouteRouteChildren,
 )
 
+interface PortalOrdersRouteChildren {
+  PortalOrdersUuidRoute: typeof PortalOrdersUuidRoute
+}
+
+const PortalOrdersRouteChildren: PortalOrdersRouteChildren = {
+  PortalOrdersUuidRoute: PortalOrdersUuidRoute,
+}
+
+const PortalOrdersRouteWithChildren = PortalOrdersRoute._addFileChildren(
+  PortalOrdersRouteChildren,
+)
+
 interface PortalRouteRouteChildren {
   PortalBeritaRoute: typeof PortalBeritaRoute
   PortalEventRoute: typeof PortalEventRoute
   PortalIdCardRoute: typeof PortalIdCardRoute
+  PortalOrdersRoute: typeof PortalOrdersRouteWithChildren
   PortalProfilRoute: typeof PortalProfilRoute
   PortalUbahPasswordRoute: typeof PortalUbahPasswordRoute
   PortalIndexRoute: typeof PortalIndexRoute
@@ -618,6 +669,7 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalBeritaRoute: PortalBeritaRoute,
   PortalEventRoute: PortalEventRoute,
   PortalIdCardRoute: PortalIdCardRoute,
+  PortalOrdersRoute: PortalOrdersRouteWithChildren,
   PortalProfilRoute: PortalProfilRoute,
   PortalUbahPasswordRoute: PortalUbahPasswordRoute,
   PortalIndexRoute: PortalIndexRoute,

@@ -32,7 +32,12 @@ const eventSchema = z.object({
     .min(1, "Slug is required")
     .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
   lokasi: z.string().min(1, "Location is required"),
+  venue: z.string().optional(),
   harga: z.string(),
+  kuota: z.coerce.number().int().min(0).optional(),
+  visibility: z.enum(["public", "internal", "private"]),
+  registrasi_dibuka: z.string().optional(),
+  registrasi_ditutup: z.string().optional(),
   deskripsi: z.string().min(1, "Description is required"),
   tanggal_mulai: z.string().min(1, "Start date is required"),
   tanggal_selesai: z.string().min(1, "End date is required"),
@@ -45,7 +50,12 @@ const EMPTY: EventValues = {
   judul_event: "",
   slug: "",
   lokasi: "",
+  venue: "",
   harga: "",
+  kuota: undefined,
+  visibility: "public",
+  registrasi_dibuka: "",
+  registrasi_ditutup: "",
   deskripsi: "",
   tanggal_mulai: "",
   tanggal_selesai: "",
@@ -57,7 +67,12 @@ function toValues(event: EventItem): EventValues {
     judul_event: event.judul_event,
     slug: event.slug,
     lokasi: event.lokasi,
+    venue: event.venue ?? "",
     harga: String(event.harga ?? ""),
+    kuota: typeof event.kuota === "number" ? event.kuota : undefined,
+    visibility: event.visibility ?? "public",
+    registrasi_dibuka: event.registrasi_dibuka ? event.registrasi_dibuka.slice(0, 16) : "",
+    registrasi_ditutup: event.registrasi_ditutup ? event.registrasi_ditutup.slice(0, 16) : "",
     deskripsi: event.deskripsi,
     tanggal_mulai: event.tanggal_mulai,
     tanggal_selesai: event.tanggal_selesai,
@@ -71,6 +86,12 @@ function toDMY(iso: string): string {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${day}/${month}/${date.getFullYear()}`;
+}
+
+/** Passes the datetime-local input through (naive local time); backend parses it. */
+function toDatetimeLocal(value: string | undefined): string | null {
+  if (!value) return null;
+  return value;
 }
 
 interface EventFormDialogProps {
@@ -106,7 +127,14 @@ export function EventFormDialog({ open, onOpenChange, event }: EventFormDialogPr
       form.append("judul_event", values.judul_event);
       form.append("slug", values.slug);
       form.append("lokasi", values.lokasi);
+      if (values.venue) form.append("venue", values.venue);
       if (values.harga) form.append("harga", values.harga);
+      if (values.kuota !== undefined) form.append("kuota", String(values.kuota));
+      form.append("visibility", values.visibility);
+      const dibuka = toDatetimeLocal(values.registrasi_dibuka);
+      const ditutup = toDatetimeLocal(values.registrasi_ditutup);
+      if (dibuka) form.append("registrasi_dibuka", dibuka);
+      if (ditutup) form.append("registrasi_ditutup", ditutup);
       form.append("deskripsi", values.deskripsi);
       form.append("tanggal", `${toDMY(values.tanggal_mulai)} - ${toDMY(values.tanggal_selesai)}`);
       form.append("tanggal_mulai", values.tanggal_mulai);
@@ -195,6 +223,15 @@ export function EventFormDialog({ open, onOpenChange, event }: EventFormDialogPr
                 <p className="mt-1.5 text-xs text-destructive">{errors.lokasi.message}</p>
               ) : null}
             </div>
+            <div>
+              <Label htmlFor="e-venue">Venue</Label>
+              <Input
+                id="e-venue"
+                className="mt-2"
+                placeholder="Venue / building"
+                {...register("venue")}
+              />
+            </div>
             <div className="sm:col-span-2">
               <Label htmlFor="e-slug">Slug</Label>
               <div className="mt-2 flex items-center gap-2">
@@ -244,6 +281,53 @@ export function EventFormDialog({ open, onOpenChange, event }: EventFormDialogPr
                   {watch("is_active") ? "Visible" : "Hidden"}
                 </span>
               </div>
+            </div>
+            <div>
+              <Label htmlFor="e-kuota">Capacity (kuota)</Label>
+              <Input
+                id="e-kuota"
+                type="number"
+                min={0}
+                className="mt-2"
+                placeholder="Unlimited if empty"
+                {...register("kuota")}
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Maximum number of accepted registrations.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="e-visibility">Visibility</Label>
+              <select
+                id="e-visibility"
+                className="mt-2 h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-ring"
+                {...register("visibility")}
+              >
+                <option value="public">Public</option>
+                <option value="internal">Internal (logged-in alumni)</option>
+                <option value="private">Private / invite only</option>
+              </select>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Public: shown to everyone. Internal: requires login. Private: not open in 2A.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="e-regdibuka">Registration opens</Label>
+              <Input
+                id="e-regdibuka"
+                type="datetime-local"
+                className="mt-2"
+                {...register("registrasi_dibuka")}
+              />
+            </div>
+            <div>
+              <Label htmlFor="e-regditutup">Registration closes</Label>
+              <Input
+                id="e-regditutup"
+                type="datetime-local"
+                className="mt-2"
+                {...register("registrasi_ditutup")}
+              />
             </div>
             <div>
               <Label htmlFor="e-tmulai">Start date</Label>

@@ -27,6 +27,7 @@ import type {
   LoginResponse,
   Member,
   NewsItem,
+  Order,
   OrgInfo,
   PasswordChangeRequest,
   ProfileUpdateRequest,
@@ -82,6 +83,16 @@ export const createEvent = (form: FormData) => apiPost<EventItem>("/events", for
 export const updateEvent = (id: number | string, form: FormData) =>
   apiPost<EventItem>(`/events/${id}`, form);
 export const deleteEvent = (id: number | string) => apiDelete<unknown>(`/events/${id}`);
+
+/* ----------------------------------------------------- registration (Phase 2A) */
+/* POST /events/{id}/register creates an order for the authenticated alumni.
+   Backend replies with `{ success, message, data }` and non-2xx on rejection
+   (409 duplicate / 403 closed / full), so callers must handle ApiError.status. */
+export const registerEvent = (id: number | string) =>
+  apiPostRaw<{ success: boolean; message?: string; data?: Order }>(`/events/${id}/register`);
+
+export const fetchMyOrders = () => apiGet<Order[]>("/my-orders");
+export const fetchOrder = (uuid: string) => apiGet<Order>(`/orders/${uuid}`);
 
 /* ------------------------------------------------------------------ news */
 
