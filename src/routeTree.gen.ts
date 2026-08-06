@@ -22,6 +22,12 @@ import { Route as ProgramsRouteImport } from './routes/programs'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as EventsIdRouteImport } from './routes/events.$id'
 import { Route as NewsIdRouteImport } from './routes/news.$id'
+import { Route as PortalIndexRouteImport } from './routes/portal/index'
+import { Route as PortalBeritaRouteImport } from './routes/portal/berita'
+import { Route as PortalEventRouteImport } from './routes/portal/event'
+import { Route as PortalIdCardRouteImport } from './routes/portal/id-card'
+import { Route as PortalProfilRouteImport } from './routes/portal/profil'
+import { Route as PortalUbahPasswordRouteImport } from './routes/portal/ubah-password'
 import { Route as DashboardActivityIndexRouteImport } from './routes/dashboard/activity/index'
 import { Route as DashboardAttendanceIndexRouteImport } from './routes/dashboard/attendance/index'
 import { Route as DashboardContentIndexRouteImport } from './routes/dashboard/content/index'
@@ -97,6 +103,36 @@ const NewsIdRoute = NewsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => NewsRoute,
 } as any)
+const PortalIndexRoute = PortalIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalBeritaRoute = PortalBeritaRouteImport.update({
+  id: '/berita',
+  path: '/berita',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalEventRoute = PortalEventRouteImport.update({
+  id: '/event',
+  path: '/event',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalIdCardRoute = PortalIdCardRouteImport.update({
+  id: '/id-card',
+  path: '/id-card',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalProfilRoute = PortalProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalUbahPasswordRoute = PortalUbahPasswordRouteImport.update({
+  id: '/ubah-password',
+  path: '/ubah-password',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const DashboardActivityIndexRoute = DashboardActivityIndexRouteImport.update({
   id: '/activity/',
   path: '/activity/',
@@ -148,7 +184,7 @@ const DashboardTransactionsIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
-  '/portal': typeof PortalRouteRoute
+  '/portal': typeof PortalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
@@ -158,7 +194,13 @@ export interface FileRoutesByFullPath {
   '/programs': typeof ProgramsRoute
   '/events/$id': typeof EventsIdRoute
   '/news/$id': typeof NewsIdRoute
+  '/portal/berita': typeof PortalBeritaRoute
+  '/portal/event': typeof PortalEventRoute
+  '/portal/id-card': typeof PortalIdCardRoute
+  '/portal/profil': typeof PortalProfilRoute
+  '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/portal/': typeof PortalIndexRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
   '/dashboard/content/': typeof DashboardContentIndexRoute
@@ -171,7 +213,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/portal': typeof PortalRouteRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
@@ -181,7 +222,13 @@ export interface FileRoutesByTo {
   '/programs': typeof ProgramsRoute
   '/events/$id': typeof EventsIdRoute
   '/news/$id': typeof NewsIdRoute
+  '/portal/berita': typeof PortalBeritaRoute
+  '/portal/event': typeof PortalEventRoute
+  '/portal/id-card': typeof PortalIdCardRoute
+  '/portal/profil': typeof PortalProfilRoute
+  '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/portal': typeof PortalIndexRoute
   '/dashboard/activity': typeof DashboardActivityIndexRoute
   '/dashboard/attendance': typeof DashboardAttendanceIndexRoute
   '/dashboard/content': typeof DashboardContentIndexRoute
@@ -196,7 +243,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
-  '/portal': typeof PortalRouteRoute
+  '/portal': typeof PortalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
@@ -206,7 +253,13 @@ export interface FileRoutesById {
   '/programs': typeof ProgramsRoute
   '/events/$id': typeof EventsIdRoute
   '/news/$id': typeof NewsIdRoute
+  '/portal/berita': typeof PortalBeritaRoute
+  '/portal/event': typeof PortalEventRoute
+  '/portal/id-card': typeof PortalIdCardRoute
+  '/portal/profil': typeof PortalProfilRoute
+  '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/portal/': typeof PortalIndexRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
   '/dashboard/content/': typeof DashboardContentIndexRoute
@@ -232,7 +285,13 @@ export interface FileRouteTypes {
     | '/programs'
     | '/events/$id'
     | '/news/$id'
+    | '/portal/berita'
+    | '/portal/event'
+    | '/portal/id-card'
+    | '/portal/profil'
+    | '/portal/ubah-password'
     | '/dashboard/'
+    | '/portal/'
     | '/dashboard/activity/'
     | '/dashboard/attendance/'
     | '/dashboard/content/'
@@ -245,7 +304,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/portal'
     | '/about'
     | '/contact'
     | '/events'
@@ -255,7 +313,13 @@ export interface FileRouteTypes {
     | '/programs'
     | '/events/$id'
     | '/news/$id'
+    | '/portal/berita'
+    | '/portal/event'
+    | '/portal/id-card'
+    | '/portal/profil'
+    | '/portal/ubah-password'
     | '/dashboard'
+    | '/portal'
     | '/dashboard/activity'
     | '/dashboard/attendance'
     | '/dashboard/content'
@@ -279,7 +343,13 @@ export interface FileRouteTypes {
     | '/programs'
     | '/events/$id'
     | '/news/$id'
+    | '/portal/berita'
+    | '/portal/event'
+    | '/portal/id-card'
+    | '/portal/profil'
+    | '/portal/ubah-password'
     | '/dashboard/'
+    | '/portal/'
     | '/dashboard/activity/'
     | '/dashboard/attendance/'
     | '/dashboard/content/'
@@ -294,7 +364,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
-  PortalRouteRoute: typeof PortalRouteRoute
+  PortalRouteRoute: typeof PortalRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   ContactRoute: typeof ContactRoute
   EventsRoute: typeof EventsRouteWithChildren
@@ -397,6 +467,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NewsIdRouteImport
       parentRoute: typeof NewsRoute
     }
+    '/portal/': {
+      id: '/portal/'
+      path: '/'
+      fullPath: '/portal/'
+      preLoaderRoute: typeof PortalIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/berita': {
+      id: '/portal/berita'
+      path: '/berita'
+      fullPath: '/portal/berita'
+      preLoaderRoute: typeof PortalBeritaRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/event': {
+      id: '/portal/event'
+      path: '/event'
+      fullPath: '/portal/event'
+      preLoaderRoute: typeof PortalEventRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/id-card': {
+      id: '/portal/id-card'
+      path: '/id-card'
+      fullPath: '/portal/id-card'
+      preLoaderRoute: typeof PortalIdCardRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/profil': {
+      id: '/portal/profil'
+      path: '/profil'
+      fullPath: '/portal/profil'
+      preLoaderRoute: typeof PortalProfilRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/ubah-password': {
+      id: '/portal/ubah-password'
+      path: '/ubah-password'
+      fullPath: '/portal/ubah-password'
+      preLoaderRoute: typeof PortalUbahPasswordRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/dashboard/activity/': {
       id: '/dashboard/activity/'
       path: '/activity'
@@ -493,6 +605,28 @@ const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
   DashboardRouteRouteChildren,
 )
 
+interface PortalRouteRouteChildren {
+  PortalBeritaRoute: typeof PortalBeritaRoute
+  PortalEventRoute: typeof PortalEventRoute
+  PortalIdCardRoute: typeof PortalIdCardRoute
+  PortalProfilRoute: typeof PortalProfilRoute
+  PortalUbahPasswordRoute: typeof PortalUbahPasswordRoute
+  PortalIndexRoute: typeof PortalIndexRoute
+}
+
+const PortalRouteRouteChildren: PortalRouteRouteChildren = {
+  PortalBeritaRoute: PortalBeritaRoute,
+  PortalEventRoute: PortalEventRoute,
+  PortalIdCardRoute: PortalIdCardRoute,
+  PortalProfilRoute: PortalProfilRoute,
+  PortalUbahPasswordRoute: PortalUbahPasswordRoute,
+  PortalIndexRoute: PortalIndexRoute,
+}
+
+const PortalRouteRouteWithChildren = PortalRouteRoute._addFileChildren(
+  PortalRouteRouteChildren,
+)
+
 interface EventsRouteChildren {
   EventsIdRoute: typeof EventsIdRoute
 }
@@ -517,7 +651,7 @@ const NewsRouteWithChildren = NewsRoute._addFileChildren(NewsRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
-  PortalRouteRoute: PortalRouteRoute,
+  PortalRouteRoute: PortalRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   ContactRoute: ContactRoute,
   EventsRoute: EventsRouteWithChildren,

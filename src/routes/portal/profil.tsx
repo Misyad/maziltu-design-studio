@@ -1,3 +1,4 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, Loader2, Save } from "lucide-react";
@@ -34,7 +35,11 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-export default function PortalProfile() {
+export const Route = createFileRoute("/portal/profil")({
+  component: PortalProfile,
+});
+
+function PortalProfile() {
   const queryClient = useQueryClient();
   const { data: profile } = useQuery(profileQuery());
   const [photo, setPhoto] = useState<File | null>(null);

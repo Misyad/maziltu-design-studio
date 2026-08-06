@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { KeyRound, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -26,7 +26,11 @@ const schema = z
 
 type Values = z.infer<typeof schema>;
 
-export default function PortalChangePassword() {
+export const Route = createFileRoute("/portal/ubah-password")({
+  component: PortalChangePassword,
+});
+
+function PortalChangePassword() {
   const router = useRouter();
   const queryClient = useQueryClient();
 

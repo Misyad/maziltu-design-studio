@@ -1,3 +1,4 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeCanvas } from "qrcode.react";
 import { Download } from "lucide-react";
@@ -26,7 +27,11 @@ function toMember(card: IdCardData) {
   };
 }
 
-export default function PortalIdCard() {
+export const Route = createFileRoute("/portal/id-card")({
+  component: PortalIdCard,
+});
+
+function PortalIdCard() {
   const { data: card } = useQuery(idCardQuery());
 
   return (

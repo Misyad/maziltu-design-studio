@@ -1,8 +1,13 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { usePublicEvents } from "@/services/public-content";
 import { EventCard } from "@/features/events/event-card";
 import { PageHeader } from "@/features/dashboard/page-header";
 
-export default function PortalEvents() {
+export const Route = createFileRoute("/portal/event")({
+  component: PortalEvents,
+});
+
+function PortalEvents() {
   const events = usePublicEvents();
 
   return (

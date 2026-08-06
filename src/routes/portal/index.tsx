@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,11 @@ function greeting(): string {
   return "Selamat malam";
 }
 
-export default function PortalHome() {
+export const Route = createFileRoute("/portal/")({
+  component: PortalHome,
+});
+
+function PortalHome() {
   const { data: user } = useQuery(meQuery());
   const events = usePublicEvents();
   const news = usePublicNews();
