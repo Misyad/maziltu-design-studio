@@ -460,3 +460,459 @@ Status: Planned
 2. Perubahan arsitektur dilakukan dengan membuat ADR baru yang menggantikan atau memperbarui ADR sebelumnya.
 3. PRD, Audit Gap Analysis, dan implementasi kode harus selalu mengacu pada ADR yang berlaku.
 4. Setiap milestone besar (misalnya v2.2, v3.0) harus meninjau kembali ADR untuk memastikan tetap relevan.
+
+# ADR-016 — Communication Engine as Cross-Cutting Service
+
+**Status:** Accepted
+
+**Date:** 2026-08-06
+
+**Decision Makers:**
+- MZT Core Team
+- Hasan Project
+
+---
+
+# Context
+
+Seiring berkembangnya MZT Apps, semakin banyak modul yang membutuhkan kemampuan mengirim komunikasi kepada pengguna.
+
+Saat ini maupun pada fase berikutnya, komunikasi akan digunakan oleh:
+
+- Membership
+- Authentication
+- Event Registration
+- Payment
+- Ticket
+- Attendance
+- Finance
+- News
+- Organization Announcement
+- Future Certificate
+- Future Donation
+- Future Merchandise
+
+Tanpa arsitektur yang jelas, setiap modul berpotensi mengimplementasikan mekanisme pengiriman komunikasi sendiri.
+
+Contoh:
+
+PaymentService
+→ kirim Email
+
+AttendanceService
+→ kirim WhatsApp
+
+MembershipService
+→ kirim Push Notification
+
+Pendekatan tersebut akan menyebabkan:
+
+- Duplikasi kode.
+- Ketergantungan langsung terhadap provider.
+- Sulit mengganti provider.
+- Sulit melakukan retry.
+- Sulit melakukan logging.
+- Sulit melakukan audit.
+- Sulit melakukan broadcast.
+- Sulit melakukan monitoring.
+
+---
+
+# Problem Statement
+
+Bagaimana cara memastikan seluruh komunikasi aplikasi memiliki pola yang konsisten, scalable, dan mudah dikembangkan tanpa membuat setiap Domain Service bergantung pada provider komunikasi tertentu?
+
+---
+
+# Decision
+
+MZT Apps menetapkan bahwa seluruh komunikasi keluar (Outbound Communication) wajib melalui Communication Engine.
+
+Business Domain tidak diperbolehkan mengirim Email, WhatsApp, Push Notification, ataupun channel komunikasi lainnya secara langsung.
+
+Sebagai gantinya, Business Domain hanya menghasilkan Domain Event.
+
+Communication Engine bertanggung jawab untuk:
+
+- menerima Domain Event,
+- memilih template,
+- menentukan channel,
+- memasukkan pekerjaan ke Queue,
+- memilih Provider,
+- melakukan Retry,
+- mencatat Communication Log.
+
+---
+
+# Architecture
+
+```
+Business Domain
+
+Membership
+Order
+Payment
+Ticket
+Attendance
+Finance
+Announcement
+
+        │
+
+        ▼
+
+Domain Event
+
+        │
+
+        ▼
+
+Communication Engine
+
+        │
+
+        ▼
+
+Queue
+
+        │
+
+        ▼
+
+Provider Layer
+
+├── SMTP
+├── WhatsApp
+├── Firebase
+├── Telegram
+├── Discord
+└── Future Provider
+
+        │
+
+        ▼
+
+Recipient
+```
+
+Business Domain tidak mengetahui implementasi provider.
+
+Business Domain hanya mengetahui bahwa sebuah Domain Event telah dipublikasikan.
+
+---
+
+# Principles
+
+Communication Engine wajib mengikuti prinsip berikut.
+
+## Single Communication Gateway
+
+Seluruh komunikasi keluar harus melalui satu gateway yang sama.
+
+Tidak boleh ada pengiriman komunikasi langsung dari Controller maupun Domain Service.
+
+---
+
+## Event Driven
+
+Communication dipicu oleh Domain Event.
+
+Contoh:
+
+```
+PaymentApproved
+
+↓
+
+Communication Engine
+```
+
+bukan
+
+```
+PaymentService
+
+↓
+
+Send WhatsApp
+```
+
+---
+
+## Provider Independence
+
+Communication Engine tidak bergantung pada provider tertentu.
+
+Provider dapat diganti tanpa mengubah Domain Layer.
+
+---
+
+## Queue First
+
+Seluruh komunikasi diproses secara asynchronous.
+
+Tidak ada proses komunikasi yang memblokir request pengguna.
+
+---
+
+## Template Driven
+
+Seluruh pesan berasal dari Template.
+
+Template dipisahkan dari Business Logic.
+
+---
+
+## Audit Friendly
+
+Seluruh komunikasi wajib memiliki log yang dapat diaudit.
+
+---
+
+# Supported Communication Types
+
+Communication Engine mendukung:
+
+- Transactional Notification
+- Reminder
+- Broadcast
+- Scheduled Communication
+- Future Campaign
+
+---
+
+# Supported Channels
+
+Phase awal mendukung:
+
+- In-App Notification
+- Email
+- WhatsApp
+
+Future:
+
+- Push Notification
+- Telegram
+- Discord
+- Slack
+- Microsoft Teams
+
+---
+
+# Responsibilities
+
+Communication Engine bertanggung jawab terhadap:
+
+- Template Resolution
+- Channel Selection
+- Queue Dispatch
+- Retry Policy
+- Provider Selection
+- Delivery Logging
+- User Preference
+- Broadcast Processing
+
+Communication Engine tidak bertanggung jawab terhadap Business Logic.
+
+---
+
+# Business Domain Responsibility
+
+Business Domain hanya bertanggung jawab terhadap:
+
+- Validasi bisnis
+- Perubahan data
+- Publish Domain Event
+
+Business Domain tidak mengetahui:
+
+- SMTP
+- WhatsApp API
+- Firebase
+- Retry
+- Queue
+- Broadcast
+
+---
+
+# Provider Layer
+
+Provider diimplementasikan menggunakan pola Adapter.
+
+```
+CommunicationProviderInterface
+
+├── SMTPProvider
+
+├── WhatsAppProvider
+
+├── FirebaseProvider
+
+├── TelegramProvider
+
+└── FutureProvider
+```
+
+Provider dapat diganti tanpa perubahan pada Domain Layer.
+
+---
+
+# User Preferences
+
+Communication Engine harus menghormati preferensi pengguna.
+
+Contoh:
+
+Email
+
+☑ Payment
+
+☑ Ticket
+
+☐ News
+
+WhatsApp
+
+☑ Reminder
+
+☑ Broadcast
+
+Namun komunikasi Mandatory tidak dapat dimatikan.
+
+Contoh:
+
+- Password Reset
+- Payment Approved
+- Ticket Revoked
+
+---
+
+# Communication Log
+
+Setiap komunikasi menghasilkan log minimal:
+
+- UUID
+- Domain Event
+- User
+- Channel
+- Provider
+- Template
+- Status
+- Retry Count
+- Response
+- Created At
+- Delivered At
+
+Communication Log merupakan bagian dari audit trail sistem.
+
+---
+
+# Consequences
+
+## Positive
+
+- Arsitektur lebih bersih.
+- Business Domain tetap sederhana.
+- Provider mudah diganti.
+- Retry terpusat.
+- Broadcast lebih mudah.
+- Monitoring lebih sederhana.
+- Audit lebih lengkap.
+- Mudah dikembangkan ke channel baru.
+- Konsisten pada seluruh modul.
+
+---
+
+## Negative
+
+- Membutuhkan Queue Worker.
+- Menambah satu lapisan arsitektur.
+- Membutuhkan Template Management.
+- Membutuhkan Communication Log.
+
+Trade-off ini diterima karena memberikan skalabilitas jangka panjang.
+
+---
+
+# Alternatives Considered
+
+## Alternative 1
+
+Setiap Domain mengirim komunikasi sendiri.
+
+Ditolak karena menyebabkan duplikasi dan tight coupling.
+
+---
+
+## Alternative 2
+
+Membuat Notification Service terpisah untuk setiap provider.
+
+Ditolak karena sulit dikelola ketika jumlah provider bertambah.
+
+---
+
+## Alternative 3
+
+Menggunakan Communication Engine terpusat.
+
+Dipilih karena:
+
+- scalable,
+- maintainable,
+- provider independent,
+- sesuai prinsip Evolution First.
+
+---
+
+# Impact
+
+ADR ini memengaruhi seluruh modul:
+
+- Membership
+- Authentication
+- Event
+- Order
+- Payment
+- Ticket
+- Attendance
+- Finance
+- Certificate (Future)
+- Donation (Future)
+- Merchandise (Future)
+
+Semua modul baru wajib menggunakan Communication Engine.
+
+---
+
+# References
+
+- ADR-001 — Order as Aggregate Root
+- ADR-002 — Immutable Snapshot
+- ADR-003 — Public Identity
+- ADR-004 — Business Logic in Service Layer
+- ADR-006 — Audit Columns
+- ADR-013 — Backward Compatibility
+- ADR-015 — Phase Milestones
+
+Dokumen terkait:
+
+- PRD Event Management System v2.1
+- PRD Payment & Ticket Engine
+- Audit-Gap-Analysis-EMS.md
+
+---
+
+# Decision Summary
+
+Mulai ADR-016, seluruh komunikasi pada MZT Apps harus mengikuti arsitektur berbasis Domain Event melalui Communication Engine.
+
+Tidak diperbolehkan ada Domain Service, Controller, maupun Repository yang mengirim Email, WhatsApp, Push Notification, atau channel komunikasi lainnya secara langsung.
+
+Seluruh pengiriman wajib melalui Communication Engine agar memenuhi prinsip:
+
+- Evolution First
+- Provider Independence
+- Queue First
+- Audit Friendly
+- Cross-Cutting Service
