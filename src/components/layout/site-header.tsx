@@ -54,6 +54,9 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle className="rounded-full" />
+          <Button asChild variant="outline" className="hidden rounded-full sm:inline-flex">
+            <Link to="/login">Masuk</Link>
+          </Button>
           <Button asChild className="hidden rounded-full sm:inline-flex">
             <Link to="/contact">
               Get involved
@@ -94,6 +97,11 @@ export function SiteHeader() {
               </li>
             ))}
           </ul>
+          <Button asChild variant="outline" className="w-full rounded-full">
+            <Link to="/login" onClick={() => setOpen(false)}>
+              Masuk
+            </Link>
+          </Button>
           <Button asChild className="w-full rounded-full">
             <Link to="/contact" onClick={() => setOpen(false)}>
               Get involved
