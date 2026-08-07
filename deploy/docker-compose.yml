@@ -73,8 +73,8 @@ services:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile
-    restart: unless-stopped
-entrypoint: ["php"]
+restart: unless-stopped
+    entrypoint: ["php"]
     command: ["artisan", "queue:work", "--queue=high,communications,default", "--sleep=2", "--tries=3", "--timeout=90", "--max-time=3600"]
     environment:
       APP_ENV: production
