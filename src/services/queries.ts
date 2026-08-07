@@ -6,6 +6,7 @@ import {
   fetchCurrentUser,
   fetchDashboardCalendar,
   fetchDashboardEvents,
+  fetchDashboardOverview,
   fetchDashboardStats,
   fetchEvent,
   fetchEvents,
@@ -19,6 +20,7 @@ import {
   fetchNews,
   fetchNewsItem,
   fetchOrder,
+  fetchPaymentSummary,
   fetchPesantrenInfo,
   fetchProfile,
   fetchPublicCarousel,
@@ -27,6 +29,8 @@ import {
   fetchPublicNews,
   fetchPublicNewsItem,
   fetchPublicStats,
+  fetchRegistrationSummary,
+  fetchRevenueSummary,
   fetchTransactions,
 } from "@/services/mzt-api";
 
@@ -35,6 +39,10 @@ export const queryKeys = {
   dashboardStats: ["dashboard", "stats"] as const,
   dashboardCalendar: ["dashboard", "calendar"] as const,
   dashboardEvents: ["dashboard", "events"] as const,
+  dashboardOverview: ["dashboard", "finance", "overview"] as const,
+  registrationSummary: ["dashboard", "finance", "registration"] as const,
+  revenueSummary: ["dashboard", "finance", "revenue"] as const,
+  paymentSummary: ["dashboard", "finance", "payments"] as const,
   members: ["members"] as const,
   member: (idUsers: number | string) => ["members", idUsers] as const,
   events: ["events"] as const,
@@ -72,6 +80,19 @@ export const dashboardCalendarQuery = () =>
 
 export const dashboardEventsQuery = () =>
   queryOptions({ queryKey: queryKeys.dashboardEvents, queryFn: fetchDashboardEvents });
+
+/* ------------------------------------------- Sprint 5A — Finance Dashboard */
+export const dashboardOverviewQuery = () =>
+  queryOptions({ queryKey: queryKeys.dashboardOverview, queryFn: fetchDashboardOverview });
+
+export const registrationSummaryQuery = () =>
+  queryOptions({ queryKey: queryKeys.registrationSummary, queryFn: fetchRegistrationSummary });
+
+export const revenueSummaryQuery = () =>
+  queryOptions({ queryKey: queryKeys.revenueSummary, queryFn: fetchRevenueSummary });
+
+export const paymentSummaryQuery = () =>
+  queryOptions({ queryKey: queryKeys.paymentSummary, queryFn: fetchPaymentSummary });
 
 export const membersQuery = () =>
   queryOptions({ queryKey: queryKeys.members, queryFn: fetchMembers });

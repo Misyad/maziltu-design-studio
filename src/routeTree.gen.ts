@@ -33,6 +33,7 @@ import { Route as DashboardActivityIndexRouteImport } from './routes/dashboard/a
 import { Route as DashboardAttendanceIndexRouteImport } from './routes/dashboard/attendance/index'
 import { Route as DashboardContentIndexRouteImport } from './routes/dashboard/content/index'
 import { Route as DashboardEventsIndexRouteImport } from './routes/dashboard/events/index'
+import { Route as DashboardFinanceIndexRouteImport } from './routes/dashboard/finance/index'
 import { Route as DashboardIdCardIndexRouteImport } from './routes/dashboard/id-card/index'
 import { Route as DashboardMembersIndexRouteImport } from './routes/dashboard/members/index'
 import { Route as DashboardNewsIndexRouteImport } from './routes/dashboard/news/index'
@@ -161,6 +162,11 @@ const DashboardEventsIndexRoute = DashboardEventsIndexRouteImport.update({
   path: '/events/',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const DashboardFinanceIndexRoute = DashboardFinanceIndexRouteImport.update({
+  id: '/finance/',
+  path: '/finance/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 const DashboardIdCardIndexRoute = DashboardIdCardIndexRouteImport.update({
   id: '/id-card/',
   path: '/id-card/',
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
   '/dashboard/content/': typeof DashboardContentIndexRoute
   '/dashboard/events/': typeof DashboardEventsIndexRoute
+  '/dashboard/finance/': typeof DashboardFinanceIndexRoute
   '/dashboard/id-card/': typeof DashboardIdCardIndexRoute
   '/dashboard/members/': typeof DashboardMembersIndexRoute
   '/dashboard/news/': typeof DashboardNewsIndexRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/dashboard/attendance': typeof DashboardAttendanceIndexRoute
   '/dashboard/content': typeof DashboardContentIndexRoute
   '/dashboard/events': typeof DashboardEventsIndexRoute
+  '/dashboard/finance': typeof DashboardFinanceIndexRoute
   '/dashboard/id-card': typeof DashboardIdCardIndexRoute
   '/dashboard/members': typeof DashboardMembersIndexRoute
   '/dashboard/news': typeof DashboardNewsIndexRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
   '/dashboard/content/': typeof DashboardContentIndexRoute
   '/dashboard/events/': typeof DashboardEventsIndexRoute
+  '/dashboard/finance/': typeof DashboardFinanceIndexRoute
   '/dashboard/id-card/': typeof DashboardIdCardIndexRoute
   '/dashboard/members/': typeof DashboardMembersIndexRoute
   '/dashboard/news/': typeof DashboardNewsIndexRoute
@@ -316,6 +325,7 @@ export interface FileRouteTypes {
     | '/dashboard/attendance/'
     | '/dashboard/content/'
     | '/dashboard/events/'
+    | '/dashboard/finance/'
     | '/dashboard/id-card/'
     | '/dashboard/members/'
     | '/dashboard/news/'
@@ -346,6 +356,7 @@ export interface FileRouteTypes {
     | '/dashboard/attendance'
     | '/dashboard/content'
     | '/dashboard/events'
+    | '/dashboard/finance'
     | '/dashboard/id-card'
     | '/dashboard/members'
     | '/dashboard/news'
@@ -378,6 +389,7 @@ export interface FileRouteTypes {
     | '/dashboard/attendance/'
     | '/dashboard/content/'
     | '/dashboard/events/'
+    | '/dashboard/finance/'
     | '/dashboard/id-card/'
     | '/dashboard/members/'
     | '/dashboard/news/'
@@ -568,6 +580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardEventsIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/dashboard/finance/': {
+      id: '/dashboard/finance/'
+      path: '/finance'
+      fullPath: '/dashboard/finance/'
+      preLoaderRoute: typeof DashboardFinanceIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/id-card/': {
       id: '/dashboard/id-card/'
       path: '/id-card'
@@ -619,6 +638,7 @@ interface DashboardRouteRouteChildren {
   DashboardAttendanceIndexRoute: typeof DashboardAttendanceIndexRoute
   DashboardContentIndexRoute: typeof DashboardContentIndexRoute
   DashboardEventsIndexRoute: typeof DashboardEventsIndexRoute
+  DashboardFinanceIndexRoute: typeof DashboardFinanceIndexRoute
   DashboardIdCardIndexRoute: typeof DashboardIdCardIndexRoute
   DashboardMembersIndexRoute: typeof DashboardMembersIndexRoute
   DashboardNewsIndexRoute: typeof DashboardNewsIndexRoute
@@ -632,6 +652,7 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardAttendanceIndexRoute: DashboardAttendanceIndexRoute,
   DashboardContentIndexRoute: DashboardContentIndexRoute,
   DashboardEventsIndexRoute: DashboardEventsIndexRoute,
+  DashboardFinanceIndexRoute: DashboardFinanceIndexRoute,
   DashboardIdCardIndexRoute: DashboardIdCardIndexRoute,
   DashboardMembersIndexRoute: DashboardMembersIndexRoute,
   DashboardNewsIndexRoute: DashboardNewsIndexRoute,

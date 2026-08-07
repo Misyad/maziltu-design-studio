@@ -13,6 +13,7 @@ import {
   Settings2,
   UserRound,
   Users,
+  Wallet,
 } from "lucide-react";
 import { Suspense } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -75,6 +76,12 @@ interface NavItem {
 
 const NAV_ITEMS: readonly NavItem[] = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, roles: ["dashboard"] },
+  {
+    to: "/dashboard/finance",
+    label: "Finance",
+    icon: Wallet,
+    roles: ["finance", "ketua", "admin"],
+  },
   { to: "/dashboard/members", label: "Members", icon: Users, roles: ["anggota"] },
   { to: "/dashboard/events", label: "Events", icon: CalendarDays, roles: ["event"] },
   { to: "/dashboard/attendance", label: "Attendance", icon: QrCode, roles: ["prisensi"] },

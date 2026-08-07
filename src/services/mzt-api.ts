@@ -19,6 +19,7 @@ import type {
   ContactRequest,
   DashboardCalendarEntry,
   DashboardEvent,
+  DashboardOverview,
   DashboardStats,
   EventItem,
   EventTanggal,
@@ -30,8 +31,11 @@ import type {
   Order,
   OrgInfo,
   PasswordChangeRequest,
+  PaymentSummary,
   ProfileUpdateRequest,
   PublicStats,
+  RegistrationSummary,
+  RevenueSummary,
   TransactionRecord,
 } from "@/types/api";
 
@@ -62,6 +66,17 @@ export async function logout() {
 export const fetchDashboardStats = () => apiGet<DashboardStats>("/dashboard/stats");
 export const fetchDashboardCalendar = () => apiGet<DashboardCalendarEntry[]>("/dashboard/calendar");
 export const fetchDashboardEvents = () => apiGet<DashboardEvent[]>("/dashboard/events");
+
+/* ------------------------------------------- Sprint 5A — Finance Dashboard */
+
+export const fetchDashboardOverview = () =>
+  apiGet<DashboardOverview>("/dashboard/finance/overview");
+export const fetchRegistrationSummary = () =>
+  apiGet<RegistrationSummary>("/dashboard/finance/registration");
+export const fetchRevenueSummary = () =>
+  apiGet<RevenueSummary>("/dashboard/finance/revenue");
+export const fetchPaymentSummary = () =>
+  apiGet<PaymentSummary>("/dashboard/finance/payments");
 
 /* --------------------------------------------------------------- members */
 /* NOTE: detail / update / delete always key on `id_users`, never `id`. */

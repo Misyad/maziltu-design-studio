@@ -18,7 +18,10 @@ export type AppRole =
   | "tampilan"
   | "aktivitas_user"
   | "id_card"
-  | "prisensi";
+  | "prisensi"
+  | "finance"
+  | "ketua"
+  | "admin";
 
 /** Shape of the `data_users` row embedded in GET /user (`user.data`). */
 export interface UserProfileData {
@@ -67,6 +70,45 @@ export interface DashboardStats {
   event_selesai: number;
   event_mendatang: number;
   total_anggota: number;
+}
+
+/* ---------------------------------------------------- Sprint 5A — Finance */
+
+export interface DashboardOverview {
+  total_orders: number;
+  total_revenue: number;
+  total_paid: number;
+  total_outstanding: number;
+  total_tickets: number;
+  pending_verifications: number;
+}
+
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
+export interface RegistrationSummary {
+  total_orders: number;
+  by_status: StatusCount[];
+}
+
+export interface StatusTotal {
+  status: string;
+  total: number;
+  count: number;
+}
+
+export interface RevenueSummary {
+  total_revenue: number;
+  total_paid: number;
+  outstanding: number;
+  by_status: StatusTotal[];
+}
+
+export interface PaymentSummary {
+  by_status: StatusTotal[];
+  waiting_verification: number;
 }
 
 export interface DashboardCalendarEntry {
