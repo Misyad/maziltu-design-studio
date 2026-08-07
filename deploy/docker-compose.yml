@@ -39,6 +39,7 @@ services:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile
+    image: mzt-backend:local
     restart: unless-stopped
     environment:
       APP_ENV: production
@@ -53,7 +54,7 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
       CACHE_DRIVER: file
       SESSION_DRIVER: file
-      QUEUE_CONNECTION: sync
+      QUEUE_CONNECTION: database
     volumes:
       # Live media (bar codes, photos). Host dir = mirror of backend storage/app.
       - ./storage:/app/storage/app
@@ -62,6 +63,39 @@ services:
         condition: service_healthy
     expose:
       - "80"
+
+  # Queue worker (Gate 3 — queue foundation). Runs the "database" queue driver,
+  # consuming jobs from the `jobs` table. No listeners/jobs are shipped yet;
+  # this container just turns the queue ON so Sprint 4 (Communication Engine)
+  # can immediately dispatch without an infrastructure change.
+  worker:
+    image: mzt-backend:local
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    entrypoint: ["php"]
+    command: ["artisan", "queue:work", "--sleep=2", "--tries=3", "--timeout=90", "--max-time=3600"]
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?set APP_KEY in .env}
+      APP_URL: ${APP_URL:-http://localhost}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: ${MYSQL_DATABASE:-mazw9983_alvinade_maziltu}
+      DB_USERNAME: ${MYSQL_USER:-maziltu}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      CACHE_DRIVER: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: database
+    volumes:
+      # Media mirror shared with the backend so handlers can render PDF/QR if needed.
+      - ./storage:/app/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     build:

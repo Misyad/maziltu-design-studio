@@ -89,3 +89,54 @@ and Caddy auto-provisions HTTPS. Rebuild the frontend with the matching
 - `APP_KEY` and MYSQL passwords are passed as container env; Laravel's PHP-FPM is
   configured with `clear_env = no` so `env()` reads them (no `.env` file needed
   inside the image).
+
+## Queue (Gate 3 — foundation)
+
+The backend uses the **`database`** queue driver (`QUEUE_CONNECTION=database`),
+so dispatched jobs are stored in the `jobs` table instead of running inline.
+As of Sprint 3.5 **no jobs/listeners are implemented yet** — the queue is simply
+turned on and a worker is ready to consume the moment Sprint 4 (Communication
+Engine) ships its first job.
+
+Topology added by Sprint 3.5:
+
+```
+backend  (nginx+php-fpm)   -- dispatch -->  db.jobs table
+                                             ^
+                                             |
+worker  (php artisan queue:work)  -- pick up --+
+```
+
+The `worker` service re-uses the same `mzt-backend:local` image (built once by
+Compose from `./backend`). It overrides the entrypoint to run:
+
+```sh
+php artisan queue:work --sleep=2 --tries=3 --timeout=90 --max-time=3600
+```
+
+`restart: unless-stopped` makes Docker supervise the worker (restart on crash or
+host reboot), which replaces the need for a separate systemd/supervisord unit on
+the host.
+
+### Enabling / verifying the queue
+
+```sh
+# 1. After a deploy, confirm the jobs table exists and the worker is up:
+cd /opt/mzt && docker compose ps
+#    -> both `backend` and `worker` should be running.
+
+# 2. Inspect the worker log for normal startup:
+docker compose logs -f --tail=50 worker
+
+# 3. (Sprint 4, once a job exists) push a job from the console and watch the
+#    worker consume it:
+docker compose exec backend php artisan queue:work --once
+```
+
+Database driver notes:
+- Jobs survive backend restarts (they live in the `jobs` table, not memory).
+- Failed jobs land in `failed_jobs` (already migrated). Inspect with
+  `docker compose exec backend php artisan queue:failed`.
+- If the queue is ever moved to Redis later, only the driver section of
+  `config/queue.php` and `QUEUE_CONNECTION` change; the application code does
+  not.
