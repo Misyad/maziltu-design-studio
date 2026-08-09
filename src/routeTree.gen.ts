@@ -40,6 +40,7 @@ import { Route as DashboardNewsIndexRouteImport } from './routes/dashboard/news/
 import { Route as DashboardProfileIndexRouteImport } from './routes/dashboard/profile/index'
 import { Route as DashboardTransactionsIndexRouteImport } from './routes/dashboard/transactions/index'
 import { Route as PortalOrdersUuidRouteImport } from './routes/portal/orders.$uuid'
+import { Route as DashboardFinanceTicketsIndexRouteImport } from './routes/dashboard/finance/tickets/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -198,6 +199,12 @@ const PortalOrdersUuidRoute = PortalOrdersUuidRouteImport.update({
   path: '/$uuid',
   getParentRoute: () => PortalOrdersRoute,
 } as any)
+const DashboardFinanceTicketsIndexRoute =
+  DashboardFinanceTicketsIndexRouteImport.update({
+    id: '/finance/tickets/',
+    path: '/finance/tickets/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/news/': typeof DashboardNewsIndexRoute
   '/dashboard/profile/': typeof DashboardProfileIndexRoute
   '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
+  '/dashboard/finance/tickets/': typeof DashboardFinanceTicketsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -262,6 +270,7 @@ export interface FileRoutesByTo {
   '/dashboard/news': typeof DashboardNewsIndexRoute
   '/dashboard/profile': typeof DashboardProfileIndexRoute
   '/dashboard/transactions': typeof DashboardTransactionsIndexRoute
+  '/dashboard/finance/tickets': typeof DashboardFinanceTicketsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -296,6 +305,7 @@ export interface FileRoutesById {
   '/dashboard/news/': typeof DashboardNewsIndexRoute
   '/dashboard/profile/': typeof DashboardProfileIndexRoute
   '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
+  '/dashboard/finance/tickets/': typeof DashboardFinanceTicketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/dashboard/news/'
     | '/dashboard/profile/'
     | '/dashboard/transactions/'
+    | '/dashboard/finance/tickets/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/dashboard/news'
     | '/dashboard/profile'
     | '/dashboard/transactions'
+    | '/dashboard/finance/tickets'
   id:
     | '__root__'
     | '/'
@@ -395,6 +407,7 @@ export interface FileRouteTypes {
     | '/dashboard/news/'
     | '/dashboard/profile/'
     | '/dashboard/transactions/'
+    | '/dashboard/finance/tickets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -629,6 +642,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalOrdersUuidRouteImport
       parentRoute: typeof PortalOrdersRoute
     }
+    '/dashboard/finance/tickets/': {
+      id: '/dashboard/finance/tickets/'
+      path: '/finance/tickets'
+      fullPath: '/dashboard/finance/tickets/'
+      preLoaderRoute: typeof DashboardFinanceTicketsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
   }
 }
 
@@ -644,6 +664,7 @@ interface DashboardRouteRouteChildren {
   DashboardNewsIndexRoute: typeof DashboardNewsIndexRoute
   DashboardProfileIndexRoute: typeof DashboardProfileIndexRoute
   DashboardTransactionsIndexRoute: typeof DashboardTransactionsIndexRoute
+  DashboardFinanceTicketsIndexRoute: typeof DashboardFinanceTicketsIndexRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
@@ -658,6 +679,7 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardNewsIndexRoute: DashboardNewsIndexRoute,
   DashboardProfileIndexRoute: DashboardProfileIndexRoute,
   DashboardTransactionsIndexRoute: DashboardTransactionsIndexRoute,
+  DashboardFinanceTicketsIndexRoute: DashboardFinanceTicketsIndexRoute,
 }
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(

@@ -28,6 +28,7 @@ import type {
   LoginResponse,
   Member,
   NewsItem,
+  OperationalSummary,
   Order,
   OrgInfo,
   PasswordChangeRequest,
@@ -36,6 +37,7 @@ import type {
   PublicStats,
   RegistrationSummary,
   RevenueSummary,
+  TicketSummary,
   TransactionRecord,
 } from "@/types/api";
 
@@ -73,10 +75,12 @@ export const fetchDashboardOverview = () =>
   apiGet<DashboardOverview>("/dashboard/finance/overview");
 export const fetchRegistrationSummary = () =>
   apiGet<RegistrationSummary>("/dashboard/finance/registration");
-export const fetchRevenueSummary = () =>
-  apiGet<RevenueSummary>("/dashboard/finance/revenue");
-export const fetchPaymentSummary = () =>
-  apiGet<PaymentSummary>("/dashboard/finance/payments");
+export const fetchRevenueSummary = () => apiGet<RevenueSummary>("/dashboard/finance/revenue");
+export const fetchPaymentSummary = () => apiGet<PaymentSummary>("/dashboard/finance/payments");
+
+export const fetchTicketSummary = () => apiGet<TicketSummary>("/dashboard/finance/tickets");
+export const fetchOperationalSummary = () =>
+  apiGet<OperationalSummary>("/dashboard/finance/operational");
 
 /* --------------------------------------------------------------- members */
 /* NOTE: detail / update / delete always key on `id_users`, never `id`. */

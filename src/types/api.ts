@@ -111,6 +111,24 @@ export interface PaymentSummary {
   waiting_verification: number;
 }
 
+/* ------------------------------------------- Sprint 5B.1 — Ticket & Operational */
+
+/** Ticket status (mirrors app/Enums/TicketStatus.php / canonical ADR-011). */
+export type TicketStatus = "draft" | "issued" | "checked_in" | "finished" | "cancelled" | "revoked";
+
+export interface TicketSummary {
+  total_tickets: number;
+  by_status: StatusCount[];
+}
+
+export interface OperationalSummary {
+  total_orders: number;
+  total_paid: number;
+  outstanding: number;
+  waiting_verification: number;
+  total_tickets: number;
+}
+
 export interface DashboardCalendarEntry {
   title: string;
   start: string;

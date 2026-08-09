@@ -20,6 +20,7 @@ import {
   fetchNews,
   fetchNewsItem,
   fetchOrder,
+  fetchOperationalSummary,
   fetchPaymentSummary,
   fetchPesantrenInfo,
   fetchProfile,
@@ -31,6 +32,7 @@ import {
   fetchPublicStats,
   fetchRegistrationSummary,
   fetchRevenueSummary,
+  fetchTicketSummary,
   fetchTransactions,
 } from "@/services/mzt-api";
 
@@ -43,6 +45,8 @@ export const queryKeys = {
   registrationSummary: ["dashboard", "finance", "registration"] as const,
   revenueSummary: ["dashboard", "finance", "revenue"] as const,
   paymentSummary: ["dashboard", "finance", "payments"] as const,
+  ticketSummary: ["dashboard", "finance", "tickets"] as const,
+  operationalSummary: ["dashboard", "finance", "operational"] as const,
   members: ["members"] as const,
   member: (idUsers: number | string) => ["members", idUsers] as const,
   events: ["events"] as const,
@@ -93,6 +97,13 @@ export const revenueSummaryQuery = () =>
 
 export const paymentSummaryQuery = () =>
   queryOptions({ queryKey: queryKeys.paymentSummary, queryFn: fetchPaymentSummary });
+
+/* ------------------------------------------- Sprint 5B.1 — Ticket & Operational */
+export const ticketSummaryQuery = () =>
+  queryOptions({ queryKey: queryKeys.ticketSummary, queryFn: fetchTicketSummary });
+
+export const operationalSummaryQuery = () =>
+  queryOptions({ queryKey: queryKeys.operationalSummary, queryFn: fetchOperationalSummary });
 
 export const membersQuery = () =>
   queryOptions({ queryKey: queryKeys.members, queryFn: fetchMembers });
