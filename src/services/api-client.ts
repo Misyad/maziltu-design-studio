@@ -73,12 +73,14 @@ apiClient.interceptors.response.use(
 export class ApiError extends Error {
   status: number | undefined;
   errors: Record<string, string[]> | undefined;
+  data: unknown;
 
-  constructor(message: string, status?: number, errors?: Record<string, string[]>) {
+  constructor(message: string, status?: number, errors?: Record<string, string[]>, data?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.errors = errors;
+    this.data = data;
   }
 }
 
@@ -91,6 +93,7 @@ function toApiError(error: unknown): ApiError {
       payload?.message ?? axiosError.message ?? "Request failed",
       status,
       payload?.errors,
+      payload?.data,
     );
   }
   return new ApiError(error instanceof Error ? error.message : "Unknown error");

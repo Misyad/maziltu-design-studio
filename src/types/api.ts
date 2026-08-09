@@ -250,6 +250,11 @@ export interface AttendanceRecord {
   id_event: number;
   id_tanggal: number;
   created_at: string;
+  /** Phase 2C — ticket-based check-in fields (additive; absent on legacy rows). */
+  id_ticket?: number | null;
+  gate?: string | null;
+  scanned_at?: string | null;
+  scanned_by?: number | null;
   dataUser?: Member;
 }
 
@@ -257,6 +262,51 @@ export interface AttendanceRequest {
   id_anggota: string;
   id_event: number;
   id_tanggal: number;
+}
+
+/** Payload for POST /api/checkin (Phase 2C). The event is derived server-side. */
+export interface CheckInRequest {
+  ticket_uuid: string;
+  id_tanggal: number;
+  gate?: string | null;
+}
+
+/** Successful check-in response body (Phase 2C). */
+export interface CheckInResult {
+  ticket: {
+    id: number;
+    uuid: string;
+    nomor_ticket: string;
+    status: TicketStatus;
+    used_at: string | null;
+    issued_at?: string | null;
+    qr_payload?: string;
+  };
+  attendance: {
+    id: number;
+    id_event: number;
+    id_tanggal: number;
+    id_anggota: number | string;
+    id_ticket: number;
+    gate: string | null;
+    scanned_at: string | null;
+    scanned_by: number | null;
+  };
+  participant: {
+    id: number;
+    id_anggota: string;
+    name: string;
+  } | null;
+  event: {
+    id_event: number;
+    event_name: string;
+  };
+}
+
+/** Duplicate-scan body (409): first scan info, nothing else is mutated. */
+export interface CheckInDuplicate {
+  first_scanned_at: string | null;
+  first_scanned_by: number | null;
 }
 
 export interface TransactionRecord {

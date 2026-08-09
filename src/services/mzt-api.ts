@@ -16,6 +16,8 @@ import type {
   AuthUser,
   BulkGenerateResult,
   CarouselSlide,
+  CheckInRequest,
+  CheckInResult,
   ContactRequest,
   DashboardCalendarEntry,
   DashboardEvent,
@@ -131,6 +133,14 @@ export const fetchAttendance = (eventId: number | string, tanggalId: number | st
 // wrap this in try/catch instead of checking `.success`.
 export const submitAttendance = (payload: AttendanceRequest) =>
   apiPostRaw<{ success: boolean; message?: string }>("/attendance", payload);
+
+/* ------------------------------------------------------- check-in (Phase 2C) */
+
+// Backend replies 409 with `{ success: false, message, data: { first_scanned_at,
+// first_scanned_by } }` on a duplicate scan. Axios turns that into an ApiError,
+// so callers must handle ApiError.status === 409 (payload is on error.data).
+export const checkIn = (payload: CheckInRequest) =>
+  apiPostRaw<{ success: boolean; message?: string; data?: CheckInResult }>("/checkin", payload);
 
 /* ---------------------------------------------------------- transactions */
 
