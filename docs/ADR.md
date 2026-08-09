@@ -3,7 +3,7 @@
 **Project** : MZT Apps (Maziltutholiban Members Platform)
 **Version** : 1.0
 **Status** : Active
-**Last Updated** : 2026-08-06
+**Last Updated** : 2026-08-09
 
 ---
 
@@ -330,29 +330,108 @@ Payment dan Registration merupakan dua lifecycle yang berbeda.
 
 ## Status
 
-Planned (Phase 2B)
+Accepted
 
-## Rencana
+Di-amend pada Architecture Gate Closure Sprint 5B (2026-08-09) — merevisi
+terminologi state awal dari `not_generated / generated / used` menjadi canonical
+state yang telah diimplementasikan dan diverifikasi (Sprint 3), serta selaras
+dengan PRD §10.2 / §16.8 / §17.14.4.
+
+## Keputusan
 
 Ticket hanya dibuat apabila Order memenuhi syarat.
 
-Status awal yang direncanakan:
+Ticket adalah anak (child) dari **Order**, bukan Event (ADR-001).
+
+## Canonical Ticket State
 
 ```
-not_generated
+draft
 
 ↓
 
-generated
+issued
 
 ↓
 
-used
+checked_in
 
 ↓
 
-cancelled
+finished
 ```
+
+## Valid Transition
+
+```
+draft → issued
+draft → cancelled
+draft → revoked
+
+issued → checked_in
+issued → cancelled
+issued → revoked
+
+checked_in → finished
+checked_in → cancelled
+checked_in → revoked
+
+finished → terminal
+cancelled → terminal
+revoked → terminal
+```
+
+## Reissue
+
+```
+issued → issued
+checked_in → checked_in
+```
+
+Reissue **bukan perubahan status** dan **tidak membuat Ticket baru**.
+
+Reissue hanya menghasilkan representasi Ticket baru (dokumen / QR on-demand)
+tanpa mengubah identitas bisnis: uuid, nomor_ticket, id_order, issued_at, status
+tetap sama (PRD §17.14.4). Setiap reissue menghasilkan entri `ticket_logs`.
+
+## Arti Status
+
+| Status | Makna |
+|--------|-------|
+| `draft` | Tiket belum diterbitkan. |
+| `issued` | Tiket telah diterbitkan dan **dapat digunakan**. |
+| `checked_in` | Tiket telah dipindai pada Gate. |
+| `finished` | Event selesai diikuti peserta (terminal). |
+| `cancelled` | Tiket dibatalkan melalui alur pembatalan registrasi/order (terminal). |
+| `revoked` | Tiket diblokir administratif, irreversible, mencatat `revoked_at`, mencegah penggunaan ulang (terminal). |
+
+## Terminal State
+
+`finished`, `cancelled`, `revoked`.
+
+## Cancelled vs Revoked
+
+- `cancelled` — dibatalkan pada level registrasi/order (mengikuti pembatalan Order).
+- `revoked` — diblokir secara administratif oleh Finance/Ketua/Admin melalui aksi
+  `DELETE /api/tickets/{uuid}` (PRD §21.7); mencerminkan kehilangan hak hadir
+  tanpa membatalkan Order.
+
+## QR / Ticket Validation Behavior
+
+- QR hanya berisi UUID Ticket (`qr_payload` = uuid tiket, PRD §10.6 / §16.8).
+- Ticket valid untuk digunakan (check-in) hanya ketika berstatus **`issued`**.
+- `cancelled`, `revoked`, `finished` **tidak dapat digunakan** untuk check-in.
+
+## Hubungan dengan Phase 2C Check-In
+
+Transisi `issued → checked_in` dan `checked_in → finished` diimplementasikan pada
+Phase 2C (Check-In). Enum dan ADR ini sudah mendefinisikan state serta transisinya;
+implementasi Phase 2C wajib mengikuti ADR ini.
+
+## Tidak Ada Status Mapping Baru
+
+Ticket Monitoring (Sprint 5B FR-01) grouping langsung memakai nilai canonical di
+atas. **Tidak ada status mapping baru** antara ADR, PRD, dan implementasi.
 
 ---
 
