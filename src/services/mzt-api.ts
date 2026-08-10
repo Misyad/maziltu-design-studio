@@ -13,6 +13,7 @@ import type {
   AlumniProfile,
   AttendanceRecord,
   AttendanceRequest,
+  AttendanceSummary,
   AuthUser,
   BulkGenerateResult,
   CarouselSlide,
@@ -25,14 +26,17 @@ import type {
   DashboardStats,
   EventItem,
   EventTanggal,
+  GateMonitoringResponse,
   IdCardData,
   LoginRequest,
   LoginResponse,
   Member,
   NewsItem,
+  OperationalEvent,
   OperationalSummary,
   Order,
   OrgInfo,
+  ParticipantListResponse,
   PasswordChangeRequest,
   PaymentSummary,
   ProfileUpdateRequest,
@@ -83,6 +87,54 @@ export const fetchPaymentSummary = () => apiGet<PaymentSummary>("/dashboard/fina
 export const fetchTicketSummary = () => apiGet<TicketSummary>("/dashboard/finance/tickets");
 export const fetchOperationalSummary = () =>
   apiGet<OperationalSummary>("/dashboard/finance/operational");
+
+/* ------------------------------------------- Phase 2D — EMS Operational Management */
+
+export type OperationEventsParams = {
+  start?: string | null;
+  end?: string | null;
+  event_id?: number | null;
+};
+
+export type ParticipantsParams = {
+  tgl?: number | null;
+  gate?: string | null;
+  q?: string | null;
+  page?: number | null;
+  per_page?: number | null;
+};
+
+export type AttendanceParams = { tgl?: number | null };
+export type GateMonitoringParams = { tgl?: number | null };
+
+/** URI-encodes the given params, dropping null/undefined/empty values. */
+function buildQuery(params: Record<string, number | string | null | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    search.set(key, String(value));
+  }
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
+export const fetchOperationalEvents = (params?: OperationEventsParams) =>
+  apiGet<OperationalEvent[]>(`/dashboard/operations/events${buildQuery(params ?? {})}`);
+
+export const fetchParticipants = (eventId: number | string, params?: ParticipantsParams) =>
+  apiGet<ParticipantListResponse>(
+    `/dashboard/operations/events/${eventId}/attendees${buildQuery(params ?? {})}`,
+  );
+
+export const fetchAttendanceSummary = (eventId: number | string, params?: AttendanceParams) =>
+  apiGet<AttendanceSummary>(
+    `/dashboard/operations/events/${eventId}/attendance${buildQuery(params ?? {})}`,
+  );
+
+export const fetchGateMonitoring = (eventId: number | string, params?: GateMonitoringParams) =>
+  apiGet<GateMonitoringResponse>(
+    `/dashboard/operations/events/${eventId}/gates${buildQuery(params ?? {})}`,
+  );
 
 /* --------------------------------------------------------------- members */
 /* NOTE: detail / update / delete always key on `id_users`, never `id`. */

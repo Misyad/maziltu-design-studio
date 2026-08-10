@@ -38,10 +38,14 @@ import { Route as DashboardFinanceIndexRouteImport } from './routes/dashboard/fi
 import { Route as DashboardIdCardIndexRouteImport } from './routes/dashboard/id-card/index'
 import { Route as DashboardMembersIndexRouteImport } from './routes/dashboard/members/index'
 import { Route as DashboardNewsIndexRouteImport } from './routes/dashboard/news/index'
+import { Route as DashboardOperationsIndexRouteImport } from './routes/dashboard/operations/index'
 import { Route as DashboardProfileIndexRouteImport } from './routes/dashboard/profile/index'
 import { Route as DashboardTransactionsIndexRouteImport } from './routes/dashboard/transactions/index'
 import { Route as PortalOrdersUuidRouteImport } from './routes/portal/orders.$uuid'
 import { Route as DashboardFinanceTicketsIndexRouteImport } from './routes/dashboard/finance/tickets/index'
+import { Route as DashboardOperationsEventsIdAttendanceRouteImport } from './routes/dashboard/operations/events.$id.attendance'
+import { Route as DashboardOperationsEventsIdAttendeesRouteImport } from './routes/dashboard/operations/events.$id.attendees'
+import { Route as DashboardOperationsEventsIdGatesRouteImport } from './routes/dashboard/operations/events.$id.gates'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -189,6 +193,12 @@ const DashboardNewsIndexRoute = DashboardNewsIndexRouteImport.update({
   path: '/news/',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const DashboardOperationsIndexRoute =
+  DashboardOperationsIndexRouteImport.update({
+    id: '/operations/',
+    path: '/operations/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
 const DashboardProfileIndexRoute = DashboardProfileIndexRouteImport.update({
   id: '/profile/',
   path: '/profile/',
@@ -209,6 +219,24 @@ const DashboardFinanceTicketsIndexRoute =
   DashboardFinanceTicketsIndexRouteImport.update({
     id: '/finance/tickets/',
     path: '/finance/tickets/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardOperationsEventsIdAttendanceRoute =
+  DashboardOperationsEventsIdAttendanceRouteImport.update({
+    id: '/operations/events/$id/attendance',
+    path: '/operations/events/$id/attendance',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardOperationsEventsIdAttendeesRoute =
+  DashboardOperationsEventsIdAttendeesRouteImport.update({
+    id: '/operations/events/$id/attendees',
+    path: '/operations/events/$id/attendees',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardOperationsEventsIdGatesRoute =
+  DashboardOperationsEventsIdGatesRouteImport.update({
+    id: '/operations/events/$id/gates',
+    path: '/operations/events/$id/gates',
     getParentRoute: () => DashboardRouteRoute,
   } as any)
 
@@ -243,9 +271,13 @@ export interface FileRoutesByFullPath {
   '/dashboard/id-card/': typeof DashboardIdCardIndexRoute
   '/dashboard/members/': typeof DashboardMembersIndexRoute
   '/dashboard/news/': typeof DashboardNewsIndexRoute
+  '/dashboard/operations/': typeof DashboardOperationsIndexRoute
   '/dashboard/profile/': typeof DashboardProfileIndexRoute
   '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
   '/dashboard/finance/tickets/': typeof DashboardFinanceTicketsIndexRoute
+  '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
+  '/dashboard/operations/events/$id/attendees': typeof DashboardOperationsEventsIdAttendeesRoute
+  '/dashboard/operations/events/$id/gates': typeof DashboardOperationsEventsIdGatesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -276,9 +308,13 @@ export interface FileRoutesByTo {
   '/dashboard/id-card': typeof DashboardIdCardIndexRoute
   '/dashboard/members': typeof DashboardMembersIndexRoute
   '/dashboard/news': typeof DashboardNewsIndexRoute
+  '/dashboard/operations': typeof DashboardOperationsIndexRoute
   '/dashboard/profile': typeof DashboardProfileIndexRoute
   '/dashboard/transactions': typeof DashboardTransactionsIndexRoute
   '/dashboard/finance/tickets': typeof DashboardFinanceTicketsIndexRoute
+  '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
+  '/dashboard/operations/events/$id/attendees': typeof DashboardOperationsEventsIdAttendeesRoute
+  '/dashboard/operations/events/$id/gates': typeof DashboardOperationsEventsIdGatesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -312,9 +348,13 @@ export interface FileRoutesById {
   '/dashboard/id-card/': typeof DashboardIdCardIndexRoute
   '/dashboard/members/': typeof DashboardMembersIndexRoute
   '/dashboard/news/': typeof DashboardNewsIndexRoute
+  '/dashboard/operations/': typeof DashboardOperationsIndexRoute
   '/dashboard/profile/': typeof DashboardProfileIndexRoute
   '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
   '/dashboard/finance/tickets/': typeof DashboardFinanceTicketsIndexRoute
+  '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
+  '/dashboard/operations/events/$id/attendees': typeof DashboardOperationsEventsIdAttendeesRoute
+  '/dashboard/operations/events/$id/gates': typeof DashboardOperationsEventsIdGatesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -349,9 +389,13 @@ export interface FileRouteTypes {
     | '/dashboard/id-card/'
     | '/dashboard/members/'
     | '/dashboard/news/'
+    | '/dashboard/operations/'
     | '/dashboard/profile/'
     | '/dashboard/transactions/'
     | '/dashboard/finance/tickets/'
+    | '/dashboard/operations/events/$id/attendance'
+    | '/dashboard/operations/events/$id/attendees'
+    | '/dashboard/operations/events/$id/gates'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -382,9 +426,13 @@ export interface FileRouteTypes {
     | '/dashboard/id-card'
     | '/dashboard/members'
     | '/dashboard/news'
+    | '/dashboard/operations'
     | '/dashboard/profile'
     | '/dashboard/transactions'
     | '/dashboard/finance/tickets'
+    | '/dashboard/operations/events/$id/attendance'
+    | '/dashboard/operations/events/$id/attendees'
+    | '/dashboard/operations/events/$id/gates'
   id:
     | '__root__'
     | '/'
@@ -417,9 +465,13 @@ export interface FileRouteTypes {
     | '/dashboard/id-card/'
     | '/dashboard/members/'
     | '/dashboard/news/'
+    | '/dashboard/operations/'
     | '/dashboard/profile/'
     | '/dashboard/transactions/'
     | '/dashboard/finance/tickets/'
+    | '/dashboard/operations/events/$id/attendance'
+    | '/dashboard/operations/events/$id/attendees'
+    | '/dashboard/operations/events/$id/gates'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -640,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardNewsIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/dashboard/operations/': {
+      id: '/dashboard/operations/'
+      path: '/operations'
+      fullPath: '/dashboard/operations/'
+      preLoaderRoute: typeof DashboardOperationsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/profile/': {
       id: '/dashboard/profile/'
       path: '/profile'
@@ -668,6 +727,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardFinanceTicketsIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/dashboard/operations/events/$id/attendance': {
+      id: '/dashboard/operations/events/$id/attendance'
+      path: '/operations/events/$id/attendance'
+      fullPath: '/dashboard/operations/events/$id/attendance'
+      preLoaderRoute: typeof DashboardOperationsEventsIdAttendanceRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/operations/events/$id/attendees': {
+      id: '/dashboard/operations/events/$id/attendees'
+      path: '/operations/events/$id/attendees'
+      fullPath: '/dashboard/operations/events/$id/attendees'
+      preLoaderRoute: typeof DashboardOperationsEventsIdAttendeesRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/operations/events/$id/gates': {
+      id: '/dashboard/operations/events/$id/gates'
+      path: '/operations/events/$id/gates'
+      fullPath: '/dashboard/operations/events/$id/gates'
+      preLoaderRoute: typeof DashboardOperationsEventsIdGatesRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
   }
 }
 
@@ -682,9 +762,13 @@ interface DashboardRouteRouteChildren {
   DashboardIdCardIndexRoute: typeof DashboardIdCardIndexRoute
   DashboardMembersIndexRoute: typeof DashboardMembersIndexRoute
   DashboardNewsIndexRoute: typeof DashboardNewsIndexRoute
+  DashboardOperationsIndexRoute: typeof DashboardOperationsIndexRoute
   DashboardProfileIndexRoute: typeof DashboardProfileIndexRoute
   DashboardTransactionsIndexRoute: typeof DashboardTransactionsIndexRoute
   DashboardFinanceTicketsIndexRoute: typeof DashboardFinanceTicketsIndexRoute
+  DashboardOperationsEventsIdAttendanceRoute: typeof DashboardOperationsEventsIdAttendanceRoute
+  DashboardOperationsEventsIdAttendeesRoute: typeof DashboardOperationsEventsIdAttendeesRoute
+  DashboardOperationsEventsIdGatesRoute: typeof DashboardOperationsEventsIdGatesRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
@@ -698,9 +782,15 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardIdCardIndexRoute: DashboardIdCardIndexRoute,
   DashboardMembersIndexRoute: DashboardMembersIndexRoute,
   DashboardNewsIndexRoute: DashboardNewsIndexRoute,
+  DashboardOperationsIndexRoute: DashboardOperationsIndexRoute,
   DashboardProfileIndexRoute: DashboardProfileIndexRoute,
   DashboardTransactionsIndexRoute: DashboardTransactionsIndexRoute,
   DashboardFinanceTicketsIndexRoute: DashboardFinanceTicketsIndexRoute,
+  DashboardOperationsEventsIdAttendanceRoute:
+    DashboardOperationsEventsIdAttendanceRoute,
+  DashboardOperationsEventsIdAttendeesRoute:
+    DashboardOperationsEventsIdAttendeesRoute,
+  DashboardOperationsEventsIdGatesRoute: DashboardOperationsEventsIdGatesRoute,
 }
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(

@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import {
   fetchActivityLog,
   fetchAttendance,
+  fetchAttendanceSummary,
   fetchCarousel,
   fetchCurrentUser,
   fetchDashboardCalendar,
@@ -11,6 +12,7 @@ import {
   fetchEvent,
   fetchEvents,
   fetchEventTanggal,
+  fetchGateMonitoring,
   fetchIdCard,
   fetchMember,
   fetchMembers,
@@ -19,8 +21,10 @@ import {
   fetchMyOrders,
   fetchNews,
   fetchNewsItem,
-  fetchOrder,
+  fetchOperationalEvents,
   fetchOperationalSummary,
+  fetchOrder,
+  fetchParticipants,
   fetchPaymentSummary,
   fetchPesantrenInfo,
   fetchProfile,
@@ -35,6 +39,12 @@ import {
   fetchTicketSummary,
   fetchTransactions,
 } from "@/services/mzt-api";
+import type {
+  AttendanceParams,
+  GateMonitoringParams,
+  OperationEventsParams,
+  ParticipantsParams,
+} from "@/services/mzt-api";
 
 export const queryKeys = {
   currentUser: ["current-user"] as const,
@@ -47,6 +57,14 @@ export const queryKeys = {
   paymentSummary: ["dashboard", "finance", "payments"] as const,
   ticketSummary: ["dashboard", "finance", "tickets"] as const,
   operationalSummary: ["dashboard", "finance", "operational"] as const,
+  operationalEvents: (params?: OperationEventsParams) =>
+    ["dashboard", "operations", "events", params] as const,
+  participants: (eventId: number | string, params: ParticipantsParams) =>
+    ["dashboard", "operations", "events", eventId, "attendees", params] as const,
+  attendanceSummary: (eventId: number | string, params: AttendanceParams) =>
+    ["dashboard", "operations", "events", eventId, "attendance", params] as const,
+  gateMonitoring: (eventId: number | string, params: GateMonitoringParams) =>
+    ["dashboard", "operations", "events", eventId, "gates", params] as const,
   members: ["members"] as const,
   member: (idUsers: number | string) => ["members", idUsers] as const,
   events: ["events"] as const,
@@ -104,6 +122,32 @@ export const ticketSummaryQuery = () =>
 
 export const operationalSummaryQuery = () =>
   queryOptions({ queryKey: queryKeys.operationalSummary, queryFn: fetchOperationalSummary });
+
+/* ------------------------------------------- Phase 2D — EMS Operational Management */
+
+export const operationalEventsQuery = (params?: OperationEventsParams) =>
+  queryOptions({
+    queryKey: queryKeys.operationalEvents(params),
+    queryFn: () => fetchOperationalEvents(params),
+  });
+
+export const participantsQuery = (eventId: number | string, params: ParticipantsParams) =>
+  queryOptions({
+    queryKey: queryKeys.participants(eventId, params),
+    queryFn: () => fetchParticipants(eventId, params),
+  });
+
+export const attendanceSummaryQuery = (eventId: number | string, params: AttendanceParams) =>
+  queryOptions({
+    queryKey: queryKeys.attendanceSummary(eventId, params),
+    queryFn: () => fetchAttendanceSummary(eventId, params),
+  });
+
+export const gateMonitoringQuery = (eventId: number | string, params: GateMonitoringParams) =>
+  queryOptions({
+    queryKey: queryKeys.gateMonitoring(eventId, params),
+    queryFn: () => fetchGateMonitoring(eventId, params),
+  });
 
 export const membersQuery = () =>
   queryOptions({ queryKey: queryKeys.members, queryFn: fetchMembers });

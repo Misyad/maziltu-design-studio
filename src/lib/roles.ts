@@ -22,3 +22,14 @@ export function homePathFor(user: {
   if (user.must_change_password) return "/portal/ubah-password";
   return hasAdminRole(user.roles) ? "/dashboard" : "/portal";
 }
+
+/** Roles allowed to verify payments / see participant PII (backend VERIFIER_ROLES). */
+const VERIFIER_ROLES: readonly string[] = ["finance", "ketua", "admin"];
+
+/**
+ * Whether the user may access verifier-only data (participant PII, financial
+ * queue). UI hint ONLY — the backend is the security boundary.
+ */
+export function isVerifier(roles: readonly (AppRole | string)[] | undefined): boolean {
+  return roles?.some((role) => VERIFIER_ROLES.includes(role)) ?? false;
+}

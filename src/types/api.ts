@@ -410,3 +410,100 @@ export interface BulkGenerateResult {
   created: number;
   skipped: number;
 }
+
+/* ------------------------------------------- Phase 2D — EMS Operational Management */
+/* Endpoints: GET /dashboard/operations/* (auth:sanctum, read-only). Field names
+   mirror the Laravel Resources exactly — never rename. PII fields (id_anggota,
+   nama) are `null` for callers WITHOUT the viewParticipantPII ability; the
+   backend does the cut, the UI only renders what the API sends. */
+
+/** Aggregate row from GET /dashboard/operations/events. */
+export interface OperationalEvent {
+  id_event: number;
+  judul_event: string;
+  tanggal_start: string | null;
+  lokasi: string | null;
+  kuota: number | null;
+  present_count: number;
+  legacy_count: number;
+  gate_count: number;
+  latest_tgl: string | null;
+}
+
+/** Source split: phase2c = scanned with a ticket (present), legacy = historical. */
+export type ParticipantSource = "phase2c" | "legacy";
+
+/** Account linkage: normal = matched to a `users` row, orphan = no match. */
+export type AccountStatus = "normal" | "orphan";
+
+/** One participant row from GET /dashboard/operations/events/{id}/attendees. */
+export interface Participant {
+  id: number;
+  id_event: number;
+  id_tanggal: number | null;
+  /** PII — null unless the caller holds viewParticipantPII (backend-cut). */
+  id_anggota: string | null;
+  /** PII — null unless the caller holds viewParticipantPII (backend-cut). */
+  nama: string | null;
+  source: ParticipantSource;
+  account_status: AccountStatus;
+  ticket_status: string | null;
+  gate: string | null;
+  scanned_at: string | null;
+}
+
+/** Echo of the applied query params, always present in attendees `meta`. */
+export interface ParticipantFilterState {
+  event_id?: number | null;
+  tgl?: number | null;
+  gate?: string | null;
+  q?: string | null;
+}
+
+export interface ParticipantMeta {
+  total: number;
+  page: number;
+  per_page: number;
+  last_page: number;
+  filter: ParticipantFilterState;
+}
+
+/** Payload of GET /dashboard/operations/events/{id}/attendees. */
+export interface ParticipantListResponse {
+  rows: Participant[];
+  meta: ParticipantMeta;
+}
+
+/** Per-day attendance breakdown from GET /dashboard/operations/events/{id}/attendance. */
+export interface PerTanggalRow {
+  tanggal_id: number | null;
+  present: number;
+  legacy_count: number;
+}
+
+/** Payload of GET /dashboard/operations/events/{id}/attendance. */
+export interface AttendanceSummary {
+  event_id: number;
+  tanggal_id: number | null;
+  /** Canonical present = prisensi_kehadiran.id_ticket IS NOT NULL (Phase 2C). */
+  present: number;
+  legacy_count: number;
+  total: number;
+  per_tanggal: PerTanggalRow[];
+}
+
+/** One gate group row from GET /dashboard/operations/events/{id}/gates. */
+export interface GateMonitorRow {
+  gate: string;
+  present: number;
+  legacy: number;
+  total: number;
+}
+
+/** Payload of GET /dashboard/operations/events/{id}/gates. */
+export interface GateMonitoringResponse {
+  event_id: number;
+  tanggal_id: number | null;
+  rows: GateMonitorRow[];
+  breakdown_per_gate: Record<string, GateMonitorRow>;
+}
