@@ -133,6 +133,8 @@ pipeline {
                 // Outputs a .sql.gz + a .json metadata sidecar (format ADR-014).
                 sh '''
                     set -eu
+                    # Never trace database credentials or commands carrying them.
+                    set +x
                     ENV_FILE="$DEPLOY_DIR/.env"
                     BK_DIR="$DEPLOY_DIR/backups"
                     DB_CONTAINER="mzt-db-1"
@@ -141,40 +143,68 @@ pipeline {
                     mkdir -p "$BK_DIR"
 
                     # Read credentials from the host .env (never hardcoded).
-                    db=$(sed -n 's/^MYSQL_DATABASE=//p' "$ENV_FILE" | tr -d '\r' | tr -d '"' | tr -d "'" || true)
-                    user=$(sed -n 's/^MYSQL_USER=//p' "$ENV_FILE" | tr -d '\r' | tr -d '"' | tr -d "'" || true)
-                    pw=$(sed -n 's/^MYSQL_PASSWORD=//p' "$ENV_FILE" | tr -d '\r' | tr -d '"' | tr -d "'" || true)
+                    db=$(sed -n 's/^MYSQL_DATABASE=//p' "$ENV_FILE")
+                    user=$(sed -n 's/^MYSQL_USER=//p' "$ENV_FILE")
+                    pw=$(sed -n 's/^MYSQL_PASSWORD=//p' "$ENV_FILE")
+                    db=$(printf '%s' "$db" | tr -d '\r' | tr -d '"' | tr -d "'")
+                    user=$(printf '%s' "$user" | tr -d '\r' | tr -d '"' | tr -d "'")
+                    pw=$(printf '%s' "$pw" | tr -d '\r' | tr -d '"' | tr -d "'")
                     [ -n "$db" ] && [ -n "$user" ] && [ -n "$pw" ] || { echo "cannot read DB credentials from $ENV_FILE"; exit 1; }
 
-                    stamp=$(TZ=Asia/Jakarta date +%Y%m%d_%H%M%S)
-                    out="$BK_DIR/mzt_pre_migrate_${stamp}.sql.gz"
-                    meta="$BK_DIR/mzt_pre_migrate_${stamp}.json"
-                    tmp="$BK_DIR/.mzt_pre_migrate.tmp.sql"
+                    run_id="$(TZ=Asia/Jakarta date +%Y%m%d_%H%M%S)_${BUILD_NUMBER:-manual}_$$"
+                    out="$BK_DIR/mzt_pre_migrate_${run_id}.sql.gz"
+                    tmp="$BK_DIR/.mzt_pre_migrate_${run_id}.sql"
+                    gz_tmp="$BK_DIR/.mzt_pre_migrate_${run_id}.sql.gz"
+                    stderr_tmp="$BK_DIR/.mzt_pre_migrate_${run_id}.stderr"
+                    trap 'rm -f "$tmp" "$gz_tmp" "$stderr_tmp"' EXIT
 
                     echo "== pre-migrate dump from db container =="
-                    docker exec "$DB_CONTAINER" sh -c "mariadb-dump -u'$user' -p'$pw' --single-transaction --routines '$db'" > "$tmp"
-                    rc=$?
+                    if docker exec -e MYSQL_PWD="$pw" "$DB_CONTAINER" \
+                        mariadb-dump --user="$user" --single-transaction --routines "$db" \
+                        > "$tmp" 2> "$stderr_tmp"; then
+                        rc=0
+                    else
+                        rc=$?
+                    fi
+                    dump_bytes=$(wc -c < "$tmp")
+                    stderr_bytes=$(wc -c < "$stderr_tmp")
+                    echo "mariadb-dump exit code=$rc stdout bytes=$dump_bytes stderr bytes=$stderr_bytes"
                     if [ "$rc" -ne 0 ]; then
-                        rm -f "$tmp"
                         echo "mariadb-dump failed (rc=$rc) - aborting deploy"
                         exit 1
                     fi
-
-                    gzip -c "$tmp" > "$out"
-                    rm -f "$tmp"
-
-                    echo "== validate backup =="
-                    if [ -s "$out" ] && gzip -t "$out" && gzip -dc "$out" | grep -q 'event_status'; then
-                        echo "backup OK: $out ($(du -h "$out" | cut -f1))"
-                    else
-                        echo "backup invalid or missing expected view (event_status)"
+                    if [ "$dump_bytes" -eq 0 ]; then
+                        echo "mariadb-dump produced an empty dump"
                         exit 1
                     fi
+
+                    echo "== compress backup =="
+                    if gzip -c "$tmp" > "$gz_tmp"; then
+                        echo "gzip exit code=0"
+                    else
+                        echo "gzip failed"
+                        exit 1
+                    fi
+
+                    echo "== validate backup =="
+                    if ! gzip -t "$gz_tmp"; then
+                        echo "backup gzip integrity check failed"
+                        exit 1
+                    fi
+                    echo "gzip integrity=PASS"
+                    if ! gzip -dc "$gz_tmp" | grep -q 'event_status'; then
+                        echo "backup missing expected view (event_status)"
+                        exit 1
+                    fi
+                    echo "event_status validation=PASS"
+                    mv "$gz_tmp" "$out"
+                    echo "backup atomic rename=PASS file=$out bytes=$(wc -c < "$out")"
 
                     echo "== write metadata sidecar =="
                     git_be=$(cd "$DEPLOY_DIR/backend" && git rev-parse --short HEAD 2>/dev/null || echo unknown)
                     git_fe=$(cd "$DEPLOY_DIR/frontend" && git rev-parse --short HEAD 2>/dev/null || echo unknown)
                     ts=$(TZ=Asia/Jakarta date "+%Y-%m-%dT%H:%M:%S%:z")
+                    meta="$BK_DIR/mzt_pre_migrate_${run_id}.json"
                     printf '{"created_at":"%s","pipeline":"mzt-deploy","git_backend":"%s","git_frontend":"%s","reason":"pre-migrate","database":"%s","compressed":true}\n' "$ts" "$git_be" "$git_fe" "$db" > "$meta"
 
                     if [ -s "$meta" ] && grep -q '"git_backend"' "$meta"; then
