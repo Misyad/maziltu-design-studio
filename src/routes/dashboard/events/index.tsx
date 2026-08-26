@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, MapPin, Pencil, Plus, Ticket, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { EVENT_ROLES, requireRoles } from "@/lib/auth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,8 @@ import { eventsQuery, queryKeys } from "@/services/queries";
 import type { EventItem } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/events/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, EVENT_ROLES, location.href),
   component: EventsPage,
 });
 

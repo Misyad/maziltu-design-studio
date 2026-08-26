@@ -2,7 +2,6 @@ import {
   createFileRoute,
   Link,
   Outlet,
-  redirect,
   useLocation,
   useRouter,
 } from "@tanstack/react-router";
@@ -49,17 +48,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
-import { mediaUrl, getStoredToken } from "@/services/api-client";
+import { mediaUrl } from "@/services/api-client";
 import { meQuery } from "@/services/queries";
 import { logout } from "@/services/mzt-api";
+import { requireUser } from "@/lib/auth";
 import { ORG } from "@/constants/content";
 
 export const Route = createFileRoute("/portal")({
-  beforeLoad: ({ location }) => {
-    if (!getStoredToken()) {
-      throw redirect({ to: "/login", replace: true, from: location.href });
-    }
-  },
+  beforeLoad: ({ context, location }) => requireUser(context.queryClient, location.href),
   component: PortalLayout,
 });
 

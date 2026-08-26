@@ -4,9 +4,12 @@ import { ClipboardList, ReceiptText, TicketCheck, Wallet } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { OPERATIONS_ROLES, requireRoles } from "@/lib/auth";
 import { operationalSummaryQuery, ticketSummaryQuery } from "@/services/queries";
 
 export const Route = createFileRoute("/dashboard/finance/tickets/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, OPERATIONS_ROLES, location.href),
   component: TicketMonitoringPage,
 });
 

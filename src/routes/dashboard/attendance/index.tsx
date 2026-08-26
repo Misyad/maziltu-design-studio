@@ -17,11 +17,14 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { PRISENSI_ROLES, requireRoles } from "@/lib/auth";
 import { submitAttendance } from "@/services/mzt-api";
 import { attendanceQuery, eventTanggalQuery, eventsQuery, queryKeys } from "@/services/queries";
 import type { AttendanceRecord } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/attendance/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, PRISENSI_ROLES, location.href),
   component: AttendancePage,
 });
 

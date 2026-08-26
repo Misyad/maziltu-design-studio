@@ -4,9 +4,12 @@ import { CalendarDays, History, UserRound } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { OPERATIONS_ROLES, requireRoles } from "@/lib/auth";
 import { attendanceSummaryQuery } from "@/services/queries";
 
 export const Route = createFileRoute("/dashboard/operations/events/$id/attendance")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, OPERATIONS_ROLES, location.href),
   component: AttendancePage,
 });
 

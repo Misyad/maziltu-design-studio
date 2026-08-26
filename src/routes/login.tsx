@@ -1,20 +1,26 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { LoginForm } from "@/features/auth/login-form";
-import { getStoredToken } from "@/services/api-client";
+import { currentUserQuery } from "@/services/queries";
+import { ApiError } from "@/services/api-client";
 import { homePathFor } from "@/lib/roles";
-import type { AuthUser } from "@/types/api";
 import { ORG } from "@/constants/content";
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: ({ context, location }) => {
-    if (getStoredToken()) {
-      const cached = context.queryClient.getQueryData<{ user?: AuthUser }>(["current-user"]);
-      const user = cached?.user;
-      throw redirect({
-        to: user ? homePathFor(user) : "/portal",
-        replace: true,
-        from: location.href,
-      });
+  beforeLoad: async ({ context, location }) => {
+    // Only probe the session on the client — SSR has no cookie jar and would
+    // otherwise bounce every visitor back to /login.
+    if (typeof window === "undefined") return;
+    try {
+      const user = await context.queryClient.ensureQueryData(currentUserQuery());
+      const { redirect } = await import("@tanstack/react-router");
+      const options = { to: homePathFor(user), replace: true } as Parameters<
+        typeof redirect
+      >[0];
+      if (location.href) (options as { from?: string }).from = location.href;
+      throw redirect(options);
+    } catch (error) {
+      if (error instanceof ApiError) return; // 401/403 -> stay on the login page
+      throw error;
     }
   },
   head: () => ({

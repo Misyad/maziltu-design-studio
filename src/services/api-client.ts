@@ -1,4 +1,4 @@
-import axios, { AxiosError, type AxiosInstance } from "axios";
+import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig } from "axios";
 import type { ApiEnvelope } from "@/types/api";
 
 export const API_BASE_URL =
@@ -23,17 +23,17 @@ export const IS_SERVER = typeof window === "undefined";
 /** Origin of the Laravel app, used to build `{ORIGIN}/storage/{path}` media URLs. */
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
-const TOKEN_STORAGE_KEY = "mzt.token";
+/**
+ * R3 — browser auth is session/cookie based. The old `mzt.token` personal
+ * access token is no longer written; the key is only swept defensively here in
+ * case a stale value survives from a pre-R3 build.
+ */
+const LEGACY_TOKEN_KEY = "mzt.token";
 
-export function getStoredToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
-}
-
-export function setStoredToken(token: string | null) {
-  if (typeof window === "undefined") return;
-  if (token) window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
-  else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+/** Axios request config carrying the R3 `authCheck` probe flag. */
+export interface AuthCheckConfig extends AxiosRequestConfig {
+  /** When true, a 401 response is left to the caller (no /login redirect). */
+  authCheck?: boolean;
 }
 
 /** Resolves a backend media path to an absolute URL. */
@@ -47,28 +47,59 @@ export const apiClient: AxiosInstance = axios.create({
   baseURL: IS_SERVER ? SSR_API_BASE_URL : API_BASE_URL,
   headers: { Accept: "application/json" },
   timeout: 20000,
+  // Browser requests must send the HttpOnly session cookie (first-party SPA).
+  withCredentials: !IS_SERVER,
+  // Axios only auto-attaches X-XSRF-TOKEN for same-origin requests unless this
+  // flag is set. The dev topology (SPA :8080 -> API :8000) is cross-origin,
+  // so the flag must be explicit or every stateful write gets a 419.
+  // Production is same-origin, where the flag is simply redundant-but-safe.
+  withXSRFToken: true,
 });
 
-apiClient.interceptors.request.use((config) => {
-  const token = getStoredToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-// Expired / revoked tokens come back as 401. Drop the stale token and send the
-// user to the login screen so the next request is authenticated.
+// Expired / revoked credentials come back as 401. Sweep any legacy token and
+// send the user to the login screen so the next request is authenticated.
+// Auth probes (`authCheck`) are exempt: route guards and public-page login
+// hints handle the 401 themselves.
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      setStoredToken(null);
-      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-        window.location.assign("/login");
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(LEGACY_TOKEN_KEY);
+        const isProbe = (error.config as AuthCheckConfig | undefined)?.authCheck;
+        if (!isProbe && !window.location.pathname.startsWith("/login")) {
+          window.location.assign("/login");
+        }
       }
     }
     return Promise.reject(error);
   },
 );
+
+let csrfPromise: Promise<void> | null = null;
+
+/**
+ * Bootstrap the Laravel session cookies (session + XSRF-TOKEN) that Sanctum
+ * needs for stateful API calls. The browser must GET /sanctum/csrf-cookie
+ * before any state-changing request (login, logout, writes). Memoised per page
+ * load; a no-op on the server, where there is no cookie jar.
+ */
+export function ensureCsrfToken(): Promise<void> {
+  if (IS_SERVER) return Promise.resolve();
+  if (!csrfPromise) {
+    csrfPromise = axios
+      .get(`${API_ORIGIN}/sanctum/csrf-cookie`, {
+        withCredentials: true,
+        headers: { Accept: "application/json" },
+      })
+      .then(() => undefined)
+      .catch((error) => {
+        csrfPromise = null; // allow a retry on the next call
+        throw error;
+      });
+  }
+  return csrfPromise;
+}
 
 export class ApiError extends Error {
   status: number | undefined;
@@ -100,9 +131,9 @@ function toApiError(error: unknown): ApiError {
 }
 
 /** GET returning the raw envelope, without requiring a `data` field. */
-export async function apiGetRaw<T>(url: string): Promise<T> {
+export async function apiGetRaw<T>(url: string, config?: AuthCheckConfig): Promise<T> {
   try {
-    const response = await apiClient.get<T>(url);
+    const response = await apiClient.get<T>(url, config);
     return response.data;
   } catch (error) {
     throw toApiError(error);

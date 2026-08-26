@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { OPERATIONS_ROLES, requireRoles } from "@/lib/auth";
 import { operationalEventsQuery } from "@/services/queries";
 import { formatDateShort } from "@/services/public-content";
 
 export const Route = createFileRoute("/dashboard/operations/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, OPERATIONS_ROLES, location.href),
   component: OperationsPage,
 });
 

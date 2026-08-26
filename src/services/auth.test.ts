@@ -1,0 +1,285 @@
+import axios from "axios";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ApiError as ApiErrorType } from "@/services/api-client";
+
+const LEGACY_TOKEN_KEY = "mzt.token";
+
+function axiosError(status: number, config?: Record<string, unknown>) {
+  return new axios.AxiosError(
+    "Unauthenticated",
+    "ERR_BAD_REQUEST",
+    { headers: {}, ...config } as never,
+    undefined,
+    {
+      status,
+      statusText: "Unauthenticated",
+      data: { success: false, message: "Unauthenticated." },
+      headers: {},
+      config: { headers: {} } as never,
+    },
+  );
+}
+
+async function loadFreshModules() {
+  vi.resetModules();
+  const apiClient = (await import("@/services/api-client")).apiClient;
+  const ApiError = (await import("@/services/api-client")).ApiError;
+  const ensureCsrfToken = (await import("@/services/api-client")).ensureCsrfToken;
+  const IS_SERVER = (await import("@/services/api-client")).IS_SERVER;
+  const mzt = await import("@/services/mzt-api");
+  // Same axios instance the freshly loaded modules closed over.
+  const axiosInstance = (await import("axios")).default;
+  return { apiClient, ApiError, ensureCsrfToken, IS_SERVER, axios: axiosInstance, ...mzt };
+}
+
+/** Capture everything the real XHR adapter hands to setRequestHeader(). */
+function captureXhrHeaders() {
+  const captured: Record<string, string> = {};
+  const original = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function (name: string, value: string) {
+    captured[name] = value;
+    return original.call(this, name, value);
+  };
+  return {
+    captured,
+    restore() {
+      XMLHttpRequest.prototype.setRequestHeader = original;
+    },
+  };
+}
+
+/** jsdom forbids spying on location methods — replace the whole location object. */
+function stubLocation(pathname = "/dashboard") {
+  const assign = vi.fn();
+  Object.defineProperty(window, "location", {
+    value: { pathname, assign },
+    writable: true,
+    configurable: true,
+  });
+  return assign;
+}
+
+describe("R3 browser auth — no personal access token persistence", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("never writes the legacy `mzt.token` key during login", async () => {
+    const { apiClient, login, axios } = await loadFreshModules();
+    const spy = vi.spyOn(apiClient, "post").mockResolvedValue({
+      data: { success: true, user: { id: 1, roles: ["anggota"] } },
+    });
+    const csrfSpy = vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
+
+    const result = await login({ id_anggota: "MZT000001", password: "secret" });
+
+    expect(csrfSpy).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledWith("/login", { id_anggota: "MZT000001", password: "secret" }, {});
+    expect(window.localStorage.getItem(LEGACY_TOKEN_KEY)).toBeNull();
+    expect(result).toEqual({ success: true, user: { id: 1, roles: ["anggota"] } });
+  });
+
+  it("does not persist a token on login even when the API returns one", async () => {
+    const { apiClient, login, axios } = await loadFreshModules();
+    vi.spyOn(apiClient, "post").mockResolvedValue({
+      data: { success: true, token: "some-pat", user: { id: 1, roles: ["anggota"] } },
+    });
+    vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
+
+    await login({ id_anggota: "MZT000001", password: "secret" });
+
+    expect(window.localStorage.getItem(LEGACY_TOKEN_KEY)).toBeNull();
+    expect(window.localStorage.getItem("mzt.token")).toBeNull();
+  });
+
+  it("clears any stale legacy token on 401 (via the response interceptor)", async () => {
+    const { apiClient } = await loadFreshModules();
+    window.localStorage.setItem(LEGACY_TOKEN_KEY, "stale-token");
+    const assignSpy = stubLocation();
+    const interceptor = apiClient.interceptors.response.handlers?.[0];
+
+    await expect(
+      interceptor?.rejected?.(axiosError(401, { authCheck: true })),
+    ).rejects.toBeTruthy();
+
+    expect(window.localStorage.getItem(LEGACY_TOKEN_KEY)).toBeNull();
+    expect(assignSpy).not.toHaveBeenCalled(); // authCheck probe -> no hard redirect
+  });
+
+  it("401 on a non-authCheck request hard-redirects to /login", async () => {
+    const { apiClient } = await loadFreshModules();
+    const assignSpy = stubLocation();
+    const interceptor = apiClient.interceptors.response.handlers?.[0];
+
+    await expect(
+      interceptor?.rejected?.(axiosError(401, { authCheck: false })),
+    ).rejects.toBeTruthy();
+
+    expect(assignSpy).toHaveBeenCalledWith("/login");
+  });
+
+  it("401 on an authCheck probe is left to the caller (no redirect)", async () => {
+    const { apiClient } = await loadFreshModules();
+    const assignSpy = stubLocation();
+    const interceptor = apiClient.interceptors.response.handlers?.[0];
+
+    await expect(
+      interceptor?.rejected?.(axiosError(401, { authCheck: true })),
+    ).rejects.toBeTruthy();
+
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  it("logout never writes the legacy token key", async () => {
+    const { apiClient, logout, axios } = await loadFreshModules();
+    vi.spyOn(apiClient, "post").mockResolvedValue({ data: { success: true } });
+    vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
+
+    await logout();
+
+    expect(window.localStorage.getItem(LEGACY_TOKEN_KEY)).toBeNull();
+  });
+
+  it("module has no token storage helpers exposed", async () => {
+    const apiModule = await import("@/services/mzt-api");
+    expect("getStoredToken" in apiModule).toBe(false);
+    expect("setStoredToken" in apiModule).toBe(false);
+  });
+});
+
+describe("currentUserQuery — session auth state", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("resolves the authenticated user from GET /user", async () => {
+    const { apiClient, fetchCurrentUser } = await loadFreshModules();
+    const user = { id: 7, id_anggota: "MZT000007", name: "Alumni", roles: ["anggota"] };
+    vi.spyOn(apiClient, "get").mockResolvedValue({ data: { success: true, user } });
+
+    await expect(fetchCurrentUser()).resolves.toEqual(user);
+  });
+
+  it("marks the /user probe as authCheck so 401 does not hard-redirect", async () => {
+    const { apiClient, ApiError, fetchCurrentUser } = await loadFreshModules();
+    vi.spyOn(apiClient, "get").mockRejectedValue(axiosError(401));
+
+    await expect(fetchCurrentUser()).rejects.toBeInstanceOf(ApiError);
+
+    const getSpy = apiClient.get as ReturnType<typeof vi.fn>;
+    const config = getSpy.mock.calls[0]?.[1] as { authCheck?: boolean } | undefined;
+    expect(config?.authCheck).toBe(true);
+  });
+
+  it("throws an ApiError carrying the HTTP status", async () => {
+    const { apiClient, ApiError, fetchCurrentUser } = await loadFreshModules();
+    vi.spyOn(apiClient, "get").mockRejectedValue(axiosError(403));
+
+    try {
+      await fetchCurrentUser();
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiErrorType).status).toBe(403);
+    }
+  });
+});
+
+describe("Sanctum session bootstrap", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("browser requests use withCredentials so the HttpOnly cookie is sent", async () => {
+    const { apiClient, IS_SERVER } = await loadFreshModules();
+    expect(IS_SERVER).toBe(false);
+    expect(apiClient.defaults.withCredentials).toBe(true);
+  });
+
+  it("GETs the CSRF cookie before a state-changing request", async () => {
+    const { apiClient, login, axios } = await loadFreshModules();
+    const csrfSpy = vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
+    vi.spyOn(apiClient, "post").mockResolvedValue({ data: { success: true, user: { id: 1 } } });
+
+    await login({ id_anggota: "MZT000001", password: "secret" });
+
+    expect(csrfSpy).toHaveBeenCalledTimes(1);
+    expect(csrfSpy.mock.calls[0]?.[0]).toContain("/sanctum/csrf-cookie");
+  });
+
+  it("ensureCsrfToken is idempotent within a page load", async () => {
+    const { ensureCsrfToken, axios } = await loadFreshModules();
+    const getSpy = vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
+
+    await ensureCsrfToken();
+    await ensureCsrfToken();
+    await ensureCsrfToken();
+
+    expect(getSpy).toHaveBeenCalledTimes(1);
+    expect(getSpy.mock.calls[0]?.[0]).toContain("/sanctum/csrf-cookie");
+  });
+
+  it("login awaits the CSRF bootstrap before posting", async () => {
+    const { apiClient, login, axios } = await loadFreshModules();
+    const csrfSpy = vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
+    const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue({
+      data: { success: true, user: { id: 1 } },
+    });
+
+    await login({ id_anggota: "MZT000001", password: "secret" });
+
+    expect(csrfSpy).toHaveBeenCalledBefore(postSpy);
+  });
+
+  it("configures withXSRFToken so cross-origin stateful requests carry the CSRF header", async () => {
+    const { apiClient } = await loadFreshModules();
+    expect(apiClient.defaults.withXSRFToken).toBe(true);
+    expect(apiClient.defaults.withCredentials).toBe(true);
+  });
+
+  it("attaches X-XSRF-TOKEN through the real axios pipeline for the dev topology (:8080 -> :8000)", async () => {
+    const { apiClient } = await loadFreshModules();
+
+    // Plant the cookie exactly as Laravel emits it on the wire: percent-encoded
+    // (Symfony rawurlencode). Axios must send the DECODED value in the header,
+    // which is what VerifyCsrfToken decrypts.
+    document.cookie = "XSRF-TOKEN=QQ%3D%3D; path=/";
+
+    // jsdom page origin is :3000 while the API base is :8000 -> genuinely
+    // cross-origin, matching the dev topology. The REAL xhr adapter runs
+    // (so resolveConfig/cookie logic executes); only the network send fails.
+    const { captured, restore } = captureXhrHeaders();
+    try {
+      await apiClient
+        .post("/login", { id_anggota: "MZT000001", password: "x" })
+        .catch(() => undefined);
+    } finally {
+      restore();
+    }
+
+    expect(captured["X-XSRF-TOKEN"]).toBe("QQ==");
+
+    document.cookie = "XSRF-TOKEN=; path=/; max-age=0";
+  });
+
+  it("negative control: without withXSRFToken a cross-origin request omits the header", async () => {
+    document.cookie = "XSRF-TOKEN=encrypted-xsrf-value; path=/";
+
+    const plain = axios.create({
+      baseURL: "http://localhost:8000/api",
+      withCredentials: true, // deliberately WITHOUT withXSRFToken
+    });
+
+    const { captured, restore } = captureXhrHeaders();
+    try {
+      await plain.post("/login", {}).catch(() => undefined);
+    } finally {
+      restore();
+    }
+
+    expect(captured["X-XSRF-TOKEN"]).toBeUndefined();
+
+    document.cookie = "XSRF-TOKEN=; path=/; max-age=0";
+  });
+});

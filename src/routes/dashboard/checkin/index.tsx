@@ -29,12 +29,15 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { CHECKIN_ROLES, requireRoles } from "@/lib/auth";
 import { ApiError } from "@/services/api-client";
 import { checkIn } from "@/services/mzt-api";
 import { eventTanggalQuery, eventsQuery, queryKeys } from "@/services/queries";
 import type { CheckInDuplicate, CheckInResult } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/checkin/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, CHECKIN_ROLES, location.href),
   component: CheckInPage,
 });
 

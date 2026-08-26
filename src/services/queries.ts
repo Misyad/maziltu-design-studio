@@ -92,7 +92,11 @@ export const queryKeys = {
 };
 
 export const currentUserQuery = () =>
-  queryOptions({ queryKey: queryKeys.currentUser, queryFn: fetchCurrentUser });
+  queryOptions({
+    queryKey: queryKeys.currentUser,
+    queryFn: fetchCurrentUser,
+    retry: 0, // unauthenticated probes must fail fast (no 3x retry on 401)
+  });
 
 export const dashboardStatsQuery = () =>
   queryOptions({ queryKey: queryKeys.dashboardStats, queryFn: fetchDashboardStats });

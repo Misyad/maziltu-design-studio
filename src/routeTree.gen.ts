@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as EventsRouteImport } from './routes/events'
+import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NewsRouteImport } from './routes/news'
@@ -70,6 +71,11 @@ const DashboardRouteRoute = DashboardRouteRouteImport.update({
 const EventsRoute = EventsRouteImport.update({
   id: '/events',
   path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForbiddenRoute = ForbiddenRouteImport.update({
+  id: '/forbidden',
+  path: '/forbidden',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryRoute = GalleryRouteImport.update({
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
+  '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
+  '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
@@ -324,6 +332,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRouteWithChildren
+  '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
@@ -365,6 +374,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/events'
+    | '/forbidden'
     | '/gallery'
     | '/login'
     | '/news'
@@ -402,6 +412,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/events'
+    | '/forbidden'
     | '/gallery'
     | '/login'
     | '/news'
@@ -441,6 +452,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/events'
+    | '/forbidden'
     | '/gallery'
     | '/login'
     | '/news'
@@ -481,6 +493,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   ContactRoute: typeof ContactRoute
   EventsRoute: typeof EventsRouteWithChildren
+  ForbiddenRoute: typeof ForbiddenRoute
   GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRouteWithChildren
@@ -522,6 +535,13 @@ declare module '@tanstack/react-router' {
       path: '/events'
       fullPath: '/events'
       preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forbidden': {
+      id: '/forbidden'
+      path: '/forbidden'
+      fullPath: '/forbidden'
+      preLoaderRoute: typeof ForbiddenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery': {
@@ -861,6 +881,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   ContactRoute: ContactRoute,
   EventsRoute: EventsRouteWithChildren,
+  ForbiddenRoute: ForbiddenRoute,
   GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
   NewsRoute: NewsRouteWithChildren,

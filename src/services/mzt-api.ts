@@ -6,7 +6,7 @@ import {
   apiPostRaw,
   apiPut,
   apiPutRaw,
-  setStoredToken,
+  ensureCsrfToken,
 } from "./api-client";
 import type {
   ActivityLogEntry,
@@ -50,23 +50,21 @@ import type {
 /* ------------------------------------------------------------------ auth */
 
 export async function login(payload: LoginRequest): Promise<LoginResponse> {
-  const result = await apiPostRaw<LoginResponse>("/login", payload);
-  if (result?.token) setStoredToken(result.token);
-  return result;
+  await ensureCsrfToken();
+  return apiPostRaw<LoginResponse>("/login", payload);
 }
 
 // GET /user returns `{ success, user: {...} }` (no `data` key), so it must be
-// read with the raw helper instead of apiGet.
+// read with the raw helper instead of apiGet. Marked `authCheck` so the global
+// 401 handler leaves the response to the caller (route guards and public-page
+// login hints) instead of hard-redirecting anonymous visitors.
 export function fetchCurrentUser() {
-  return apiGetRaw<{ user: AuthUser }>("/user").then((res) => res.user);
+  return apiGetRaw<{ user: AuthUser }>("/user", { authCheck: true }).then((res) => res.user);
 }
 
 export async function logout() {
-  try {
-    await apiPost<unknown>("/logout");
-  } finally {
-    setStoredToken(null);
-  }
+  await ensureCsrfToken();
+  await apiPost<unknown>("/logout");
 }
 
 /* ------------------------------------------------------------- dashboard */

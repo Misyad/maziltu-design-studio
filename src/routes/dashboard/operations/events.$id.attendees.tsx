@@ -17,10 +17,13 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { OPERATIONS_ROLES, requireRoles } from "@/lib/auth";
 import { isVerifier } from "@/lib/roles";
 import { currentUserQuery, participantsQuery } from "@/services/queries";
 
 export const Route = createFileRoute("/dashboard/operations/events/$id/attendees")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, OPERATIONS_ROLES, location.href),
   validateSearch: z.object({
     q: z.string().optional(),
     page: z.number().int().positive().optional(),

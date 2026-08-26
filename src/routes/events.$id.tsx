@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/features/events/event-card";
-import { getStoredToken, mediaUrl } from "@/services/api-client";
+import { mediaUrl } from "@/services/api-client";
 import { registerEvent } from "@/services/mzt-api";
 import { eventStatus, formatDateShort, parsePrice } from "@/services/public-content";
-import { myOrdersQuery, publicEventQuery } from "@/services/queries";
+import { currentUserQuery, myOrdersQuery, publicEventQuery } from "@/services/queries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/events/$id")({
@@ -166,7 +166,10 @@ const REGISTER_ERROR: Record<number, string> = {
 
 function RegisterPanel({ eventId, isPrivate }: { eventId: number; isPrivate: boolean }) {
   const queryClient = useQueryClient();
-  const loggedIn = !!getStoredToken();
+  // Session probe on a public page — the query is `authCheck`-flagged so an
+  // anonymous visitor gets a clean 401 instead of a hard redirect to /login.
+  const { data: user } = useQuery(currentUserQuery());
+  const loggedIn = !!user;
   const { data: orders } = useQuery({
     ...myOrdersQuery(),
     enabled: loggedIn,

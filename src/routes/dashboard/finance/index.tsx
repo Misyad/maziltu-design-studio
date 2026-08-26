@@ -4,6 +4,7 @@ import { Banknote, ClipboardList, ReceiptText, TicketCheck, Wallet } from "lucid
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { FINANCE_ROLES, requireRoles } from "@/lib/auth";
 import {
   dashboardOverviewQuery,
   paymentSummaryQuery,
@@ -12,6 +13,8 @@ import {
 } from "@/services/queries";
 
 export const Route = createFileRoute("/dashboard/finance/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, FINANCE_ROLES, location.href),
   component: FinancePage,
 });
 

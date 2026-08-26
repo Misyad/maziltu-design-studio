@@ -12,9 +12,12 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { OPERATIONS_ROLES, requireRoles } from "@/lib/auth";
 import { gateMonitoringQuery } from "@/services/queries";
 
 export const Route = createFileRoute("/dashboard/operations/events/$id/gates")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, OPERATIONS_ROLES, location.href),
   component: GatesPage,
 });
 

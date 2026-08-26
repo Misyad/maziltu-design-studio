@@ -60,7 +60,12 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   success: boolean;
-  token: string;
+  /**
+   * Personal access token — only returned for non-browser (stateless) API
+   * clients. Browser sessions authenticate via the Sanctum HttpOnly cookie and
+   * never receive a token, so this is optional.
+   */
+  token?: string;
   user: AuthUser;
   message?: string;
 }

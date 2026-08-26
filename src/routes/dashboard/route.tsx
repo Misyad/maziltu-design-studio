@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -55,18 +55,15 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
-import { mediaUrl, getStoredToken } from "@/services/api-client";
+import { mediaUrl } from "@/services/api-client";
 import { currentUserQuery } from "@/services/queries";
 import { logout } from "@/services/mzt-api";
+import { requireUser } from "@/lib/auth";
 import type { AppRole } from "@/types/api";
 import { ORG } from "@/constants/content";
 
 export const Route = createFileRoute("/dashboard")({
-  beforeLoad: ({ location }) => {
-    if (!getStoredToken()) {
-      throw redirect({ to: "/login", replace: true, from: location.href });
-    }
-  },
+  beforeLoad: ({ context, location }) => requireUser(context.queryClient, location.href),
   component: DashboardLayout,
 });
 
