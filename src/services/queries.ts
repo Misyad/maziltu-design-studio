@@ -17,6 +17,7 @@ import {
   fetchMember,
   fetchMembers,
   fetchMe,
+  fetchMyTicket,
   fetchMztInfo,
   fetchMyOrders,
   fetchNews,
@@ -37,6 +38,7 @@ import {
   fetchPublicStats,
   fetchRegistrationSummary,
   fetchRevenueSummary,
+  fetchTicket,
   fetchTicketSummary,
   fetchTransactions,
   fetchVerificationQueue,
@@ -250,6 +252,12 @@ export const myOrdersQuery = () =>
 /** PORTAL — single order by UUID (Phase 2A). */
 export const orderQuery = (uuid: string) =>
   queryOptions({ queryKey: queryKeys.order(uuid), queryFn: () => fetchOrder(uuid) });
+
+export const myTicketQuery = (orderUuid: string) =>
+  queryOptions({ queryKey: ["tickets", "my", orderUuid] as const, queryFn: () => fetchMyTicket(orderUuid) });
+
+export const ticketQuery = (uuid: string) =>
+  queryOptions({ queryKey: ["tickets", uuid] as const, queryFn: () => fetchTicket(uuid) });
 
 /* ---------------- Phase 3 — Payment Verification Queue */
 

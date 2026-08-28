@@ -1,15 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, Ticket } from "lucide-react";
+import { ArrowLeft, CalendarDays, Download, QrCode, Ticket } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/features/events/event-card";
 import { PageHeader } from "@/features/dashboard/page-header";
-import { orderQuery } from "@/services/queries";
+import { ApiError } from "@/services/api-client";
+import { downloadTicketPdf } from "@/services/mzt-api";
+import { myTicketQuery, orderQuery } from "@/services/queries";
 import { formatDateShort } from "@/services/public-content";
-import type { OrderStatus, PaymentStatus } from "@/types/api";
+import type { OrderStatus, PaymentStatus, TicketStatus } from "@/types/api";
 
 export const Route = createFileRoute("/portal/orders/$uuid")({
   component: PortalOrderDetail,
@@ -32,6 +35,15 @@ const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   refund: "Refund",
 };
 
+const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
+  draft: "Draft",
+  issued: "Tersedia",
+  checked_in: "Sudah check-in",
+  finished: "Selesai",
+  cancelled: "Dibatalkan",
+  revoked: "Dibatalkan",
+};
+
 function formatAmount(value: number | string): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
   return formatPrice(Number.isNaN(num) ? 0 : num);
@@ -40,6 +52,30 @@ function formatAmount(value: number | string): string {
 function PortalOrderDetail() {
   const { uuid } = Route.useParams();
   const { data: order, isPending, isError } = useQuery(orderQuery(uuid));
+  const {
+    data: ticket,
+    isPending: ticketPending,
+    error: ticketError,
+  } = useQuery({
+    ...myTicketQuery(uuid),
+    enabled: !!order && !isPending && !isError,
+    retry: false,
+  });
+
+  async function handleDownload() {
+    if (!ticket) return;
+    try {
+      const blob = await downloadTicketPdf(ticket.uuid);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tiket-${ticket.nomor_ticket}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Gagal mengunduh tiket");
+    }
+  }
 
   if (isPending) {
     return (
@@ -124,6 +160,61 @@ function PortalOrderDetail() {
             </dt>
             <dd className="mt-1 font-mono text-xs">{order.nomor_order}</dd>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <QrCode className="size-4" aria-hidden />
+            Tiket
+            {ticket && (
+              <Badge variant={ticket.status === "revoked" || ticket.status === "cancelled" ? "outline" : "default"}>
+                {TICKET_STATUS_LABEL[ticket.status]}
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {ticketPending ? (
+            <Skeleton className="h-24 w-full rounded-xl" />
+          ) : ticket ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Nomor Tiket</p>
+                  <p className="font-mono text-xs font-medium">{ticket.nomor_ticket}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-sm capitalize">{TICKET_STATUS_LABEL[ticket.status]}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">QR Payload</p>
+                  <p className="font-mono text-xs">{ticket.qr_payload}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Diterbitkan</p>
+                  <p className="text-xs">{ticket.issued_at ? formatDateShort(ticket.issued_at) : "—"}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleDownload} size="sm" className="rounded-full">
+                  <Download className="size-4" /> Unduh PDF
+                </Button>
+              </div>
+              {(ticket.status === "revoked" || ticket.status === "cancelled") && (
+                <p className="text-xs text-destructive">Tiket dibatalkan dan tidak dapat digunakan untuk check-in.</p>
+              )}
+              {ticket.status === "finished" && (
+                <p className="text-xs text-muted-foreground">Tiket telah digunakan — kehadiran tercatat.</p>
+              )}
+            </div>
+          ) : ticketError ? (
+            <p className="text-sm text-muted-foreground">Tiket belum tersedia untuk order ini.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Memuat tiket…</p>
+          )}
         </CardContent>
       </Card>
     </div>

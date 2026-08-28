@@ -42,6 +42,8 @@ import { Route as DashboardMembersIndexRouteImport } from './routes/dashboard/me
 import { Route as DashboardNewsIndexRouteImport } from './routes/dashboard/news/index'
 import { Route as DashboardOperationsIndexRouteImport } from './routes/dashboard/operations/index'
 import { Route as DashboardProfileIndexRouteImport } from './routes/dashboard/profile/index'
+import { Route as DashboardTicketsIndexRouteImport } from './routes/dashboard/tickets/index'
+import { Route as DashboardTicketsUuidRouteImport } from './routes/dashboard/tickets/$uuid'
 import { Route as DashboardTransactionsIndexRouteImport } from './routes/dashboard/transactions/index'
 import { Route as PortalOrdersUuidRouteImport } from './routes/portal/orders.$uuid'
 import { Route as DashboardFinanceTicketsIndexRouteImport } from './routes/dashboard/finance/tickets/index'
@@ -217,6 +219,16 @@ const DashboardProfileIndexRoute = DashboardProfileIndexRouteImport.update({
   path: '/profile/',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const DashboardTicketsIndexRoute = DashboardTicketsIndexRouteImport.update({
+  id: '/tickets/',
+  path: '/tickets/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardTicketsUuidRoute = DashboardTicketsUuidRouteImport.update({
+  id: '/tickets/$uuid',
+  path: '/tickets/$uuid',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 const DashboardTransactionsIndexRoute =
   DashboardTransactionsIndexRouteImport.update({
     id: '/transactions/',
@@ -276,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
+  '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
@@ -288,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/news/': typeof DashboardNewsIndexRoute
   '/dashboard/operations/': typeof DashboardOperationsIndexRoute
   '/dashboard/profile/': typeof DashboardProfileIndexRoute
+  '/dashboard/tickets/': typeof DashboardTicketsIndexRoute
   '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
   '/dashboard/finance/tickets/': typeof DashboardFinanceTicketsIndexRoute
   '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
@@ -315,6 +329,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/portal': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
+  '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity': typeof DashboardActivityIndexRoute
   '/dashboard/attendance': typeof DashboardAttendanceIndexRoute
@@ -327,6 +342,7 @@ export interface FileRoutesByTo {
   '/dashboard/news': typeof DashboardNewsIndexRoute
   '/dashboard/operations': typeof DashboardOperationsIndexRoute
   '/dashboard/profile': typeof DashboardProfileIndexRoute
+  '/dashboard/tickets': typeof DashboardTicketsIndexRoute
   '/dashboard/transactions': typeof DashboardTransactionsIndexRoute
   '/dashboard/finance/tickets': typeof DashboardFinanceTicketsIndexRoute
   '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
@@ -357,6 +373,7 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
+  '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
@@ -369,6 +386,7 @@ export interface FileRoutesById {
   '/dashboard/news/': typeof DashboardNewsIndexRoute
   '/dashboard/operations/': typeof DashboardOperationsIndexRoute
   '/dashboard/profile/': typeof DashboardProfileIndexRoute
+  '/dashboard/tickets/': typeof DashboardTicketsIndexRoute
   '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
   '/dashboard/finance/tickets/': typeof DashboardFinanceTicketsIndexRoute
   '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
@@ -400,6 +418,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/portal/'
     | '/dashboard/finance/verification'
+    | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity/'
     | '/dashboard/attendance/'
@@ -412,6 +431,7 @@ export interface FileRouteTypes {
     | '/dashboard/news/'
     | '/dashboard/operations/'
     | '/dashboard/profile/'
+    | '/dashboard/tickets/'
     | '/dashboard/transactions/'
     | '/dashboard/finance/tickets/'
     | '/dashboard/operations/events/$id/attendance'
@@ -439,6 +459,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/portal'
     | '/dashboard/finance/verification'
+    | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity'
     | '/dashboard/attendance'
@@ -451,6 +472,7 @@ export interface FileRouteTypes {
     | '/dashboard/news'
     | '/dashboard/operations'
     | '/dashboard/profile'
+    | '/dashboard/tickets'
     | '/dashboard/transactions'
     | '/dashboard/finance/tickets'
     | '/dashboard/operations/events/$id/attendance'
@@ -480,6 +502,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/portal/'
     | '/dashboard/finance/verification'
+    | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity/'
     | '/dashboard/attendance/'
@@ -492,6 +515,7 @@ export interface FileRouteTypes {
     | '/dashboard/news/'
     | '/dashboard/operations/'
     | '/dashboard/profile/'
+    | '/dashboard/tickets/'
     | '/dashboard/transactions/'
     | '/dashboard/finance/tickets/'
     | '/dashboard/operations/events/$id/attendance'
@@ -746,6 +770,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProfileIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/dashboard/tickets/': {
+      id: '/dashboard/tickets/'
+      path: '/tickets'
+      fullPath: '/dashboard/tickets/'
+      preLoaderRoute: typeof DashboardTicketsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/tickets/$uuid': {
+      id: '/dashboard/tickets/$uuid'
+      path: '/tickets/$uuid'
+      fullPath: '/dashboard/tickets/$uuid'
+      preLoaderRoute: typeof DashboardTicketsUuidRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/transactions/': {
       id: '/dashboard/transactions/'
       path: '/transactions'
@@ -794,6 +832,7 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteRouteChildren {
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardFinanceVerificationRoute: typeof DashboardFinanceVerificationRoute
+  DashboardTicketsUuidRoute: typeof DashboardTicketsUuidRoute
   DashboardActivityIndexRoute: typeof DashboardActivityIndexRoute
   DashboardAttendanceIndexRoute: typeof DashboardAttendanceIndexRoute
   DashboardCheckinIndexRoute: typeof DashboardCheckinIndexRoute
@@ -805,6 +844,7 @@ interface DashboardRouteRouteChildren {
   DashboardNewsIndexRoute: typeof DashboardNewsIndexRoute
   DashboardOperationsIndexRoute: typeof DashboardOperationsIndexRoute
   DashboardProfileIndexRoute: typeof DashboardProfileIndexRoute
+  DashboardTicketsIndexRoute: typeof DashboardTicketsIndexRoute
   DashboardTransactionsIndexRoute: typeof DashboardTransactionsIndexRoute
   DashboardFinanceTicketsIndexRoute: typeof DashboardFinanceTicketsIndexRoute
   DashboardOperationsEventsIdAttendanceRoute: typeof DashboardOperationsEventsIdAttendanceRoute
@@ -815,6 +855,7 @@ interface DashboardRouteRouteChildren {
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardFinanceVerificationRoute: DashboardFinanceVerificationRoute,
+  DashboardTicketsUuidRoute: DashboardTicketsUuidRoute,
   DashboardActivityIndexRoute: DashboardActivityIndexRoute,
   DashboardAttendanceIndexRoute: DashboardAttendanceIndexRoute,
   DashboardCheckinIndexRoute: DashboardCheckinIndexRoute,
@@ -826,6 +867,7 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardNewsIndexRoute: DashboardNewsIndexRoute,
   DashboardOperationsIndexRoute: DashboardOperationsIndexRoute,
   DashboardProfileIndexRoute: DashboardProfileIndexRoute,
+  DashboardTicketsIndexRoute: DashboardTicketsIndexRoute,
   DashboardTransactionsIndexRoute: DashboardTransactionsIndexRoute,
   DashboardFinanceTicketsIndexRoute: DashboardFinanceTicketsIndexRoute,
   DashboardOperationsEventsIdAttendanceRoute:

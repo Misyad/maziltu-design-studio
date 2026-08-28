@@ -1,4 +1,5 @@
 import {
+  apiClient,
   apiDelete,
   apiGet,
   apiGetRaw,
@@ -44,6 +45,7 @@ import type {
   PublicStats,
   RegistrationSummary,
   RevenueSummary,
+  Ticket,
   TicketSummary,
   TransactionRecord,
   VerificationQueueResponse,
@@ -255,6 +257,34 @@ export const updateProfileJson = (payload: ProfileUpdateRequest | FormData) =>
   apiPut<AlumniProfile>("/profile", payload);
 export const changePassword = (payload: PasswordChangeRequest) =>
   apiPutRaw<{ success: boolean; message?: string }>("/password", payload);
+
+/* ------------------------------------------------- Ticket (Phase 2B) */
+
+export const fetchMyTicket = (orderUuid: string) =>
+  apiGet<{ ticket: Ticket }>(`/orders/${orderUuid}/ticket`).then((r) => r.ticket);
+
+export const fetchTicket = (uuid: string) =>
+  apiGet<{ ticket: Ticket }>(`/tickets/${uuid}`).then((r) => r.ticket);
+
+export const downloadTicketPdf = async (uuid: string): Promise<Blob> => {
+  const res = await apiClient.get<Blob>(`/tickets/${uuid}/download`, {
+    responseType: "blob",
+  });
+  return res.data;
+};
+
+export const reissueTicket = (uuid: string, note?: string | null) =>
+  apiPost<{ ticket: Ticket }>(`/tickets/${uuid}/reissue`, { note: note ?? null });
+
+export const revokeTicket = async (uuid: string, note?: string | null) => {
+  const payload = note ? { note } : {};
+  const res = await apiClient.delete<{ success: boolean; data: { ticket: Ticket } }>(
+    `/tickets/${uuid}`,
+    { data: payload },
+  );
+  if (!res.data.success) throw new Error(res.data as unknown as string);
+  return (res.data.data ?? res.data) as { ticket: Ticket };
+};
 
 /* --------------------------- Phase 3 — Payment Verification Queue */
 

@@ -121,6 +121,34 @@ export interface PaymentSummary {
 /** Ticket status (mirrors app/Enums/TicketStatus.php / canonical ADR-011). */
 export type TicketStatus = "draft" | "issued" | "checked_in" | "finished" | "cancelled" | "revoked";
 
+export interface Ticket {
+  id: number;
+  uuid: string;
+  nomor_ticket: string;
+  id_order: number;
+  qr_payload: string;
+  status: TicketStatus;
+  issued_at: string | null;
+  expired_at: string | null;
+  used_at: string | null;
+  revoked_at: string | null;
+  created_by: number | null;
+  updated_by: number | null;
+  created_at: string;
+  updated_at: string;
+  order?: Order | null;
+}
+
+export interface TicketLog {
+  id: number;
+  id_ticket: number;
+  old_status: string | null;
+  new_status: string;
+  note: string | null;
+  changed_by: number | null;
+  created_at: string;
+}
+
 export interface TicketSummary {
   total_tickets: number;
   by_status: StatusCount[];
