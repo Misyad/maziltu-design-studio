@@ -38,6 +38,7 @@ import type {
   OrgInfo,
   ParticipantListResponse,
   PasswordChangeRequest,
+  PaymentItem,
   PaymentSummary,
   ProfileUpdateRequest,
   PublicStats,
@@ -45,7 +46,9 @@ import type {
   RevenueSummary,
   TicketSummary,
   TransactionRecord,
+  VerificationQueueResponse,
 } from "@/types/api";
+import type { VerificationQueueParams } from "@/types/api";
 
 /* ------------------------------------------------------------------ auth */
 
@@ -252,6 +255,22 @@ export const updateProfileJson = (payload: ProfileUpdateRequest | FormData) =>
   apiPut<AlumniProfile>("/profile", payload);
 export const changePassword = (payload: PasswordChangeRequest) =>
   apiPutRaw<{ success: boolean; message?: string }>("/password", payload);
+
+/* --------------------------- Phase 3 — Payment Verification Queue */
+
+export const fetchVerificationQueue = (params?: VerificationQueueParams) =>
+  apiGet<VerificationQueueResponse>(`/payments${buildQuery((params ?? {}) as Record<string, number | string | null | undefined>)}`);
+
+export const verifyPayment = (uuid: string, payload: { status: string; note?: string | null }) =>
+  apiPutRaw<{ success: boolean; message?: string; data?: { payment: PaymentItem; changed: boolean } }>(
+    `/payments/${uuid}/verify`,
+    payload,
+  );
+
+export const fetchPaymentDetail = (uuid: string) =>
+  apiGet<{ payment: PaymentItem; outstanding: { total: number; paid: number; outstanding: number; payment_status: string } }>(
+    `/payments/${uuid}`,
+  );
 
 export const generateAccount = (idUsers: number | string) =>
   apiPostRaw<{ success: boolean; message?: string; password?: string }>(

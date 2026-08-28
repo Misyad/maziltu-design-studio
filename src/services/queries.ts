@@ -25,6 +25,7 @@ import {
   fetchOperationalSummary,
   fetchOrder,
   fetchParticipants,
+  fetchPaymentDetail,
   fetchPaymentSummary,
   fetchPesantrenInfo,
   fetchProfile,
@@ -38,7 +39,9 @@ import {
   fetchRevenueSummary,
   fetchTicketSummary,
   fetchTransactions,
+  fetchVerificationQueue,
 } from "@/services/mzt-api";
+import type { VerificationQueueParams } from "@/types/api";
 import type {
   AttendanceParams,
   GateMonitoringParams,
@@ -247,3 +250,19 @@ export const myOrdersQuery = () =>
 /** PORTAL — single order by UUID (Phase 2A). */
 export const orderQuery = (uuid: string) =>
   queryOptions({ queryKey: queryKeys.order(uuid), queryFn: () => fetchOrder(uuid) });
+
+/* ---------------- Phase 3 — Payment Verification Queue */
+
+export const queryKeysVerification = {
+  queue: (params: VerificationQueueParams) => ["payments", "queue", params] as const,
+  paymentDetail: (uuid: string) => ["payments", uuid] as const,
+};
+
+export const verificationQueueQuery = (params: VerificationQueueParams) =>
+  queryOptions({
+    queryKey: queryKeysVerification.queue(params),
+    queryFn: () => fetchVerificationQueue(params),
+  });
+
+export const paymentDetailQuery = (uuid: string) =>
+  queryOptions({ queryKey: queryKeysVerification.paymentDetail(uuid), queryFn: () => fetchPaymentDetail(uuid) });

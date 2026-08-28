@@ -512,3 +512,52 @@ export interface GateMonitoringResponse {
   rows: GateMonitorRow[];
   breakdown_per_gate: Record<string, GateMonitorRow>;
 }
+
+/* ------------------------------- Phase 3 — Payment Verification Queue */
+
+export interface PaymentItem {
+  id: number;
+  uuid: string;
+  nomor_payment: string;
+  id_order: number;
+  method: string;
+  amount: number | string;
+  status: PaymentStatus;
+  paid_at: string | null;
+  verified_at: string | null;
+  verified_by: number | null;
+  reference_number: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  order: {
+    id: number;
+    uuid: string;
+    nomor_order: string;
+    event_name: string;
+    event_price: number | string;
+    total_amount: number | string;
+    id_event: number;
+    payment_status: string;
+    event?: { id: number; judul_event: string; slug: string } | null;
+  } | null;
+  proofs: { id: number; id_payment: number; file_path: string; original_name: string | null; file_size: number | null }[];
+}
+
+export interface VerificationQueueParams {
+  status?: PaymentStatus | string | null;
+  event_id?: number | null;
+  date_from?: string | null;
+  date_to?: string | null;
+  q?: string | null;
+  page?: number | null;
+  per_page?: number | null;
+}
+
+export interface VerificationQueueResponse {
+  data: PaymentItem[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
