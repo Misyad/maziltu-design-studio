@@ -42,8 +42,9 @@ import {
   fetchTicketSummary,
   fetchTransactions,
   fetchVerificationQueue,
+  fetchAuditTimeline,
 } from "@/services/mzt-api";
-import type { VerificationQueueParams } from "@/types/api";
+import type { AuditTimelineParams, VerificationQueueParams } from "@/types/api";
 import type {
   AttendanceParams,
   GateMonitoringParams,
@@ -274,3 +275,13 @@ export const verificationQueueQuery = (params: VerificationQueueParams) =>
 
 export const paymentDetailQuery = (uuid: string) =>
   queryOptions({ queryKey: queryKeysVerification.paymentDetail(uuid), queryFn: () => fetchPaymentDetail(uuid) });
+
+export const queryKeysAuditTimeline = (params: AuditTimelineParams) =>
+  ["audit-timeline", params] as const;
+
+export const auditTimelineQuery = (params: AuditTimelineParams) =>
+  queryOptions({
+    queryKey: queryKeysAuditTimeline(params),
+    queryFn: () => fetchAuditTimeline(params),
+    retry: 0,
+  });

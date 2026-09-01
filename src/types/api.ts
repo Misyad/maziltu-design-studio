@@ -589,3 +589,33 @@ export interface VerificationQueueResponse {
   per_page: number;
   total: number;
 }
+
+/* ------------------------------- Phase 3 — Audit Timeline (M-05) */
+
+export interface AuditTimelineItem {
+  actor: string;
+  action: string;
+  entity: "payment" | "ticket" | "checkin";
+  entity_id: number;
+  old_status?: string | null;
+  new_status?: string | null;
+  timestamp: string;
+  note?: string | null;
+}
+
+export interface AuditTimelineResponse {
+  rows: AuditTimelineItem[];
+  total: number;
+}
+
+export type AuditTimelineParams = {
+  event_id?: number | null;
+  date_from?: string | null;
+  date_to?: string | null;
+  entity_type?: "payment" | "ticket" | "checkin" | null;
+  action?: string | null;
+  actor?: string | null;
+  q?: string | null;
+  page?: number | null;
+  per_page?: number | null;
+};

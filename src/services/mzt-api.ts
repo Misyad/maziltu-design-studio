@@ -316,3 +316,10 @@ export const setAccountStatus = (idUsers: number | string, isActive: "1" | "0") 
   apiPutRaw<{ success: boolean; message?: string }>(`/members/${idUsers}/account/status`, {
     is_active: isActive,
   });
+
+/* ------------------------------------------------- Phase 3 — Audit Timeline (M-05) */
+
+export const fetchAuditTimeline = (params?: import("@/types/api").AuditTimelineParams) =>
+  apiGet<import("@/types/api").AuditTimelineResponse>(
+    `/audit-timeline/data${buildQuery((params ?? {}) as Record<string, number | string | null | undefined>)}`,
+  );

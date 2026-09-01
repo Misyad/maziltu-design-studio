@@ -32,6 +32,7 @@ import { Route as PortalProfilRouteImport } from './routes/portal/profil'
 import { Route as PortalUbahPasswordRouteImport } from './routes/portal/ubah-password'
 import { Route as DashboardActivityIndexRouteImport } from './routes/dashboard/activity/index'
 import { Route as DashboardAttendanceIndexRouteImport } from './routes/dashboard/attendance/index'
+import { Route as DashboardAuditTimelineIndexRouteImport } from './routes/dashboard/audit-timeline/index'
 import { Route as DashboardCheckinIndexRouteImport } from './routes/dashboard/checkin/index'
 import { Route as DashboardContentIndexRouteImport } from './routes/dashboard/content/index'
 import { Route as DashboardEventsIndexRouteImport } from './routes/dashboard/events/index'
@@ -167,6 +168,12 @@ const DashboardAttendanceIndexRoute =
     path: '/attendance/',
     getParentRoute: () => DashboardRouteRoute,
   } as any)
+const DashboardAuditTimelineIndexRoute =
+  DashboardAuditTimelineIndexRouteImport.update({
+    id: '/audit-timeline/',
+    path: '/audit-timeline/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
 const DashboardCheckinIndexRoute = DashboardCheckinIndexRouteImport.update({
   id: '/checkin/',
   path: '/checkin/',
@@ -292,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
+  '/dashboard/audit-timeline/': typeof DashboardAuditTimelineIndexRoute
   '/dashboard/checkin/': typeof DashboardCheckinIndexRoute
   '/dashboard/content/': typeof DashboardContentIndexRoute
   '/dashboard/events/': typeof DashboardEventsIndexRoute
@@ -333,6 +341,7 @@ export interface FileRoutesByTo {
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity': typeof DashboardActivityIndexRoute
   '/dashboard/attendance': typeof DashboardAttendanceIndexRoute
+  '/dashboard/audit-timeline': typeof DashboardAuditTimelineIndexRoute
   '/dashboard/checkin': typeof DashboardCheckinIndexRoute
   '/dashboard/content': typeof DashboardContentIndexRoute
   '/dashboard/events': typeof DashboardEventsIndexRoute
@@ -377,6 +386,7 @@ export interface FileRoutesById {
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
+  '/dashboard/audit-timeline/': typeof DashboardAuditTimelineIndexRoute
   '/dashboard/checkin/': typeof DashboardCheckinIndexRoute
   '/dashboard/content/': typeof DashboardContentIndexRoute
   '/dashboard/events/': typeof DashboardEventsIndexRoute
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/portal/orders/$uuid'
     | '/dashboard/activity/'
     | '/dashboard/attendance/'
+    | '/dashboard/audit-timeline/'
     | '/dashboard/checkin/'
     | '/dashboard/content/'
     | '/dashboard/events/'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/portal/orders/$uuid'
     | '/dashboard/activity'
     | '/dashboard/attendance'
+    | '/dashboard/audit-timeline'
     | '/dashboard/checkin'
     | '/dashboard/content'
     | '/dashboard/events'
@@ -506,6 +518,7 @@ export interface FileRouteTypes {
     | '/portal/orders/$uuid'
     | '/dashboard/activity/'
     | '/dashboard/attendance/'
+    | '/dashboard/audit-timeline/'
     | '/dashboard/checkin/'
     | '/dashboard/content/'
     | '/dashboard/events/'
@@ -700,6 +713,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAttendanceIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/dashboard/audit-timeline/': {
+      id: '/dashboard/audit-timeline/'
+      path: '/audit-timeline'
+      fullPath: '/dashboard/audit-timeline/'
+      preLoaderRoute: typeof DashboardAuditTimelineIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/checkin/': {
       id: '/dashboard/checkin/'
       path: '/checkin'
@@ -835,6 +855,7 @@ interface DashboardRouteRouteChildren {
   DashboardTicketsUuidRoute: typeof DashboardTicketsUuidRoute
   DashboardActivityIndexRoute: typeof DashboardActivityIndexRoute
   DashboardAttendanceIndexRoute: typeof DashboardAttendanceIndexRoute
+  DashboardAuditTimelineIndexRoute: typeof DashboardAuditTimelineIndexRoute
   DashboardCheckinIndexRoute: typeof DashboardCheckinIndexRoute
   DashboardContentIndexRoute: typeof DashboardContentIndexRoute
   DashboardEventsIndexRoute: typeof DashboardEventsIndexRoute
@@ -858,6 +879,7 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardTicketsUuidRoute: DashboardTicketsUuidRoute,
   DashboardActivityIndexRoute: DashboardActivityIndexRoute,
   DashboardAttendanceIndexRoute: DashboardAttendanceIndexRoute,
+  DashboardAuditTimelineIndexRoute: DashboardAuditTimelineIndexRoute,
   DashboardCheckinIndexRoute: DashboardCheckinIndexRoute,
   DashboardContentIndexRoute: DashboardContentIndexRoute,
   DashboardEventsIndexRoute: DashboardEventsIndexRoute,
