@@ -4,6 +4,7 @@ import {
   Activity,
   BadgeCheck,
   CalendarDays,
+  ClipboardCheck,
   Gauge,
   LayoutDashboard,
   LogOut,
@@ -80,6 +81,12 @@ const NAV_ITEMS: readonly NavItem[] = [
     to: "/dashboard/finance",
     label: "Finance",
     icon: Wallet,
+    roles: ["finance", "ketua", "admin"],
+  },
+  {
+    to: "/dashboard/finance/verification",
+    label: "Verifikasi Pembayaran",
+    icon: ClipboardCheck,
     roles: ["finance", "ketua", "admin"],
   },
   {
