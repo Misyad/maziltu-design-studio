@@ -10,6 +10,9 @@ http://:80 {
 	handle /api/* {
 		reverse_proxy backend:80
 	}
+	handle /sanctum/* {
+		reverse_proxy backend:80
+	}
 	handle /storage/* {
 		reverse_proxy backend:80
 	}
