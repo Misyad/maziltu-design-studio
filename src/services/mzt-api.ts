@@ -170,6 +170,9 @@ export const registerEvent = (id: number | string) =>
 export const fetchMyOrders = () => apiGet<Order[]>("/my-orders");
 export const fetchOrder = (uuid: string) => apiGet<Order>(`/orders/${uuid}`);
 
+export const uploadPayment = (uuid: string, form: FormData) =>
+  apiPostRaw<{ success: boolean; message?: string; data?: Order }>(`/orders/${uuid}/payment`, form);
+
 /* ------------------------------------------------------------------ news */
 
 export const fetchNews = () => apiGet<NewsItem[]>("/news");

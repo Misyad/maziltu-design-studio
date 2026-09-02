@@ -1,16 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, Download, QrCode, Ticket } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, CalendarDays, Download, QrCode, Ticket, Upload } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/features/events/event-card";
 import { PageHeader } from "@/features/dashboard/page-header";
 import { ApiError } from "@/services/api-client";
-import { downloadTicketPdf } from "@/services/mzt-api";
-import { myTicketQuery, orderQuery } from "@/services/queries";
+import { downloadTicketPdf, uploadPayment } from "@/services/mzt-api";
+import { myTicketQuery, orderQuery, queryKeys } from "@/services/queries";
 import { formatDateShort } from "@/services/public-content";
 import type { OrderStatus, PaymentStatus, TicketStatus } from "@/types/api";
 
@@ -43,6 +46,102 @@ const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
   cancelled: "Dibatalkan",
   revoked: "Dibatalkan",
 };
+
+function PaymentUploadForm({ orderUuid, paymentStatus }: { orderUuid: string; paymentStatus: PaymentStatus }) {
+  const queryClient = useQueryClient();
+  const [file, setFile] = useState<File | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!file) throw new Error("Pilih file bukti pembayaran");
+      const form = new FormData();
+      form.append("payment_proof", file);
+      return uploadPayment(orderUuid, form);
+    },
+    onSuccess: (res) => {
+      toast.success(res?.message ?? "Bukti pembayaran diunggah — Menunggu verifikasi");
+      queryClient.invalidateQueries({ queryKey: queryKeys.order(orderUuid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myOrders });
+      setFile(null);
+      const input = document.getElementById("payment_proof") as HTMLInputElement | null;
+      if (input) input.value = "";
+    },
+    onError: (e: unknown) => {
+      const msg = e instanceof ApiError ? e.message : "Upload gagal";
+      toast.error(msg);
+    },
+  });
+
+  if (paymentStatus === "waiting_verification") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Pembayaran</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm font-medium">Menunggu verifikasi</p>
+          <p className="text-xs text-muted-foreground">Bukti pembayaran telah diunggah dan sedang diverifikasi oleh finance.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (paymentStatus === "paid") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Pembayaran</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Badge>Lunas</Badge>
+          <p className="mt-2 text-xs text-muted-foreground">Pembayaran telah diverifikasi.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (paymentStatus === "pending" || paymentStatus === "rejected") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Upload className="size-4" aria-hidden />
+            Upload Bukti Pembayaran
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {paymentStatus === "rejected" && (
+            <p className="text-sm text-destructive">Pembayaran sebelumnya ditolak. Silakan unggah bukti baru.</p>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="payment_proof">Bukti Pembayaran (JPG, PNG, PDF, max 5 MB)</Label>
+            <Input
+              id="payment_proof"
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              disabled={mutation.isPending}
+            />
+          </div>
+          <Button
+            onClick={() => mutation.mutate()}
+            disabled={!file || mutation.isPending}
+            className="rounded-full"
+          >
+            {mutation.isPending ? "Mengunggah..." : "Upload Bukti"}
+          </Button>
+          {mutation.isError && (
+            <p className="text-sm text-destructive">
+              {(mutation.error as ApiError)?.message ?? "Upload gagal"}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return null;
+}
 
 function formatAmount(value: number | string): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
@@ -162,6 +261,8 @@ function PortalOrderDetail() {
           </div>
         </CardContent>
       </Card>
+
+      <PaymentUploadForm orderUuid={order.uuid} paymentStatus={order.payment_status} />
 
       <Card>
         <CardHeader>
