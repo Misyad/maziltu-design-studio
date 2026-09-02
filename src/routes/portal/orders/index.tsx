@@ -11,7 +11,7 @@ import { myOrdersQuery } from "@/services/queries";
 import type { Order, OrderStatus, PaymentStatus } from "@/types/api";
 import { formatDateShort } from "@/services/public-content";
 
-export const Route = createFileRoute("/portal/orders")({
+export const Route = createFileRoute("/portal/orders/")({
   component: PortalOrders,
 });
 
