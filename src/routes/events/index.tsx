@@ -4,7 +4,7 @@ import { Reveal } from "@/components/shared/reveal";
 import { SectionTitle } from "@/components/shared/section-title";
 import { usePublicEvents } from "@/services/public-content";
 
-export const Route = createFileRoute("/events")({
+export const Route = createFileRoute("/events/")({
   head: () => ({
     meta: [
       { title: "Events — MZT Apps | Maziltu Tholiban" },

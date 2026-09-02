@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
-import { Route as EventsRouteImport } from './routes/events'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LoginRouteImport } from './routes/login'
@@ -21,7 +20,8 @@ import { Route as NewsRouteImport } from './routes/news'
 import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as ProgramsRouteImport } from './routes/programs'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as EventsIdRouteImport } from './routes/events.$id'
+import { Route as EventsIndexRouteImport } from './routes/events/index'
+import { Route as EventsIdRouteImport } from './routes/events/$id'
 import { Route as NewsIdRouteImport } from './routes/news.$id'
 import { Route as PortalIndexRouteImport } from './routes/portal/index'
 import { Route as PortalBeritaRouteImport } from './routes/portal/berita'
@@ -72,11 +72,6 @@ const DashboardRouteRoute = DashboardRouteRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EventsRoute = EventsRouteImport.update({
-  id: '/events',
-  path: '/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ForbiddenRoute = ForbiddenRouteImport.update({
   id: '/forbidden',
   path: '/forbidden',
@@ -112,10 +107,15 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const EventsIndexRoute = EventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsIdRoute = EventsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => EventsRoute,
+  id: '/events/$id',
+  path: '/events/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const NewsIdRoute = NewsIdRouteImport.update({
   id: '/$id',
@@ -278,7 +278,6 @@ export interface FileRoutesByFullPath {
   '/portal': typeof PortalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
-  '/events': typeof EventsRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
@@ -293,6 +292,7 @@ export interface FileRoutesByFullPath {
   '/portal/profil': typeof PortalProfilRoute
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/events/': typeof EventsIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
@@ -320,7 +320,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
-  '/events': typeof EventsRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
@@ -335,6 +334,7 @@ export interface FileRoutesByTo {
   '/portal/profil': typeof PortalProfilRoute
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/events': typeof EventsIndexRoute
   '/portal': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
@@ -365,7 +365,6 @@ export interface FileRoutesById {
   '/portal': typeof PortalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
-  '/events': typeof EventsRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
@@ -380,6 +379,7 @@ export interface FileRoutesById {
   '/portal/profil': typeof PortalProfilRoute
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/events/': typeof EventsIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
@@ -411,7 +411,6 @@ export interface FileRouteTypes {
     | '/portal'
     | '/about'
     | '/contact'
-    | '/events'
     | '/forbidden'
     | '/gallery'
     | '/login'
@@ -426,6 +425,7 @@ export interface FileRouteTypes {
     | '/portal/profil'
     | '/portal/ubah-password'
     | '/dashboard/'
+    | '/events/'
     | '/portal/'
     | '/dashboard/finance/verification'
     | '/dashboard/tickets/$uuid'
@@ -453,7 +453,6 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/contact'
-    | '/events'
     | '/forbidden'
     | '/gallery'
     | '/login'
@@ -468,6 +467,7 @@ export interface FileRouteTypes {
     | '/portal/profil'
     | '/portal/ubah-password'
     | '/dashboard'
+    | '/events'
     | '/portal'
     | '/dashboard/finance/verification'
     | '/dashboard/tickets/$uuid'
@@ -497,7 +497,6 @@ export interface FileRouteTypes {
     | '/portal'
     | '/about'
     | '/contact'
-    | '/events'
     | '/forbidden'
     | '/gallery'
     | '/login'
@@ -512,6 +511,7 @@ export interface FileRouteTypes {
     | '/portal/profil'
     | '/portal/ubah-password'
     | '/dashboard/'
+    | '/events/'
     | '/portal/'
     | '/dashboard/finance/verification'
     | '/dashboard/tickets/$uuid'
@@ -542,12 +542,13 @@ export interface RootRouteChildren {
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   ContactRoute: typeof ContactRoute
-  EventsRoute: typeof EventsRouteWithChildren
   ForbiddenRoute: typeof ForbiddenRoute
   GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRouteWithChildren
   ProgramsRoute: typeof ProgramsRoute
+  EventsIdRoute: typeof EventsIdRoute
+  EventsIndexRoute: typeof EventsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -578,13 +579,6 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/events': {
-      id: '/events'
-      path: '/events'
-      fullPath: '/events'
-      preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forbidden': {
@@ -636,12 +630,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/events/': {
+      id: '/events/'
+      path: '/events'
+      fullPath: '/events/'
+      preLoaderRoute: typeof EventsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/$id': {
       id: '/events/$id'
-      path: '/$id'
+      path: '/events/$id'
       fullPath: '/events/$id'
       preLoaderRoute: typeof EventsIdRouteImport
-      parentRoute: typeof EventsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/news/$id': {
       id: '/news/$id'
@@ -939,17 +940,6 @@ const PortalRouteRouteWithChildren = PortalRouteRoute._addFileChildren(
   PortalRouteRouteChildren,
 )
 
-interface EventsRouteChildren {
-  EventsIdRoute: typeof EventsIdRoute
-}
-
-const EventsRouteChildren: EventsRouteChildren = {
-  EventsIdRoute: EventsIdRoute,
-}
-
-const EventsRouteWithChildren =
-  EventsRoute._addFileChildren(EventsRouteChildren)
-
 interface NewsRouteChildren {
   NewsIdRoute: typeof NewsIdRoute
 }
@@ -966,12 +956,13 @@ const rootRouteChildren: RootRouteChildren = {
   PortalRouteRoute: PortalRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   ContactRoute: ContactRoute,
-  EventsRoute: EventsRouteWithChildren,
   ForbiddenRoute: ForbiddenRoute,
   GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
   NewsRoute: NewsRouteWithChildren,
   ProgramsRoute: ProgramsRoute,
+  EventsIdRoute: EventsIdRoute,
+  EventsIndexRoute: EventsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
