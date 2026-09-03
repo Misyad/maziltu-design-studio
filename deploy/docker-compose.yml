@@ -53,7 +53,7 @@ services:
       DB_USERNAME: ${MYSQL_USER:-maziltu}
       DB_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
       CACHE_DRIVER: file
-      SESSION_DRIVER: file
+      SESSION_DRIVER: ${SESSION_DRIVER:-file}
       QUEUE_CONNECTION: database
     volumes:
       # Live media (bar codes, photos). Host dir = mirror of backend storage/app.
@@ -88,7 +88,7 @@ services:
       DB_USERNAME: ${MYSQL_USER:-maziltu}
       DB_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
       CACHE_DRIVER: file
-      SESSION_DRIVER: file
+      SESSION_DRIVER: ${SESSION_DRIVER:-file}
       QUEUE_CONNECTION: database
     volumes:
       # Media mirror shared with the backend so handlers can render PDF/QR if needed.
