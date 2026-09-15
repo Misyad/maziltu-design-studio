@@ -60,6 +60,9 @@ services:
       SESSION_SAME_SITE: ${SESSION_SAME_SITE:-lax}
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      # Public "Cek Status KTA" flag. Passed through so the explicit production
+      # value reaches Laravel; falls back to disabled when unset.
+      KTA_PUBLIC_ENABLED: ${KTA_PUBLIC_ENABLED:-false}
       QUEUE_CONNECTION: database
     volumes:
       # Live media (bar codes, photos). Host dir = mirror of backend storage/app.
