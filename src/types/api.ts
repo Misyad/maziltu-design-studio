@@ -619,3 +619,64 @@ export type AuditTimelineParams = {
   page?: number | null;
   per_page?: number | null;
 };
+
+/* ------------------------------- Public "Cek Status KTA" (read-only) */
+
+/**
+ * Stage-1 lookup request. The public response is intentionally generic
+ * (`stage: "challenge"`) and never reveals whether the lookup matched zero,
+ * one, or many members — that state lives only inside the challenge token.
+ */
+export type KtaCheckRequest =
+  | { mode: "name_dob"; name: string; tanggal_lahir: string }
+  | { mode: "member_id"; id_anggota: string };
+
+export interface KtaCheckResponse {
+  stage: "challenge";
+  challenge_token: string;
+}
+
+/** Field order the backend will ask for when a lookup is ambiguous. */
+export type KtaDisambiguateField = "tahun_masuk" | "tempat_lahir" | "niqobah";
+
+export type KtaVerifyRequest =
+  | { challenge_token: string; method: "hp_last4"; value: string }
+  | {
+      challenge_token: string;
+      method: "no_hp_fallback";
+      value: { tahun_masuk: string; tempat_lahir: string };
+    }
+  | {
+      challenge_token: string;
+      method: "disambiguate";
+      field: KtaDisambiguateField;
+      value: string;
+    };
+
+/** Successful verification — masked identity only, no raw PII. */
+export interface KtaVerifiedResult {
+  verified: true;
+  nama_masked: string;
+  id_anggota_masked: string;
+  status: "active" | "non_active";
+  qr_payload: string;
+  kta: { type: "digital"; fisik: string };
+  note?: string;
+}
+
+/** Intermediate challenge (wrong answer, or narrowed disambiguation). */
+export interface KtaChallengeResult {
+  stage: "challenge";
+  challenge_token: string;
+  attempts_left?: number;
+}
+
+export interface KtaManualReviewResult {
+  stage: "manual_review";
+  message: string;
+}
+
+export type KtaVerifyResponse =
+  | KtaVerifiedResult
+  | KtaChallengeResult
+  | KtaManualReviewResult;

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as CekKtaRouteImport } from './routes/cek-kta'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
@@ -60,6 +61,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CekKtaRoute = CekKtaRouteImport.update({
+  id: '/cek-kta',
+  path: '/cek-kta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -277,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/cek-kta': typeof CekKtaRoute
   '/contact': typeof ContactRoute
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
@@ -319,6 +326,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/cek-kta': typeof CekKtaRoute
   '/contact': typeof ContactRoute
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
@@ -364,6 +372,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/cek-kta': typeof CekKtaRoute
   '/contact': typeof ContactRoute
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
@@ -410,6 +419,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/portal'
     | '/about'
+    | '/cek-kta'
     | '/contact'
     | '/forbidden'
     | '/gallery'
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/cek-kta'
     | '/contact'
     | '/forbidden'
     | '/gallery'
@@ -496,6 +507,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/portal'
     | '/about'
+    | '/cek-kta'
     | '/contact'
     | '/forbidden'
     | '/gallery'
@@ -541,6 +553,7 @@ export interface RootRouteChildren {
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
+  CekKtaRoute: typeof CekKtaRoute
   ContactRoute: typeof ContactRoute
   ForbiddenRoute: typeof ForbiddenRoute
   GalleryRoute: typeof GalleryRoute
@@ -565,6 +578,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cek-kta': {
+      id: '/cek-kta'
+      path: '/cek-kta'
+      fullPath: '/cek-kta'
+      preLoaderRoute: typeof CekKtaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -945,6 +965,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
   AboutRoute: AboutRoute,
+  CekKtaRoute: CekKtaRoute,
   ContactRoute: ContactRoute,
   ForbiddenRoute: ForbiddenRoute,
   GalleryRoute: GalleryRoute,

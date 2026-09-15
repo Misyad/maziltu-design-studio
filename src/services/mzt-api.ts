@@ -326,3 +326,27 @@ export const fetchAuditTimeline = (params?: import("@/types/api").AuditTimelineP
   apiGet<import("@/types/api").AuditTimelineResponse>(
     `/audit-timeline/data${buildQuery((params ?? {}) as Record<string, number | string | null | undefined>)}`,
   );
+
+/* ------------------------------------------------- Public "Cek Status KTA" */
+
+/**
+ * Stage 1 — start a lookup. The backend answers with a generic
+ * `{ stage: "challenge", challenge_token }` for ANY valid input, so callers
+ * must never branch on "found / not found" here.
+ */
+export const ktaCheck = (payload: import("@/types/api").KtaCheckRequest) =>
+  apiPostRaw<{ success: boolean; message?: string; data?: import("@/types/api").KtaCheckResponse }>(
+    "/public/kta/check",
+    payload,
+  );
+
+/**
+ * Stage 2 — prove ownership / disambiguate. A `200` may still mean "keep
+ * going" (another challenge token) or "manual review"; only
+ * `data.verified === true` reveals the masked result.
+ */
+export const ktaVerify = (payload: import("@/types/api").KtaVerifyRequest) =>
+  apiPostRaw<{ success: boolean; message?: string; data?: import("@/types/api").KtaVerifyResponse }>(
+    "/public/kta/verify",
+    payload,
+  );
