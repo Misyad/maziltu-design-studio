@@ -43,6 +43,9 @@ import {
   fetchTransactions,
   fetchVerificationQueue,
   fetchAuditTimeline,
+  fetchKtaPrintRequest,
+  fetchKtaPrintQueue,
+  fetchKtaPrintDetail,
 } from "@/services/mzt-api";
 import type { AuditTimelineParams, VerificationQueueParams } from "@/types/api";
 import type {
@@ -283,5 +286,46 @@ export const auditTimelineQuery = (params: AuditTimelineParams) =>
   queryOptions({
     queryKey: queryKeysAuditTimeline(params),
     queryFn: () => fetchAuditTimeline(params),
+    retry: 0,
+  });
+
+/* ---------------------------------- Physical KTA print request (v3.0) */
+
+export const queryKeysKtaPrint = {
+  own: (printToken: string) => ["kta-print", "own", printToken] as const,
+  queue: (params: {
+    status?: string | null;
+    delivery_method?: string | null;
+    q?: string | null;
+    page?: number | null;
+    per_page?: number | null;
+  }) => ["kta-print", "queue", params] as const,
+  detail: (id: number | string) => ["kta-print", "detail", id] as const,
+};
+
+export const ktaPrintOwnQuery = (printToken: string) =>
+  queryOptions({
+    queryKey: queryKeysKtaPrint.own(printToken),
+    queryFn: () => fetchKtaPrintRequest(printToken),
+    retry: 0,
+  });
+
+export const ktaPrintQueueQuery = (params: {
+  status?: string | null;
+  delivery_method?: string | null;
+  q?: string | null;
+  page?: number | null;
+  per_page?: number | null;
+}) =>
+  queryOptions({
+    queryKey: queryKeysKtaPrint.queue(params),
+    queryFn: () => fetchKtaPrintQueue(params),
+    retry: 0,
+  });
+
+export const ktaPrintDetailQuery = (id: number | string) =>
+  queryOptions({
+    queryKey: queryKeysKtaPrint.detail(id),
+    queryFn: () => fetchKtaPrintDetail(id),
     retry: 0,
   });

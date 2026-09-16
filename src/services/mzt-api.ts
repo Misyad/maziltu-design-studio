@@ -350,3 +350,44 @@ export const ktaVerify = (payload: import("@/types/api").KtaVerifyRequest) =>
     "/public/kta/verify",
     payload,
   );
+
+/* ---------------------------------- Physical KTA print request (v3.0) */
+
+/**
+ * Read the member's active print request. Identity comes from the verified
+ * print token — never from the browser.
+ */
+export const fetchKtaPrintRequest = (printToken: string) =>
+  apiGetRaw<{ success: boolean; message?: string; data?: { request: import("@/types/api").KtaPrintRequest | null } }>(
+    `/public/kta/print-request?print_token=${encodeURIComponent(printToken)}`,
+  );
+
+export const createKtaPrintRequest = (payload: import("@/types/api").KtaPrintRequestCreate) =>
+  apiPostRaw<{ success: boolean; message?: string; data?: { request: import("@/types/api").KtaPrintRequest } }>(
+    "/public/kta/print-request",
+    payload,
+  );
+
+/** Admin print queue (verifier roles). */
+export const fetchKtaPrintQueue = (params?: {
+  status?: string | null;
+  delivery_method?: string | null;
+  q?: string | null;
+  page?: number | null;
+  per_page?: number | null;
+}) =>
+  apiGet<import("@/types/api").KtaPrintRequestQueueResponse>(
+    `/kta/print-requests${buildQuery((params ?? {}) as Record<string, number | string | null | undefined>)}`,
+  );
+
+export const fetchKtaPrintDetail = (id: number | string) =>
+  apiGet<{ request: import("@/types/api").KtaPrintRequestAdminDetail }>(`/kta/print-requests/${id}`);
+
+export const updateKtaPrintStatus = (
+  id: number | string,
+  payload: { status: string; reason?: string | null },
+) =>
+  apiPutRaw<{ success: boolean; message?: string; data?: { request: import("@/types/api").KtaPrintRequestAdminRow } }>(
+    `/kta/print-requests/${id}/status`,
+    payload,
+  );

@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   Newspaper,
+  Printer,
   QrCode,
   ReceiptText,
   ScanLine,
@@ -87,6 +88,12 @@ const NAV_ITEMS: readonly NavItem[] = [
     to: "/dashboard/finance/verification",
     label: "Verifikasi Pembayaran",
     icon: ClipboardCheck,
+    roles: ["finance", "ketua", "admin"],
+  },
+  {
+    to: "/dashboard/kta",
+    label: "Cetak KTA",
+    icon: Printer,
     roles: ["finance", "ketua", "admin"],
   },
   {

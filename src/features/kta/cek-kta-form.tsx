@@ -4,7 +4,8 @@ import { QRCodeCanvas } from "qrcode.react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { apiClient, ApiError } from "@/services/api-client";
+import { KtaPrintRequestBlock } from "@/features/kta/kta-print-request";
+import { ApiError } from "@/services/api-client";
 import { ktaCheck, ktaVerify } from "@/services/mzt-api";
 import type {
   KtaCheckRequest,
@@ -234,22 +235,12 @@ export function CekKtaForm() {
           <QRCodeCanvas value={r.qr_payload} size={148} level="M" includeMargin />
         </div>
 
+        {r.print_token ? (
+          <KtaPrintRequestBlock printToken={r.print_token} status={r.status} />
+        ) : null}
+
         <Button variant="outline" className="mt-6 w-full rounded-full" onClick={reset}>
           Cek anggota lain
-        </Button>
-      </div>
-    );
-  }
-
-  if (stage.name === "manual_review") {    return (
-      <div
-        className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft sm:p-8"
-        data-testid="kta-manual-review"
-      >
-        <p className="font-display text-lg font-semibold">Perlu verifikasi manual</p>
-        <p className="mt-2 text-sm text-muted-foreground">{stage.message}</p>
-        <Button variant="outline" className="mt-6 w-full rounded-full" onClick={reset}>
-          Mulai ulang
         </Button>
       </div>
     );
@@ -263,9 +254,27 @@ export function CekKtaForm() {
       >
         <p className="font-display text-lg font-semibold">Terlalu banyak percobaan</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Demi keamanan, sesi verifikasi ini dikunci. Silakan mulai ulang nanti.
+          Demi keamanan, sesi verifikasi ini dikunci. Bila data Anda belum terdaftar, silakan
+          daftar sebagai anggota.
         </p>
-        <Button variant="outline" className="mt-6 w-full rounded-full" onClick={reset}>
+        <RegisterCta />
+        <Button variant="outline" className="mt-3 w-full rounded-full" onClick={reset}>
+          Mulai ulang
+        </Button>
+      </div>
+    );
+  }
+
+  if (stage.name === "manual_review") {
+    return (
+      <div
+        className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft sm:p-8"
+        data-testid="kta-manual-review"
+      >
+        <p className="font-display text-lg font-semibold">Perlu verifikasi manual</p>
+        <p className="mt-2 text-sm text-muted-foreground">{stage.message}</p>
+        <RegisterCta />
+        <Button variant="outline" className="mt-3 w-full rounded-full" onClick={reset}>
           Mulai ulang
         </Button>
       </div>
@@ -516,5 +525,25 @@ export function CekKtaForm() {
         </p>
       </fieldset>
     </form>
+  );
+}
+
+/**
+ * CTA shown on terminal states. The registry has no public self-service
+ * registration yet, so this routes to the existing contact channel instead of
+ * inventing a second registration system (PRD v3.0 §4/§11).
+ */
+function RegisterCta() {
+  return (
+    <div className="mt-6 rounded-2xl border border-border/60 bg-surface p-5" data-testid="kta-register-cta">
+      <p className="text-sm font-semibold">Data anggota belum ditemukan</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Kami belum menemukan data Anda di database anggota MZT. Silakan hubungi admin untuk
+        pendaftaran anggota.
+      </p>
+      <Button asChild className="mt-4 w-full rounded-full">
+        <a href="/contact">Daftar Sebagai Anggota</a>
+      </Button>
+    </div>
   );
 }

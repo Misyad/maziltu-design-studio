@@ -1,0 +1,297 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, PackageCheck, Printer, Truck, Store } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ApiError } from "@/services/api-client";
+import { createKtaPrintRequest, fetchKtaPrintRequest } from "@/services/mzt-api";
+import type {
+  KtaDeliveryMethod,
+  KtaPrintRequest,
+  KtaPrintRequestCreate,
+  KtaPrintStatus,
+} from "@/types/api";
+
+const STATUS_LABEL: Record<KtaPrintStatus, string> = {
+  menunggu_pembayaran: "Menunggu Pembayaran",
+  menunggu_cetak: "Menunggu Cetak",
+  sudah_dicetak: "Sudah Dicetak",
+  siap_diambil: "Siap Diambil",
+  dikirim: "Sedang Dikirim",
+  selesai: "Selesai",
+  ditolak: "Ditolak",
+  pembayaran_expired: "Pembayaran Kedaluwarsa",
+};
+
+/**
+ * Physical KTA print request block, shown after a successful ownership
+ * verification. Identity is proven by `printToken` (issued by the backend on
+ * verify) — the browser never sends the member id.
+ *
+ * Active statuses hide the form and show the live status + payment link
+ * instead, so a member cannot create a second request.
+ */
+export function KtaPrintRequestBlock({
+  printToken,
+  status,
+}: {
+  printToken: string;
+  status: "active" | "non_active";
+}) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [method, setMethod] = useState<KtaDeliveryMethod>("pickup");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [address, setAddress] = useState("");
+
+  const own = useQuery({
+    queryKey: ["kta-print", "own", printToken],
+    queryFn: () => fetchKtaPrintRequest(printToken),
+    retry: 0,
+    enabled: status === "active",
+  });
+
+  const request = own.data?.data?.request ?? null;
+
+  const create = useMutation({
+    mutationFn: () => {
+      const payload: KtaPrintRequestCreate = { print_token: printToken, delivery_method: method };
+      if (method === "delivery") {
+        payload.recipient_name = recipientName.trim();
+        payload.recipient_phone = recipientPhone.trim();
+        payload.shipping_address = address.trim();
+      }
+      return createKtaPrintRequest(payload);
+    },
+    onSuccess: () => {
+      toast.success("Pengajuan KTA dibuat. Silakan selesaikan pembayaran.");
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["kta-print", "own", printToken] });
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof ApiError ? e.message : "Gagal mengajukan KTA");
+    },
+  });
+
+  // Inactive members can never request a card.
+  if (status !== "active") {
+    return (
+      <div
+        className="mt-6 rounded-2xl border border-border/60 bg-surface p-5"
+        data-testid="kta-print-inactive"
+      >
+        <p className="text-sm font-semibold">Pengajuan KTA fisik tidak tersedia</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Akun anggota Anda tidak aktif. Hubungi admin untuk mengaktifkan kembali.
+        </p>
+      </div>
+    );
+  }
+
+  if (own.isPending) {
+    return (
+      <div className="mt-6 rounded-2xl border border-border/60 bg-surface p-5">
+        <p className="text-sm text-muted-foreground">Memuat status KTA fisik...</p>
+      </div>
+    );
+  }
+
+  // An active (or terminal) request already exists — show status + timeline.
+  if (request) {
+    return (
+      <div
+        className="mt-6 rounded-2xl border border-border/60 bg-surface p-5"
+        data-testid="kta-print-status"
+      >
+        <div className="flex items-center gap-2">
+          <PackageCheck className="size-5 text-primary" aria-hidden />
+          <p className="text-sm font-semibold">Pengajuan KTA Fisik</p>
+        </div>
+
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs uppercase text-muted-foreground">Referensi</dt>
+            <dd className="mt-0.5 font-mono text-xs">{request.reference}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase text-muted-foreground">Metode</dt>
+            <dd className="mt-0.5 capitalize">
+              {request.delivery_method === "pickup" ? "Diambil" : "Dikirim"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase text-muted-foreground">Status</dt>
+            <dd className="mt-0.5 font-medium">{STATUS_LABEL[request.status]}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase text-muted-foreground">Pembayaran</dt>
+            <dd className="mt-0.5 capitalize">{request.payment_status}</dd>
+          </div>
+        </dl>
+
+        {request.status === "menunggu_pembayaran" && request.pay_url && (
+          <Button asChild className="mt-4 w-full rounded-full">
+            <a href={request.pay_url} target="_blank" rel="noreferrer noopener">
+              Bayar Sekarang
+            </a>
+          </Button>
+        )}
+
+        {request.status === "menunggu_cetak" && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Pembayaran berhasil. KTA Anda masuk antrean cetak.
+          </p>
+        )}
+
+        {request.status === "ditolak" && request.rejection_reason && (
+          <p className="mt-4 text-sm text-destructive">
+            Ditolak: {request.rejection_reason}
+          </p>
+        )}
+
+        <PrintTimeline request={request} />
+      </div>
+    );
+  }
+
+  // No request yet — offer the form.
+  if (!open) {
+    return (
+      <Button
+        className="mt-6 w-full rounded-full"
+        data-testid="kta-print-open"
+        onClick={() => setOpen(true)}
+      >
+        <Printer className="size-4" aria-hidden />
+        Ajukan Cetak KTA Fisik
+      </Button>
+    );
+  }
+
+  return (
+    <form
+      className="mt-6 rounded-2xl border border-border/60 bg-surface p-5"
+      data-testid="kta-print-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        create.mutate();
+      }}
+    >
+      <p className="text-sm font-semibold">Ajukan pencetakan KTA fisik?</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Pilih metode penerimaan kartu.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          data-testid="kta-print-pickup"
+          aria-pressed={method === "pickup"}
+          onClick={() => setMethod("pickup")}
+          className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-colors ${
+            method === "pickup" ? "border-primary bg-primary-soft" : "border-border/70 bg-card"
+          }`}
+        >
+          <Store className="size-4 text-primary" aria-hidden />
+          Diambil
+        </button>
+        <button
+          type="button"
+          data-testid="kta-print-delivery"
+          aria-pressed={method === "delivery"}
+          onClick={() => setMethod("delivery")}
+          className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-colors ${
+            method === "delivery" ? "border-primary bg-primary-soft" : "border-border/70 bg-card"
+          }`}
+        >
+          <Truck className="size-4 text-primary" aria-hidden />
+          Dikirim
+        </button>
+      </div>
+
+      {method === "delivery" && (
+        <div className="mt-4 space-y-3">
+          <div>
+            <label htmlFor="kta-recipient" className="text-sm font-medium">
+              Nama penerima
+            </label>
+            <input
+              id="kta-recipient"
+              required
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+            />
+          </div>
+          <div>
+            <label htmlFor="kta-recipient-phone" className="text-sm font-medium">
+              Nomor HP penerima
+            </label>
+            <input
+              id="kta-recipient-phone"
+              required
+              value={recipientPhone}
+              onChange={(e) => setRecipientPhone(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+            />
+          </div>
+          <div>
+            <label htmlFor="kta-address" className="text-sm font-medium">
+              Alamat pengiriman
+            </label>
+            <textarea
+              id="kta-address"
+              required
+              rows={3}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="mt-1 w-full resize-none rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <Button type="submit" disabled={create.isPending} className="flex-1 rounded-full">
+          {create.isPending && <Loader2 className="size-4 animate-spin" aria-hidden />}
+          Ajukan
+        </Button>
+        <Button type="button" variant="ghost" className="rounded-full" onClick={() => setOpen(false)}>
+          Batal
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Compact lifecycle timeline from the request's own timestamps.
+ */
+function PrintTimeline({ request }: { request: KtaPrintRequest }) {
+  const steps: { label: string; at: string | null }[] = [
+    { label: "Diajukan", at: request.submitted_at },
+    { label: "Dibayar", at: request.paid_at },
+    { label: "Dicetak", at: request.printed_at },
+    {
+      label: request.delivery_method === "pickup" ? "Siap diambil" : "Dikirim",
+      at: request.ready_at ?? request.shipped_at,
+    },
+    { label: "Selesai", at: request.completed_at },
+  ];
+
+  return (
+    <ol className="mt-4 space-y-2" data-testid="kta-print-timeline">
+      {steps.map((s) => (
+        <li key={s.label} className="flex items-center gap-2 text-xs">
+          <span
+            className={`inline-block size-2 rounded-full ${s.at ? "bg-primary" : "bg-border"}`}
+            aria-hidden
+          />
+          <span className={s.at ? "font-medium" : "text-muted-foreground"}>{s.label}</span>
+          {s.at && <span className="text-muted-foreground">· {new Date(s.at).toLocaleDateString("id-ID")}</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}

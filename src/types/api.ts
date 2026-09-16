@@ -662,6 +662,9 @@ export interface KtaVerifiedResult {
   qr_payload: string;
   kta: { type: "digital"; fisik: string };
   note?: string;
+  /** Short-lived proof of ownership, required to request a physical card. */
+  print_token?: string;
+  print_amount?: number;
 }
 
 /** Intermediate challenge (wrong answer, or narrowed disambiguation). */
@@ -680,3 +683,82 @@ export type KtaVerifyResponse =
   | KtaVerifiedResult
   | KtaChallengeResult
   | KtaManualReviewResult;
+
+/* ---------------------------------- Physical KTA print request (v3.0) */
+
+export type KtaPrintStatus =
+  | "menunggu_pembayaran"
+  | "menunggu_cetak"
+  | "sudah_dicetak"
+  | "siap_diambil"
+  | "dikirim"
+  | "selesai"
+  | "ditolak"
+  | "pembayaran_expired";
+
+export type KtaDeliveryMethod = "pickup" | "delivery";
+
+/** Public projection of a print request (masked identity, no raw PII). */
+export interface KtaPrintRequest {
+  id: number;
+  reference: string;
+  status: KtaPrintStatus;
+  delivery_method: KtaDeliveryMethod;
+  payment_status: string;
+  payment_amount: number | string | null;
+  pay_url: string | null;
+  submitted_at: string | null;
+  paid_at: string | null;
+  printed_at: string | null;
+  ready_at: string | null;
+  shipped_at: string | null;
+  completed_at: string | null;
+  rejection_reason: string | null;
+}
+
+export interface KtaPrintRequestCreate {
+  print_token: string;
+  delivery_method: KtaDeliveryMethod;
+  recipient_name?: string;
+  recipient_phone?: string;
+  shipping_address?: string;
+}
+
+/** Admin queue row — masked identity only. */
+export interface KtaPrintRequestAdminRow {
+  id: number;
+  reference: string;
+  nama_masked: string;
+  id_anggota_masked: string;
+  status: KtaPrintStatus;
+  delivery_method: KtaDeliveryMethod;
+  payment_status: string;
+  payment_amount: number | string | null;
+  submitted_at: string | null;
+  updated_at: string | null;
+}
+
+export interface KtaPrintRequestAuditLog {
+  old_status: string | null;
+  new_status: string;
+  reason: string | null;
+  source: string;
+  actor_id: number | null;
+  at: string | null;
+}
+
+export interface KtaPrintRequestAdminDetail extends KtaPrintRequestAdminRow {
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  shipping_address: string | null;
+  notes: string | null;
+  logs: KtaPrintRequestAuditLog[];
+}
+
+export interface KtaPrintRequestQueueResponse {
+  data: KtaPrintRequestAdminRow[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
