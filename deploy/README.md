@@ -89,6 +89,10 @@ and Caddy auto-provisions HTTPS. Rebuild the frontend with the matching
 - `APP_KEY` and MYSQL passwords are passed as container env; Laravel's PHP-FPM is
   configured with `clear_env = no` so `env()` reads them (no `.env` file needed
   inside the image).
+- Feature flags such as `KTA_PUBLIC_ENABLED` are passed through by
+  `docker-compose.yml` and default to the disabled state. Changing a flag in
+  `.env` only takes effect after the backend container is recreated (a deploy),
+  because the value is injected as container env at create time.
 
 ## Queue (Gate 3 — foundation)
 
