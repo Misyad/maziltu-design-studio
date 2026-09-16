@@ -93,6 +93,9 @@ and Caddy auto-provisions HTTPS. Rebuild the frontend with the matching
   `docker-compose.yml` and default to the disabled state. Changing a flag in
   `.env` only takes effect after the backend container is recreated (a deploy),
   because the value is injected as container env at create time.
+- Public "Cek Status KTA" (`/cek-kta`, `POST /api/public/kta/{check,verify}`) is
+  gated by `KTA_PUBLIC_ENABLED=true`; with the flag off both endpoints return a
+  generic `503`.
 
 ## Queue (Gate 3 — foundation)
 
