@@ -26,9 +26,9 @@ function pendingRequest(overrides: Partial<KtaPrintRequest> = {}): KtaPrintReque
     status: "menunggu_pembayaran",
     delivery_method: "pickup",
     payment_status: "pending",
-    payment_amount: "25750.00",
+    payment_amount: "25375.00",
     pay_url: "https://paymenku.com/pay/IDP-1",
-    submitted_at: '2026-09-16T00:00:00Z',
+    submitted_at: "2026-09-16T00:00:00Z",
     paid_at: null,
     printed_at: null,
     ready_at: null,
@@ -116,6 +116,23 @@ describe("KtaPrintRequestBlock", () => {
     );
     // No second-request form for an active request.
     expect(screen.queryByTestId("kta-print-form")).not.toBeInTheDocument();
+  });
+
+  it("shows the KTA price, gateway fee, and Paymenku customer total", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      data: { success: true, data: { request: pendingRequest() } },
+    } as never);
+
+    renderBlock(<KtaPrintRequestBlock printToken={TOKEN} status="active" baseAmount={25000} />);
+
+    const breakdown = await screen.findByTestId("kta-payment-breakdown");
+    expect(breakdown).toHaveTextContent("Harga KTA");
+    expect(breakdown).toHaveTextContent("Rp25.000");
+    expect(breakdown).toHaveTextContent("Biaya gateway");
+    expect(breakdown).toHaveTextContent("Rp375");
+    expect(breakdown).toHaveTextContent("Total pembayaran");
+    expect(breakdown).toHaveTextContent("Rp25.375");
+    expect(breakdown).toHaveTextContent(/mengikuti nominal dari Paymenku/i);
   });
 
   it("reflects payment success without a pay button", async () => {

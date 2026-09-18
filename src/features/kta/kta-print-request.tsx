@@ -23,6 +23,21 @@ const STATUS_LABEL: Record<KtaPrintStatus, string> = {
   pembayaran_expired: "Pembayaran Kedaluwarsa",
 };
 
+const rupiah = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  maximumFractionDigits: 0,
+});
+
+function formatRupiah(value: number) {
+  return rupiah.format(value).replace(/^Rp\s*/, "Rp");
+}
+
+function amountValue(value: number | string | null | undefined) {
+  const amount = typeof value === "string" ? Number(value) : value;
+  return typeof amount === "number" && Number.isFinite(amount) ? amount : null;
+}
+
 /**
  * Physical KTA print request block, shown after a successful ownership
  * verification. Identity is proven by `printToken` (issued by the backend on
@@ -34,9 +49,11 @@ const STATUS_LABEL: Record<KtaPrintStatus, string> = {
 export function KtaPrintRequestBlock({
   printToken,
   status,
+  baseAmount,
 }: {
   printToken: string;
   status: "active" | "non_active";
+  baseAmount?: number;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -53,6 +70,12 @@ export function KtaPrintRequestBlock({
   });
 
   const request = own.data?.data?.request ?? null;
+  const basePrice = amountValue(baseAmount);
+  const customerTotal = amountValue(request?.payment_amount);
+  const gatewayFee =
+    customerTotal !== null && basePrice !== null && customerTotal >= basePrice
+      ? customerTotal - basePrice
+      : null;
 
   const create = useMutation({
     mutationFn: () => {
@@ -130,6 +153,35 @@ export function KtaPrintRequestBlock({
           </div>
         </dl>
 
+        {customerTotal !== null && (
+          <div
+            className="mt-4 rounded-xl border border-border/60 bg-card p-4"
+            data-testid="kta-payment-breakdown"
+          >
+            <dl className="space-y-2 text-sm">
+              {basePrice !== null && (
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-muted-foreground">Harga KTA</dt>
+                  <dd className="font-medium">{formatRupiah(basePrice)}</dd>
+                </div>
+              )}
+              {gatewayFee !== null && (
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-muted-foreground">Biaya gateway</dt>
+                  <dd className="font-medium">{formatRupiah(gatewayFee)}</dd>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-4 border-t border-border/60 pt-2">
+                <dt className="font-semibold">Total pembayaran</dt>
+                <dd className="font-semibold">{formatRupiah(customerTotal)}</dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Total pembayaran mengikuti nominal dari Paymenku.
+            </p>
+          </div>
+        )}
+
         {request.status === "menunggu_pembayaran" && request.pay_url && (
           <Button asChild className="mt-4 w-full rounded-full">
             <a href={request.pay_url} target="_blank" rel="noreferrer noopener">
@@ -145,9 +197,7 @@ export function KtaPrintRequestBlock({
         )}
 
         {request.status === "ditolak" && request.rejection_reason && (
-          <p className="mt-4 text-sm text-destructive">
-            Ditolak: {request.rejection_reason}
-          </p>
+          <p className="mt-4 text-sm text-destructive">Ditolak: {request.rejection_reason}</p>
         )}
 
         <PrintTimeline request={request} />
@@ -179,9 +229,7 @@ export function KtaPrintRequestBlock({
       }}
     >
       <p className="text-sm font-semibold">Ajukan pencetakan KTA fisik?</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Pilih metode penerimaan kartu.
-      </p>
+      <p className="mt-1 text-xs text-muted-foreground">Pilih metode penerimaan kartu.</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <button
@@ -257,7 +305,12 @@ export function KtaPrintRequestBlock({
           {create.isPending && <Loader2 className="size-4 animate-spin" aria-hidden />}
           Ajukan
         </Button>
-        <Button type="button" variant="ghost" className="rounded-full" onClick={() => setOpen(false)}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="rounded-full"
+          onClick={() => setOpen(false)}
+        >
           Batal
         </Button>
       </div>
@@ -289,7 +342,11 @@ function PrintTimeline({ request }: { request: KtaPrintRequest }) {
             aria-hidden
           />
           <span className={s.at ? "font-medium" : "text-muted-foreground"}>{s.label}</span>
-          {s.at && <span className="text-muted-foreground">· {new Date(s.at).toLocaleDateString("id-ID")}</span>}
+          {s.at && (
+            <span className="text-muted-foreground">
+              · {new Date(s.at).toLocaleDateString("id-ID")}
+            </span>
+          )}
         </li>
       ))}
     </ol>

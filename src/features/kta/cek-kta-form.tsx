@@ -7,19 +7,21 @@ import { Button } from "@/components/ui/button";
 import { KtaPrintRequestBlock } from "@/features/kta/kta-print-request";
 import { ApiError } from "@/services/api-client";
 import { ktaCheck, ktaVerify } from "@/services/mzt-api";
-import type {
-  KtaCheckRequest,
-  KtaDisambiguateField,
-  KtaVerifiedResult,
-} from "@/types/api";
+import type { KtaCheckRequest, KtaDisambiguateField, KtaVerifiedResult } from "@/types/api";
 
 type Mode = "name_dob" | "member_id";
 
 type Stage =
   | { name: "lookup" }
+  | { name: "choose_verification"; token: string; attemptsLeft: number | null }
   | { name: "verify_hp"; token: string; attemptsLeft: number | null }
   | { name: "verify_fallback"; token: string; attemptsLeft: number | null }
-  | { name: "disambiguate"; token: string; field: KtaDisambiguateField; attemptsLeft: number | null }
+  | {
+      name: "disambiguate";
+      token: string;
+      field: KtaDisambiguateField;
+      attemptsLeft: number | null;
+    }
   | { name: "result"; result: KtaVerifiedResult }
   | { name: "manual_review"; message: string }
   | { name: "locked" };
@@ -38,10 +40,41 @@ type Stage =
  */
 const DISAMBIGUATION_ORDER: KtaDisambiguateField[] = ["tahun_masuk", "tempat_lahir", "niqobah"];
 
+function formatDobInput(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function parseDob(value: string) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  if (year < 1900 || month < 1 || month > 12 || day < 1) return null;
+
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (day > daysInMonth) return null;
+
+  const iso = `${match[3]}-${match[2]}-${match[1]}`;
+  const today = new Date();
+  const todayIso = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  return iso <= todayIso ? iso : null;
+}
+
 export function CekKtaForm() {
   const [mode, setMode] = useState<Mode>("name_dob");
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
+  const [dobError, setDobError] = useState("");
   const [memberId, setMemberId] = useState("");
   const [hpLast4, setHpLast4] = useState("");
   const [tahunMasuk, setTahunMasuk] = useState("");
@@ -67,7 +100,7 @@ export function CekKtaForm() {
       }
       // Generic — we do not know (and must not guess) whether this will be a
       // single candidate, ambiguous, or a dead end.
-      setStage({ name: "verify_hp", token: data.challenge_token, attemptsLeft: null });
+      setStage({ name: "choose_verification", token: data.challenge_token, attemptsLeft: null });
     },
     onError: (error: unknown) => {
       const status = error instanceof ApiError ? error.status : undefined;
@@ -94,21 +127,19 @@ export function CekKtaForm() {
         return;
       }
 
-      // Intermediate challenge: the backend accepted the answer as insufficient
-      // and returned a fresh token. Because the contract keeps this response
-      // deliberately opaque (no candidate count, no field hint), the UI cannot
-      // tell "wrong HP" apart from "ambiguous, please disambiguate" — so it
-      // advances the disambiguation cursor, which is the only productive path.
-      // A genuinely wrong answer simply fails again and consumes an attempt.
+      // Intermediate challenges stay opaque. Preserve the explicit no-phone
+      // route; otherwise advance through the fixed disambiguation sequence.
       if (data && "challenge_token" in data) {
         const attemptsLeft = "attempts_left" in data ? (data.attempts_left ?? null) : null;
         setDisValue("");
         setHpLast4("");
         setStage((prev) => {
+          if (prev.name === "verify_fallback") {
+            return { name: "verify_fallback", token: data.challenge_token, attemptsLeft };
+          }
+
           const nextIndex =
-            prev.name === "disambiguate"
-              ? DISAMBIGUATION_ORDER.indexOf(prev.field) + 1
-              : 0;
+            prev.name === "disambiguate" ? DISAMBIGUATION_ORDER.indexOf(prev.field) + 1 : 0;
           const nextDis = DISAMBIGUATION_ORDER[nextIndex];
 
           if (nextDis) {
@@ -147,7 +178,14 @@ export function CekKtaForm() {
   function handleLookup(event: FormEvent) {
     event.preventDefault();
     if (mode === "name_dob") {
-      check.mutate({ mode: "name_dob", name: name.trim(), tanggal_lahir: dob });
+      const parsedDob = parseDob(dob);
+      if (!parsedDob) {
+        setDobError("Tanggal lahir tidak valid. Gunakan format DD/MM/YYYY.");
+        return;
+      }
+
+      setDobError("");
+      check.mutate({ mode: "name_dob", name: name.trim(), tanggal_lahir: parsedDob });
     } else {
       check.mutate({ mode: "member_id", id_anggota: memberId.trim() });
     }
@@ -236,7 +274,11 @@ export function CekKtaForm() {
         </div>
 
         {r.print_token ? (
-          <KtaPrintRequestBlock printToken={r.print_token} status={r.status} />
+          <KtaPrintRequestBlock
+            printToken={r.print_token}
+            status={r.status}
+            {...(r.print_amount === undefined ? {} : { baseAmount: r.print_amount })}
+          />
         ) : null}
 
         <Button variant="outline" className="mt-6 w-full rounded-full" onClick={reset}>
@@ -254,8 +296,8 @@ export function CekKtaForm() {
       >
         <p className="font-display text-lg font-semibold">Terlalu banyak percobaan</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Demi keamanan, sesi verifikasi ini dikunci. Bila data Anda belum terdaftar, silakan
-          daftar sebagai anggota.
+          Demi keamanan, sesi verifikasi ini dikunci. Bila data Anda belum terdaftar, silakan daftar
+          sebagai anggota.
         </p>
         <RegisterCta />
         <Button variant="outline" className="mt-3 w-full rounded-full" onClick={reset}>
@@ -282,6 +324,37 @@ export function CekKtaForm() {
   }
 
   // ── Verification steps ───────────────────────────────────────────────────
+  if (stage.name === "choose_verification") {
+    return (
+      <div
+        className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft sm:p-8"
+        data-testid="kta-verification-choice"
+      >
+        <p className="font-display text-lg font-semibold">Pilih cara verifikasi</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Gunakan data yang sudah terdaftar untuk memverifikasi kepemilikan.
+        </p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <Button
+            type="button"
+            className="rounded-full"
+            onClick={() => setStage({ ...stage, name: "verify_hp" } as Stage)}
+          >
+            Saya punya nomor HP
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => setStage({ ...stage, name: "verify_fallback" } as Stage)}
+          >
+            Saya tidak punya nomor HP
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (stage.name === "verify_hp") {
     return (
       <form
@@ -306,12 +379,14 @@ export function CekKtaForm() {
           placeholder="••••"
         />
         {stage.attemptsLeft !== null && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Sisa percobaan: {stage.attemptsLeft}
-          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Sisa percobaan: {stage.attemptsLeft}</p>
         )}
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <Button type="submit" disabled={pending || hpLast4.length !== 4} className="flex-1 rounded-full">
+          <Button
+            type="submit"
+            disabled={pending || hpLast4.length !== 4}
+            className="flex-1 rounded-full"
+          >
             {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
             Verifikasi
           </Button>
@@ -362,24 +437,14 @@ export function CekKtaForm() {
         {stage.attemptsLeft !== null && (
           <p className="mt-2 text-xs text-muted-foreground">Sisa percobaan: {stage.attemptsLeft}</p>
         )}
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <Button
-            type="submit"
-            disabled={pending || !tahunMasuk.trim() || !tempatLahir.trim()}
-            className="flex-1 rounded-full"
-          >
-            {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
-            Verifikasi
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded-full"
-            onClick={() => setStage({ ...stage, name: "verify_hp" } as Stage)}
-          >
-            Kembali
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          disabled={pending || !tahunMasuk.trim() || !tempatLahir.trim()}
+          className="mt-5 w-full rounded-full"
+        >
+          {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
+          Verifikasi
+        </Button>
       </form>
     );
   }
@@ -462,7 +527,9 @@ export function CekKtaForm() {
           >
             <Search className="size-5 text-primary" aria-hidden />
             <p className="mt-2 text-sm font-semibold">Saya tahu nomor anggota</p>
-            <p className="mt-1 text-xs text-muted-foreground">Cari langsung dengan nomor anggota.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cari langsung dengan nomor anggota.
+            </p>
           </button>
         </div>
 
@@ -487,12 +554,27 @@ export function CekKtaForm() {
               </label>
               <input
                 id="kta-dob"
-                type="date"
+                type="text"
+                inputMode="numeric"
+                autoComplete="bday"
+                maxLength={10}
                 required
                 value={dob}
-                onChange={(e) => setDob(e.target.value)}
+                onChange={(e) => {
+                  setDob(formatDobInput(e.target.value));
+                  setDobError("");
+                }}
+                aria-invalid={dobError ? "true" : undefined}
+                aria-describedby="kta-dob-hint"
+                placeholder="DD/MM/YYYY"
                 className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/30"
               />
+              <p
+                id="kta-dob-hint"
+                className={`mt-2 text-xs ${dobError ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {dobError || "Format: DD/MM/YYYY"}
+              </p>
             </div>
           </div>
         ) : (
@@ -535,7 +617,10 @@ export function CekKtaForm() {
  */
 function RegisterCta() {
   return (
-    <div className="mt-6 rounded-2xl border border-border/60 bg-surface p-5" data-testid="kta-register-cta">
+    <div
+      className="mt-6 rounded-2xl border border-border/60 bg-surface p-5"
+      data-testid="kta-register-cta"
+    >
       <p className="text-sm font-semibold">Data anggota belum ditemukan</p>
       <p className="mt-1 text-xs text-muted-foreground">
         Kami belum menemukan data Anda di database anggota MZT. Silakan hubungi admin untuk

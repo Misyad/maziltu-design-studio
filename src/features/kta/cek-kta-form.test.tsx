@@ -55,7 +55,8 @@ describe("CekKtaForm — public KTA status page", () => {
     expect(screen.getByTestId("kta-mode-name")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("kta-mode-member")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByLabelText("Nama lengkap")).toBeInTheDocument();
-    expect(screen.getByLabelText("Tanggal lahir")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tanggal lahir")).toHaveAttribute("placeholder", "DD/MM/YYYY");
+    expect(screen.getByText("Format: DD/MM/YYYY")).toBeInTheDocument();
   });
 
   it("switches to member-number mode", async () => {
@@ -75,7 +76,7 @@ describe("CekKtaForm — public KTA status page", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Nama lengkap"), "Achmad Hasanudin");
-    await user.type(screen.getByLabelText("Tanggal lahir"), "2001-07-13");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "13/07/2001");
     await user.click(screen.getByRole("button", { name: /cek status/i }));
 
     await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
@@ -86,8 +87,42 @@ describe("CekKtaForm — public KTA status page", () => {
       tanggal_lahir: "2001-07-13",
     });
 
-    expect(await screen.findByTestId("kta-verify-hp")).toBeInTheDocument();
+    expect(await screen.findByTestId("kta-verification-choice")).toBeInTheDocument();
   });
+
+  it("rejects an invalid calendar date", async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(apiClient, "post");
+    renderForm();
+
+    await user.type(screen.getByLabelText("Nama lengkap"), "Achmad Hasanudin");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "31/02/2001");
+    await user.click(screen.getByRole("button", { name: /cek status/i }));
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Tanggal lahir tidak valid. Gunakan format DD/MM/YYYY."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Tanggal lahir")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it.each(["01/01/0001", "31/12/1899", "01/01/2999"])(
+    "rejects sentinel or out-of-range date %s",
+    async (date) => {
+      const user = userEvent.setup();
+      const spy = vi.spyOn(apiClient, "post");
+      renderForm();
+
+      await user.type(screen.getByLabelText("Nama lengkap"), "Achmad Hasanudin");
+      await user.type(screen.getByLabelText("Tanggal lahir"), date);
+      await user.click(screen.getByRole("button", { name: /cek status/i }));
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(
+        screen.getByText("Tanggal lahir tidak valid. Gunakan format DD/MM/YYYY."),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("submits member id to /public/kta/check (still requires verification)", async () => {
     const user = userEvent.setup();
@@ -102,7 +137,7 @@ describe("CekKtaForm — public KTA status page", () => {
     expect(spy.mock.calls[0]?.[1]).toEqual({ mode: "member_id", id_anggota: "0174011119" });
 
     // Valid member id alone never yields the result.
-    expect(await screen.findByTestId("kta-verify-hp")).toBeInTheDocument();
+    expect(await screen.findByTestId("kta-verification-choice")).toBeInTheDocument();
     expect(screen.queryByTestId("kta-result")).not.toBeInTheDocument();
   });
 
@@ -118,8 +153,9 @@ describe("CekKtaForm — public KTA status page", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Nama lengkap"), "Achmad Hasanudin");
-    await user.type(screen.getByLabelText("Tanggal lahir"), "2001-07-13");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "13/07/2001");
     await user.click(screen.getByRole("button", { name: /cek status/i }));
+    await user.click(await screen.findByRole("button", { name: /saya punya nomor hp/i }));
 
     const hp = await screen.findByLabelText("4 digit terakhir nomor HP");
     await user.type(hp, "2559");
@@ -152,11 +188,10 @@ describe("CekKtaForm — public KTA status page", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Nama lengkap"), "Achmad Hasanudin");
-    await user.type(screen.getByLabelText("Tanggal lahir"), "2001-07-13");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "13/07/2001");
     await user.click(screen.getByRole("button", { name: /cek status/i }));
 
-    await screen.findByTestId("kta-verify-hp");
-    await user.click(screen.getByRole("button", { name: /tidak punya nomor hp/i }));
+    await user.click(await screen.findByRole("button", { name: /saya tidak punya nomor hp/i }));
 
     const fallback = await screen.findByTestId("kta-verify-fallback");
     expect(fallback).toBeInTheDocument();
@@ -172,6 +207,50 @@ describe("CekKtaForm — public KTA status page", () => {
       value: { tahun_masuk: "2011", tempat_lahir: "Malang" },
     });
 
+    expect(await screen.findByTestId("kta-result")).toBeInTheDocument();
+  });
+
+  it("keeps no-phone verification on fallback after a failed attempt", async () => {
+    const user = userEvent.setup();
+    const spy = vi
+      .spyOn(apiClient, "post")
+      .mockResolvedValueOnce({
+        data: { success: true, data: { stage: "challenge", challenge_token: "tok-4a" } },
+      } as never)
+      .mockResolvedValueOnce({
+        data: {
+          success: false,
+          data: { stage: "challenge", challenge_token: "tok-4b", attempts_left: 4 },
+        },
+      } as never)
+      .mockResolvedValueOnce({ data: { success: true, data: VERIFIED } } as never);
+
+    renderForm();
+
+    await user.type(screen.getByLabelText("Nama lengkap"), "Achmad Tanpa HP");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "13/07/2001");
+    await user.click(screen.getByRole("button", { name: /cek status/i }));
+    await user.click(await screen.findByRole("button", { name: /saya tidak punya nomor hp/i }));
+
+    await user.type(screen.getByLabelText("Tahun masuk"), "2011");
+    await user.type(screen.getByLabelText("Tempat lahir"), "Surabaya");
+    await user.click(screen.getByRole("button", { name: /^verifikasi$/i }));
+
+    const fallback = await screen.findByTestId("kta-verify-fallback");
+    expect(fallback).toHaveTextContent("Sisa percobaan: 4");
+    expect(screen.queryByTestId("kta-verify-hp")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("kta-disambiguate")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Tempat lahir"));
+    await user.type(screen.getByLabelText("Tempat lahir"), "Malang");
+    await user.click(screen.getByRole("button", { name: /^verifikasi$/i }));
+
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(3));
+    expect(spy.mock.calls[2]?.[1]).toEqual({
+      challenge_token: "tok-4b",
+      method: "no_hp_fallback",
+      value: { tahun_masuk: "2011", tempat_lahir: "Malang" },
+    });
     expect(await screen.findByTestId("kta-result")).toBeInTheDocument();
   });
 
@@ -194,8 +273,9 @@ describe("CekKtaForm — public KTA status page", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Nama lengkap"), "Identik Total");
-    await user.type(screen.getByLabelText("Tanggal lahir"), "1992-03-03");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "03/03/1992");
     await user.click(screen.getByRole("button", { name: /cek status/i }));
+    await user.click(await screen.findByRole("button", { name: /saya punya nomor hp/i }));
 
     const hp = await screen.findByLabelText("4 digit terakhir nomor HP");
     await user.type(hp, "0000");
@@ -226,8 +306,9 @@ describe("CekKtaForm — public KTA status page", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Nama lengkap"), "Achmad Hasanudin");
-    await user.type(screen.getByLabelText("Tanggal lahir"), "2001-07-13");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "13/07/2001");
     await user.click(screen.getByRole("button", { name: /cek status/i }));
+    await user.click(await screen.findByRole("button", { name: /saya punya nomor hp/i }));
 
     const hp = await screen.findByLabelText("4 digit terakhir nomor HP");
     await user.type(hp, "0000");
@@ -255,10 +336,11 @@ describe("CekKtaForm — public KTA status page", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Nama lengkap"), "Kembar Sama");
-    await user.type(screen.getByLabelText("Tanggal lahir"), "1990-01-01");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "01/01/1990");
     await user.click(screen.getByRole("button", { name: /cek status/i }));
 
     // First verification step is the phone challenge.
+    await user.click(await screen.findByRole("button", { name: /saya punya nomor hp/i }));
     const hp = await screen.findByLabelText("4 digit terakhir nomor HP");
     await user.type(hp, "0000");
     await user.click(screen.getByRole("button", { name: /^verifikasi$/i }));
@@ -284,8 +366,9 @@ describe("CekKtaForm — public KTA status page", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Nama lengkap"), "Achmad Hasanudin");
-    await user.type(screen.getByLabelText("Tanggal lahir"), "2001-07-13");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "13/07/2001");
     await user.click(screen.getByRole("button", { name: /cek status/i }));
+    await user.click(await screen.findByRole("button", { name: /saya punya nomor hp/i }));
 
     const hp = await screen.findByLabelText("4 digit terakhir nomor HP");
     await user.type(hp, "2559");
