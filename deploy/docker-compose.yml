@@ -63,6 +63,15 @@ services:
       # Public "Cek Status KTA" flag. Passed through so the explicit production
       # value reaches Laravel; falls back to disabled when unset.
       KTA_PUBLIC_ENABLED: ${KTA_PUBLIC_ENABLED:-false}
+      KTA_PRINT_ENABLED: ${KTA_PRINT_ENABLED:-false}
+      KTA_PRINT_AMOUNT: ${KTA_PRINT_AMOUNT:-25000}
+      KTA_PRINT_CHANNEL: ${KTA_PRINT_CHANNEL:-qris}
+      KTA_PRINT_RETURN_URL: ${KTA_PRINT_RETURN_URL:?set KTA_PRINT_RETURN_URL in .env}
+      PAYMENKU_BASE_URL: ${PAYMENKU_BASE_URL:-https://paymenku.com/api/v1}
+      PAYMENKU_API_KEY: ${PAYMENKU_API_KEY:?set PAYMENKU_API_KEY in .env}
+      PAYMENKU_WEBHOOK_SECRET: ${PAYMENKU_WEBHOOK_SECRET:?set PAYMENKU_WEBHOOK_SECRET in .env}
+      PAYMENKU_WEBHOOK_TOLERANCE: ${PAYMENKU_WEBHOOK_TOLERANCE:-300}
+      PAYMENKU_TIMEOUT: ${PAYMENKU_TIMEOUT:-20}
       QUEUE_CONNECTION: database
     volumes:
       # Live media (bar codes, photos). Host dir = mirror of backend storage/app.
@@ -104,6 +113,16 @@ services:
       SESSION_SAME_SITE: ${SESSION_SAME_SITE:-lax}
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      KTA_PUBLIC_ENABLED: ${KTA_PUBLIC_ENABLED:-false}
+      KTA_PRINT_ENABLED: ${KTA_PRINT_ENABLED:-false}
+      KTA_PRINT_AMOUNT: ${KTA_PRINT_AMOUNT:-25000}
+      KTA_PRINT_CHANNEL: ${KTA_PRINT_CHANNEL:-qris}
+      KTA_PRINT_RETURN_URL: ${KTA_PRINT_RETURN_URL:?set KTA_PRINT_RETURN_URL in .env}
+      PAYMENKU_BASE_URL: ${PAYMENKU_BASE_URL:-https://paymenku.com/api/v1}
+      PAYMENKU_API_KEY: ${PAYMENKU_API_KEY:?set PAYMENKU_API_KEY in .env}
+      PAYMENKU_WEBHOOK_SECRET: ${PAYMENKU_WEBHOOK_SECRET:?set PAYMENKU_WEBHOOK_SECRET in .env}
+      PAYMENKU_WEBHOOK_TOLERANCE: ${PAYMENKU_WEBHOOK_TOLERANCE:-300}
+      PAYMENKU_TIMEOUT: ${PAYMENKU_TIMEOUT:-20}
       QUEUE_CONNECTION: database
     volumes:
       # Media mirror shared with the backend so handlers can render PDF/QR if needed.

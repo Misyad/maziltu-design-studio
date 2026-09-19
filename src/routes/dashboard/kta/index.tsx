@@ -5,6 +5,13 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -18,7 +25,7 @@ import { PageHeader } from "@/features/dashboard/page-header";
 import { FINANCE_ROLES, requireRoles } from "@/lib/auth";
 import { ApiError } from "@/services/api-client";
 import { updateKtaPrintStatus } from "@/services/mzt-api";
-import { ktaPrintQueueQuery, queryKeysKtaPrint } from "@/services/queries";
+import { ktaPrintDetailQuery, ktaPrintQueueQuery, queryKeysKtaPrint } from "@/services/queries";
 import type { KtaPrintRequestAdminRow, KtaPrintStatus } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/kta/")({
@@ -40,12 +47,18 @@ const STATUS_LABEL: Record<KtaPrintStatus, string> = {
 
 /** Queue reset (no explicit status) → production statuses only. */
 const QUEUE_VALUE = "queue";
+const RUPIAH = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  maximumFractionDigits: 0,
+});
 
-function KtaQueuePage() {
+export function KtaQueuePage() {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<string>(QUEUE_VALUE);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<KtaPrintRequestAdminRow | null>(null);
   const perPage = 15;
 
   const queue = useQuery(
@@ -146,7 +159,9 @@ function KtaQueuePage() {
         <Skeleton className="h-64 w-full rounded-xl" />
       ) : queue.isError ? (
         <Card>
-          <CardContent className="p-6 text-sm text-destructive">Gagal memuat antrean KTA.</CardContent>
+          <CardContent className="p-6 text-sm text-destructive">
+            Gagal memuat antrean KTA.
+          </CardContent>
         </Card>
       ) : !queue.data?.data?.length ? (
         <Card>
@@ -188,6 +203,14 @@ function KtaQueuePage() {
                         <td className="px-4 py-2">{STATUS_LABEL[row.status]}</td>
                         <td className="px-4 py-2 text-right">
                           <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="rounded-full"
+                              onClick={() => setSelected(row)}
+                            >
+                              Detail
+                            </Button>
                             {nextActions(row).map((a) => (
                               <Button
                                 key={a.status}
@@ -247,6 +270,117 @@ function KtaQueuePage() {
           </div>
         </>
       )}
+
+      <KtaDetailDialog
+        request={selected}
+        open={selected !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setSelected(null);
+        }}
+      />
+    </div>
+  );
+}
+
+function KtaDetailDialog({
+  request,
+  open,
+  onOpenChange,
+}: {
+  request: KtaPrintRequestAdminRow | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const detail = useQuery({
+    ...ktaPrintDetailQuery(request?.id ?? 0),
+    enabled: open && request !== null,
+  });
+
+  if (!request) return null;
+
+  const data = detail.data?.request;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Detail Pengajuan KTA</DialogTitle>
+          <DialogDescription className="font-mono text-xs">{request.reference}</DialogDescription>
+        </DialogHeader>
+
+        {detail.isPending ? (
+          <Skeleton className="h-48 w-full" />
+        ) : detail.isError || !data ? (
+          <p className="text-sm text-destructive">Gagal memuat detail pengajuan KTA.</p>
+        ) : (
+          <div className="space-y-5 text-sm">
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <DetailField label="Metode pengiriman">
+                {data.delivery_method === "pickup" ? "Diambil" : "Dikirim"}
+              </DetailField>
+              <DetailField label="Status pembayaran">{data.payment_status}</DetailField>
+              <DetailField label="Nominal pembayaran">
+                {data.payment_amount === null ? "—" : RUPIAH.format(Number(data.payment_amount))}
+              </DetailField>
+              <DetailField label="Status cetak">{STATUS_LABEL[data.status]}</DetailField>
+              {data.delivery_method === "delivery" && (
+                <>
+                  <DetailField label="Nama penerima">{data.recipient_name || "—"}</DetailField>
+                  <DetailField label="Nomor HP penerima">{data.recipient_phone || "—"}</DetailField>
+                  <DetailField label="Alamat pengiriman" className="sm:col-span-2">
+                    {data.shipping_address || "—"}
+                  </DetailField>
+                </>
+              )}
+              {data.notes && (
+                <DetailField label="Catatan" className="sm:col-span-2">
+                  {data.notes}
+                </DetailField>
+              )}
+            </dl>
+
+            {data.logs.length > 0 && (
+              <div>
+                <p className="font-medium">Riwayat status</p>
+                <ol className="mt-2 space-y-2">
+                  {data.logs.map((log, index) => (
+                    <li key={`${log.at ?? "log"}-${index}`} className="rounded-lg border p-3">
+                      <p>
+                        {log.old_status
+                          ? `${STATUS_LABEL[log.old_status as KtaPrintStatus] ?? log.old_status} → `
+                          : ""}
+                        {STATUS_LABEL[log.new_status as KtaPrintStatus] ?? log.new_status}
+                      </p>
+                      {log.reason && <p className="text-xs text-muted-foreground">{log.reason}</p>}
+                      <p className="text-xs text-muted-foreground">
+                        {log.source}
+                        {log.at ? ` · ${new Date(log.at).toLocaleString("id-ID")}` : ""}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailField({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <dt className="text-xs uppercase text-muted-foreground">{label}</dt>
+      <dd className="mt-1 whitespace-pre-wrap font-medium">{children}</dd>
     </div>
   );
 }
