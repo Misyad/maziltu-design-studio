@@ -10,6 +10,7 @@ import {
   requireRoles,
   requireUser,
 } from "@/lib/auth";
+import { homePathFor } from "@/lib/roles";
 
 function apiError(status: number) {
   return new ApiError("Request failed", status);
@@ -102,6 +103,19 @@ describe("R3 route guards — requireRoles", () => {
       expect(isRedirect(error)).toBe(true);
       expect((error as Response & { options: { to: string } }).options.to).toBe("/login");
     }
+  });
+});
+
+describe("post-login landing", () => {
+  it("sends a dedicated KTA operator to the KTA card picker", () => {
+    expect(homePathFor({ roles: ["id_card"] })).toBe("/dashboard/id-card");
+  });
+
+  it("keeps dashboard and password-change priorities", () => {
+    expect(homePathFor({ roles: ["dashboard", "id_card"] })).toBe("/dashboard");
+    expect(homePathFor({ roles: ["id_card"], must_change_password: true })).toBe(
+      "/portal/ubah-password",
+    );
   });
 });
 

@@ -46,6 +46,9 @@ import {
   fetchKtaPrintRequest,
   fetchKtaPrintQueue,
   fetchKtaPrintDetail,
+  fetchKtaCards,
+  fetchKtaCard,
+  fetchKtaPrintRequestCard,
 } from "@/services/mzt-api";
 import type { AuditTimelineParams, VerificationQueueParams } from "@/types/api";
 import type {
@@ -301,6 +304,9 @@ export const queryKeysKtaPrint = {
     per_page?: number | null;
   }) => ["kta-print", "queue", params] as const,
   detail: (id: number | string) => ["kta-print", "detail", id] as const,
+  cards: ["kta-print", "cards"] as const,
+  card: (idUsers: number | string) => ["kta-print", "cards", idUsers] as const,
+  requestCard: (requestId: number | string) => ["kta-print", "requests", requestId, "card"] as const,
 };
 
 export const ktaPrintOwnQuery = (printToken: string) =>
@@ -327,5 +333,22 @@ export const ktaPrintDetailQuery = (id: number | string) =>
   queryOptions({
     queryKey: queryKeysKtaPrint.detail(id),
     queryFn: () => fetchKtaPrintDetail(id),
+    retry: 0,
+  });
+
+export const ktaCardsQuery = () =>
+  queryOptions({ queryKey: queryKeysKtaPrint.cards, queryFn: fetchKtaCards, retry: 0 });
+
+export const ktaCardQuery = (idUsers: number | string) =>
+  queryOptions({
+    queryKey: queryKeysKtaPrint.card(idUsers),
+    queryFn: () => fetchKtaCard(idUsers),
+    retry: 0,
+  });
+
+export const ktaPrintRequestCardQuery = (requestId: number | string) =>
+  queryOptions({
+    queryKey: queryKeysKtaPrint.requestCard(requestId),
+    queryFn: () => fetchKtaPrintRequestCard(requestId),
     retry: 0,
   });

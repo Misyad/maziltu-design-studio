@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Printer } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -22,15 +23,22 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
-import { FINANCE_ROLES, requireRoles } from "@/lib/auth";
+import { KTA_PRINT_AREA_ID, PhysicalKtaCard } from "@/features/dashboard/physical-kta-card";
+import { KTA_QUEUE_ROLES, requireRoles } from "@/lib/auth";
+import { canViewKtaCards, isVerifier } from "@/lib/roles";
 import { ApiError } from "@/services/api-client";
 import { updateKtaPrintStatus } from "@/services/mzt-api";
-import { ktaPrintDetailQuery, ktaPrintQueueQuery, queryKeysKtaPrint } from "@/services/queries";
+import {
+  currentUserQuery,
+  ktaPrintDetailQuery,
+  ktaPrintQueueQuery,
+  ktaPrintRequestCardQuery,
+} from "@/services/queries";
 import type { KtaPrintRequestAdminRow, KtaPrintStatus } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/kta/")({
   beforeLoad: ({ context, location }) =>
-    requireRoles(context.queryClient, FINANCE_ROLES, location.href),
+    requireRoles(context.queryClient, KTA_QUEUE_ROLES, location.href),
   component: KtaQueuePage,
 });
 
@@ -47,6 +55,13 @@ const STATUS_LABEL: Record<KtaPrintStatus, string> = {
 
 /** Queue reset (no explicit status) → production statuses only. */
 const QUEUE_VALUE = "queue";
+const PRINTABLE_STATUSES = new Set<KtaPrintStatus>([
+  "menunggu_cetak",
+  "sudah_dicetak",
+  "siap_diambil",
+  "dikirim",
+  "selesai",
+]);
 const RUPIAH = new Intl.NumberFormat("id-ID", {
   style: "currency",
   currency: "IDR",
@@ -55,10 +70,14 @@ const RUPIAH = new Intl.NumberFormat("id-ID", {
 
 export function KtaQueuePage() {
   const queryClient = useQueryClient();
+  const currentUser = useQuery(currentUserQuery());
   const [status, setStatus] = useState<string>(QUEUE_VALUE);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<KtaPrintRequestAdminRow | null>(null);
+  const [printing, setPrinting] = useState<KtaPrintRequestAdminRow | null>(null);
+  const canManage = isVerifier(currentUser.data?.roles);
+  const canPrint = canViewKtaCards(currentUser.data?.roles);
   const perPage = 15;
 
   const queue = useQuery(
@@ -203,28 +222,46 @@ export function KtaQueuePage() {
                         <td className="px-4 py-2">{STATUS_LABEL[row.status]}</td>
                         <td className="px-4 py-2 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="rounded-full"
-                              onClick={() => setSelected(row)}
-                            >
-                              Detail
-                            </Button>
-                            {nextActions(row).map((a) => (
+                            {canPrint &&
+                            row.payment_status === "paid" &&
+                            PRINTABLE_STATUSES.has(row.status) ? (
                               <Button
-                                key={a.status}
                                 size="sm"
-                                variant="outline"
+                                variant="ghost"
                                 className="rounded-full"
-                                disabled={transition.isPending}
-                                onClick={() => handleAction(row, a.status)}
+                                onClick={() => setPrinting(row)}
                               >
-                                {a.label}
+                                <Printer aria-hidden />
+                                Cetak
                               </Button>
-                            ))}
-                            {(row.status === "menunggu_pembayaran" ||
-                              row.status === "menunggu_cetak") && (
+                            ) : null}
+                            {canManage ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="rounded-full"
+                                onClick={() => setSelected(row)}
+                              >
+                                Detail
+                              </Button>
+                            ) : null}
+                            {canManage
+                              ? nextActions(row).map((a) => (
+                                  <Button
+                                    key={a.status}
+                                    size="sm"
+                                    variant="outline"
+                                    className="rounded-full"
+                                    disabled={transition.isPending}
+                                    onClick={() => handleAction(row, a.status)}
+                                  >
+                                    {a.label}
+                                  </Button>
+                                ))
+                              : null}
+                            {canManage &&
+                            (row.status === "menunggu_pembayaran" ||
+                              row.status === "menunggu_cetak") ? (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -234,7 +271,7 @@ export function KtaQueuePage() {
                               >
                                 Tolak
                               </Button>
-                            )}
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -278,7 +315,57 @@ export function KtaQueuePage() {
           if (!nextOpen) setSelected(null);
         }}
       />
+      <KtaPrintDialog
+        request={printing}
+        open={printing !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setPrinting(null);
+        }}
+      />
     </div>
+  );
+}
+
+function KtaPrintDialog({
+  request,
+  open,
+  onOpenChange,
+}: {
+  request: KtaPrintRequestAdminRow | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const card = useQuery({
+    ...ktaPrintRequestCardQuery(request?.id ?? 0),
+    enabled: open && request !== null,
+  });
+
+  if (!request) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Preview KTA</DialogTitle>
+          <DialogDescription className="font-mono text-xs">{request.reference}</DialogDescription>
+        </DialogHeader>
+        {card.isPending ? (
+          <Skeleton className="aspect-[85.6/54] w-full rounded-xl" />
+        ) : card.isError || !card.data ? (
+          <p className="text-sm text-destructive">Gagal memuat data KTA.</p>
+        ) : (
+          <div className="space-y-4">
+            <div id={KTA_PRINT_AREA_ID}>
+              <PhysicalKtaCard card={card.data} />
+            </div>
+            <Button className="w-full rounded-full" onClick={() => window.print()}>
+              <Printer aria-hidden />
+              Cetak KTA
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

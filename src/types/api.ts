@@ -438,6 +438,26 @@ export interface IdCardData {
   barcode: string | null;
 }
 
+export interface KtaCardSummary {
+  id_users: number;
+  id_anggota: string;
+  nama: string;
+}
+
+export interface KtaCard {
+  id_users: number;
+  id_anggota: string;
+  nama: string;
+  alamat: string;
+  niqobah: string;
+  tahun_masuk: string | null;
+  tahun_keluar: string | null;
+  foto: string | null;
+  barcode_value: string;
+  barcode_data_uri: string;
+  background_url: string;
+}
+
 /** Result of POST /members/bulk-account. */
 export interface BulkGenerateResult {
   created: number;

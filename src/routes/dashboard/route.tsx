@@ -94,7 +94,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     to: "/dashboard/kta",
     label: "Cetak KTA",
     icon: Printer,
-    roles: ["finance", "ketua", "admin"],
+    roles: ["id_card", "finance", "ketua", "admin"],
   },
   {
     to: "/dashboard/finance/tickets",
@@ -121,7 +121,12 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/dashboard/transactions", label: "Transactions", icon: ReceiptText, roles: ["event"] },
   { to: "/dashboard/activity", label: "Activity", icon: Activity, roles: ["aktivitas_user"] },
   { to: "/dashboard/content", label: "Content", icon: Settings2, roles: ["tampilan"] },
-  { to: "/dashboard/id-card", label: "ID Cards", icon: BadgeCheck, roles: ["id_card"] },
+  {
+    to: "/dashboard/id-card",
+    label: "ID Cards",
+    icon: BadgeCheck,
+    roles: ["id_card", "ketua", "admin"],
+  },
   { to: "/dashboard/profile", label: "Profile", icon: UserRound, roles: ["profil"] },
 ];
 

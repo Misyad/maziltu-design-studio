@@ -29,6 +29,8 @@ import type {
   EventTanggal,
   GateMonitoringResponse,
   IdCardData,
+  KtaCard,
+  KtaCardSummary,
   LoginRequest,
   LoginResponse,
   Member,
@@ -382,6 +384,12 @@ export const fetchKtaPrintQueue = (params?: {
 
 export const fetchKtaPrintDetail = (id: number | string) =>
   apiGet<{ request: import("@/types/api").KtaPrintRequestAdminDetail }>(`/kta/print-requests/${id}`);
+
+export const fetchKtaCards = () => apiGet<KtaCardSummary[]>("/kta/cards");
+export const fetchKtaCard = (idUsers: number | string) =>
+  apiGet<KtaCard>(`/kta/cards/${idUsers}`);
+export const fetchKtaPrintRequestCard = (requestId: number | string) =>
+  apiGet<KtaCard>(`/kta/print-requests/${requestId}/card`);
 
 export const updateKtaPrintStatus = (
   id: number | string,
