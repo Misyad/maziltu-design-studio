@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { Menu, MoveUpRight, X } from "lucide-react";
+import { LogIn, Menu, MoveUpRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { ThemeMenu, ThemeToggle } from "@/components/shared/theme-toggle";
 import { NAV_LINKS, ORG } from "@/constants/content";
 import { cn } from "@/lib/utils";
 
@@ -53,11 +53,18 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle className="rounded-full" />
-          <Button asChild variant="outline" className="hidden rounded-full sm:inline-flex">
-            <Link to="/login">Masuk</Link>
+          <ThemeToggle className="rounded-full lg:hidden" />
+          <Button
+            asChild
+            className="hidden rounded-full bg-violet-100 px-5 text-violet-800 shadow-none hover:bg-violet-200 hover:text-violet-900 dark:bg-violet-950/70 dark:text-violet-200 dark:hover:bg-violet-900 lg:inline-flex"
+          >
+            <Link to="/login">
+              <LogIn className="size-4" aria-hidden />
+              Masuk
+            </Link>
           </Button>
-          <Button asChild className="hidden rounded-full sm:inline-flex">
+          <ThemeMenu className="hidden rounded-full bg-background shadow-none lg:inline-flex" />
+          <Button asChild className="hidden rounded-full sm:inline-flex lg:hidden">
             <Link to="/contact">
               Get involved
               <MoveUpRight className="size-4" aria-hidden />
