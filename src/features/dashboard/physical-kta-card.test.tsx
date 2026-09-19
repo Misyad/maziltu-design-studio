@@ -23,9 +23,14 @@ describe("PhysicalKtaCard", () => {
   it("renders the printable member identity and backend-generated barcode", () => {
     render(<PhysicalKtaCard card={card} />);
 
-    expect(screen.getByTestId("physical-kta-card")).toHaveClass("kta-card");
+    const preview = screen.getByTestId("physical-kta-card");
+    expect(preview).toHaveClass("kta-card");
+    expect(preview.querySelector(".kta-card__background")).toHaveAttribute(
+      "src",
+      card.background_url,
+    );
     expect(screen.getByText("Achmad Hasanudin")).toBeInTheDocument();
-    expect(screen.getAllByText("0174011119")).toHaveLength(2);
+    expect(screen.getAllByText("0174011119")).toHaveLength(1);
     expect(screen.getByText("Jl. Contoh No. 10, Malang")).toBeInTheDocument();
     expect(screen.getByText("2011")).toBeInTheDocument();
     expect(screen.getByText("2019")).toBeInTheDocument();

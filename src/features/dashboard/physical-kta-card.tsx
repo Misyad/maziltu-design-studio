@@ -26,7 +26,6 @@ export function PhysicalKtaCard({ card }: { card: KtaCard }) {
       </dl>
       <div className="kta-card__barcode">
         <img src={card.barcode_data_uri} alt={`Barcode anggota ${card.id_anggota}`} />
-        <span>{card.barcode_value}</span>
       </div>
     </div>
   );
