@@ -261,7 +261,9 @@ export function CekKtaForm() {
             <dt className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               Kartu Fisik
             </dt>
-            <dd className="mt-1 font-medium">Status kartu fisik belum tercatat di sistem.</dd>
+            <dd className="mt-1 font-medium">
+              Status pengajuan tersedia setelah Anda mengajukan cetak KTA.
+            </dd>
           </div>
         </dl>
 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EventCard } from "@/features/events/event-card";
 import { NewsCard } from "@/features/news/news-card";
+import { MyKtaPrintStatus } from "@/features/kta/my-kta-print-status";
 import { usePublicEvents, usePublicNews } from "@/services/public-content";
 import { mediaUrl } from "@/services/api-client";
 import { meQuery } from "@/services/queries";
@@ -54,6 +55,8 @@ function PortalHome() {
           </Link>
         </Button>
       </div>
+
+      <MyKtaPrintStatus />
 
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-2">

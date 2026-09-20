@@ -173,7 +173,7 @@ describe("CekKtaForm — public KTA status page", () => {
     expect(result).toHaveTextContent("A*** H***");
     expect(result).toHaveTextContent("MZT***119");
     expect(result).toHaveTextContent(/terdaftar \(aktif\)/i);
-    expect(result).toHaveTextContent(/status kartu fisik belum tercatat/i);
+    expect(result).toHaveTextContent(/status pengajuan tersedia setelah anda mengajukan/i);
   });
 
   it("falls back to tahun_masuk + tempat_lahir when the member has no phone", async () => {

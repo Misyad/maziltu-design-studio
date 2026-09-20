@@ -38,7 +38,6 @@ export const NAV_LINKS = [
   { label: "Events", to: "/events" },
   { label: "News", to: "/news" },
   { label: "Gallery", to: "/gallery" },
-  { label: "Cek Status KTA", to: "/cek-kta" },
   { label: "Contact", to: "/contact" },
 ] as const;
 

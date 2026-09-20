@@ -60,12 +60,23 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { mediaUrl } from "@/services/api-client";
 import { currentUserQuery } from "@/services/queries";
 import { logout } from "@/services/mzt-api";
-import { requireUser } from "@/lib/auth";
-import type { AppRole } from "@/types/api";
+import {
+  ATTENDANCE_ROUTE_ROLES,
+  CHECKIN_ROLES,
+  DASHBOARD_ROLES,
+  FINANCE_ROLES,
+  KTA_CARD_ROLES,
+  KTA_QUEUE_ROLES,
+  MEMBER_ADMIN_ROLES,
+  STAFF_ROLES,
+  requireRoles,
+} from "@/lib/auth";
+import { homePathFor } from "@/lib/roles";
 import { ORG } from "@/constants/content";
 
 export const Route = createFileRoute("/dashboard")({
-  beforeLoad: ({ context, location }) => requireUser(context.queryClient, location.href),
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, DASHBOARD_ROLES, location.href),
   component: DashboardLayout,
 });
 
@@ -73,61 +84,41 @@ interface NavItem {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
-  roles: AppRole[];
+  roles: readonly string[];
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
-  { to: "/dashboard", label: "Overview", icon: LayoutDashboard, roles: ["dashboard"] },
-  {
-    to: "/dashboard/finance",
-    label: "Finance",
-    icon: Wallet,
-    roles: ["finance", "ketua", "admin"],
-  },
+  { to: "/dashboard", label: "Overview", icon: LayoutDashboard, roles: STAFF_ROLES },
+  { to: "/dashboard/finance", label: "Finance", icon: Wallet, roles: FINANCE_ROLES },
   {
     to: "/dashboard/finance/verification",
     label: "Verifikasi Pembayaran",
     icon: ClipboardCheck,
-    roles: ["finance", "ketua", "admin"],
+    roles: FINANCE_ROLES,
   },
-  {
-    to: "/dashboard/kta",
-    label: "Cetak KTA",
-    icon: Printer,
-    roles: ["id_card", "finance", "ketua", "admin"],
-  },
+  { to: "/dashboard/kta", label: "Cetak KTA", icon: Printer, roles: KTA_QUEUE_ROLES },
   {
     to: "/dashboard/finance/tickets",
     label: "Tiket & Operasional",
     icon: TicketCheck,
-    roles: ["dashboard", "event", "finance", "ketua", "admin"],
+    roles: STAFF_ROLES,
   },
+  { to: "/dashboard/operations", label: "Operasional", icon: Gauge, roles: STAFF_ROLES },
+  { to: "/dashboard/members", label: "Members", icon: Users, roles: STAFF_ROLES },
+  { to: "/dashboard/events", label: "Events", icon: CalendarDays, roles: STAFF_ROLES },
   {
-    to: "/dashboard/operations",
-    label: "Operasional",
-    icon: Gauge,
-    roles: ["dashboard", "event", "prisensi", "finance", "ketua", "admin"],
+    to: "/dashboard/attendance",
+    label: "Attendance",
+    icon: QrCode,
+    roles: ATTENDANCE_ROUTE_ROLES,
   },
-  { to: "/dashboard/members", label: "Members", icon: Users, roles: ["anggota"] },
-  { to: "/dashboard/events", label: "Events", icon: CalendarDays, roles: ["event"] },
-  { to: "/dashboard/attendance", label: "Attendance", icon: QrCode, roles: ["prisensi"] },
-  {
-    to: "/dashboard/checkin",
-    label: "Check-In",
-    icon: ScanLine,
-    roles: ["prisensi", "event", "finance", "ketua", "admin"],
-  },
-  { to: "/dashboard/news", label: "News", icon: Newspaper, roles: ["berita"] },
-  { to: "/dashboard/transactions", label: "Transactions", icon: ReceiptText, roles: ["event"] },
-  { to: "/dashboard/activity", label: "Activity", icon: Activity, roles: ["aktivitas_user"] },
-  { to: "/dashboard/content", label: "Content", icon: Settings2, roles: ["tampilan"] },
-  {
-    to: "/dashboard/id-card",
-    label: "ID Cards",
-    icon: BadgeCheck,
-    roles: ["id_card", "ketua", "admin"],
-  },
-  { to: "/dashboard/profile", label: "Profile", icon: UserRound, roles: ["profil"] },
+  { to: "/dashboard/checkin", label: "Check-In", icon: ScanLine, roles: CHECKIN_ROLES },
+  { to: "/dashboard/news", label: "News", icon: Newspaper, roles: STAFF_ROLES },
+  { to: "/dashboard/transactions", label: "Transactions", icon: ReceiptText, roles: FINANCE_ROLES },
+  { to: "/dashboard/activity", label: "Activity", icon: Activity, roles: FINANCE_ROLES },
+  { to: "/dashboard/content", label: "Content", icon: Settings2, roles: STAFF_ROLES },
+  { to: "/dashboard/id-card", label: "ID Cards", icon: BadgeCheck, roles: KTA_CARD_ROLES },
+  { to: "/dashboard/profile", label: "Profile", icon: UserRound, roles: MEMBER_ADMIN_ROLES },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
@@ -147,6 +138,7 @@ function DashboardLayout() {
   const { data: user } = useQuery(currentUserQuery());
 
   const roles = user?.roles ?? [];
+  const homePath = homePathFor({ roles });
   const navItems = NAV_ITEMS.filter(
     (item) => item.roles.length === 0 || item.roles.some((role) => roles.includes(role)),
   );
@@ -227,7 +219,7 @@ function DashboardLayout() {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to="/dashboard">Dashboard</Link>
+                  <Link to={homePath}>Dashboard</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
             </BreadcrumbList>

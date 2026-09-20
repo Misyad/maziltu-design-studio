@@ -4,16 +4,20 @@ import type { ApiError as ApiErrorType } from "@/services/api-client";
 
 const LEGACY_TOKEN_KEY = "mzt.token";
 
-function axiosError(status: number, config?: Record<string, unknown>) {
+function axiosError(
+  status: number,
+  config?: Record<string, unknown>,
+  data: Record<string, unknown> = { success: false, message: "Unauthenticated." },
+) {
   return new axios.AxiosError(
-    "Unauthenticated",
+    String(data["message"] ?? "Request failed"),
     "ERR_BAD_REQUEST",
     { headers: {}, ...config } as never,
     undefined,
     {
       status,
-      statusText: "Unauthenticated",
-      data: { success: false, message: "Unauthenticated." },
+      statusText: "Request failed",
+      data,
       headers: {},
       config: { headers: {} } as never,
     },
@@ -129,6 +133,69 @@ describe("R3 browser auth — no personal access token persistence", () => {
     ).rejects.toBeTruthy();
 
     expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  it("redirects a non-probe 428 password requirement without using /login", async () => {
+    const { apiClient } = await loadFreshModules();
+    const assignSpy = stubLocation("/dashboard");
+    const interceptor = apiClient.interceptors.response.handlers?.[0];
+    const error = axiosError(
+      428,
+      { authCheck: false },
+      {
+        success: false,
+        code: "PASSWORD_CHANGE_REQUIRED",
+        message: "Change password first.",
+      },
+    );
+
+    await expect(interceptor?.rejected?.(error)).rejects.toBe(error);
+
+    expect(assignSpy).toHaveBeenCalledOnce();
+    expect(assignSpy).toHaveBeenCalledWith("/portal/ubah-password");
+    expect(assignSpy).not.toHaveBeenCalledWith("/login");
+  });
+
+  it("does not loop or redirect probes on a 428 password requirement", async () => {
+    const { apiClient } = await loadFreshModules();
+    const assignSpy = stubLocation("/portal/ubah-password");
+    const interceptor = apiClient.interceptors.response.handlers?.[0];
+
+    await expect(
+      interceptor?.rejected?.(
+        axiosError(428, { authCheck: false }, { code: "PASSWORD_CHANGE_REQUIRED" }),
+      ),
+    ).rejects.toBeTruthy();
+    await expect(
+      interceptor?.rejected?.(
+        axiosError(428, { authCheck: true }, { code: "PASSWORD_CHANGE_REQUIRED" }),
+      ),
+    ).rejects.toBeTruthy();
+
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  it("preserves the response code on ApiError", async () => {
+    const { apiClient, changePassword } = await loadFreshModules();
+    vi.spyOn(apiClient, "put").mockRejectedValue(
+      axiosError(
+        428,
+        { authCheck: true },
+        { code: "PASSWORD_CHANGE_REQUIRED", message: "Required" },
+      ),
+    );
+
+    await expect(
+      changePassword({
+        current_password: "old-password",
+        password: "new-password",
+        password_confirmation: "new-password",
+      }),
+    ).rejects.toMatchObject({
+      status: 428,
+      code: "PASSWORD_CHANGE_REQUIRED",
+      message: "Required",
+    });
   });
 
   it("logout never writes the legacy token key", async () => {

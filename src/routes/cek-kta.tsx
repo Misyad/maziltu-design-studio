@@ -38,7 +38,7 @@ function CekKtaPage() {
       <Reveal delay={0.15} className="mt-8">
         <p className="mx-auto max-w-2xl text-center text-xs text-muted-foreground">
           Halaman ini tidak menampilkan email, nomor HP, alamat, tanggal lahir, atau foto. Status
-          kartu fisik belum tercatat di sistem.
+          pengajuan KTA fisik dapat dipantau setelah verifikasi atau melalui portal alumni.
         </p>
       </Reveal>
     </section>

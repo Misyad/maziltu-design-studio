@@ -15,8 +15,9 @@ import type {
   AttendanceRecord,
   AttendanceRequest,
   AttendanceSummary,
+  AccountResetAudit,
+  AccountResetResult,
   AuthUser,
-  BulkGenerateResult,
   CarouselSlide,
   CheckInRequest,
   CheckInResult,
@@ -258,6 +259,10 @@ export function fetchMe() {
 
 export const fetchProfile = () => apiGet<AlumniProfile>("/profile");
 export const fetchIdCard = () => apiGet<IdCardData>("/id-card");
+export const fetchMyKtaPrintRequest = () =>
+  apiGetRaw<import("@/types/api").MyKtaPrintRequestResponse>("/me/kta/print-request").then(
+    (response) => response.data.request,
+  );
 export const updateProfileJson = (payload: ProfileUpdateRequest | FormData) =>
   apiPut<AlumniProfile>("/profile", payload);
 export const changePassword = (payload: PasswordChangeRequest) =>
@@ -307,19 +312,21 @@ export const fetchPaymentDetail = (uuid: string) =>
     `/payments/${uuid}`,
   );
 
-export const generateAccount = (idUsers: number | string) =>
-  apiPostRaw<{ success: boolean; message?: string; password?: string }>(
-    `/members/${idUsers}/account`,
-  );
+export const fetchAccountResetAudit = () =>
+  apiGet<AccountResetAudit>("/members/account-reset-audit");
 
-export const bulkGenerateAccounts = () => apiPost<BulkGenerateResult>("/members/bulk-account");
-export const resetAccount = (idUsers: number | string) =>
-  apiPutRaw<{ success: boolean; message?: string; password?: string }>(
-    `/members/${idUsers}/account`,
-  );
-export const setAccountStatus = (idUsers: number | string, isActive: "1" | "0") =>
-  apiPutRaw<{ success: boolean; message?: string }>(`/members/${idUsers}/account/status`, {
-    is_active: isActive,
+export const resetAccount = (
+  idUsers: number | string,
+  confirmationIdAnggota: string,
+) =>
+  apiPut<AccountResetResult>(`/members/${idUsers}/account`, {
+    confirm: true,
+    confirmation_id_anggota: confirmationIdAnggota,
+  });
+
+export const setAccountStatus = (idUsers: number | string, active: boolean) =>
+  apiPutRaw<{ success: boolean; message?: string }>(`/members/${idUsers}/status`, {
+    is_active: active ? "1" : "0",
   });
 
 /* ------------------------------------------------- Phase 3 — Audit Timeline (M-05) */

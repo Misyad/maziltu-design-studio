@@ -9,12 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { MEMBER_ADMIN_ROLES, requireRoles } from "@/lib/auth";
 import { mediaUrl } from "@/services/api-client";
 import { updateMember } from "@/services/mzt-api";
 import { currentUserQuery, queryKeys } from "@/services/queries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/profile/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, MEMBER_ADMIN_ROLES, location.href),
   component: ProfilePage,
 });
 

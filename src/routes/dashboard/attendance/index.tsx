@@ -17,14 +17,25 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
 import { PageHeader } from "@/features/dashboard/page-header";
-import { PRISENSI_ROLES, requireRoles } from "@/lib/auth";
+import {
+  ATTENDANCE_READ_ROLES,
+  ATTENDANCE_ROUTE_ROLES,
+  ATTENDANCE_WRITE_ROLES,
+  requireRoles,
+} from "@/lib/auth";
 import { submitAttendance } from "@/services/mzt-api";
-import { attendanceQuery, eventTanggalQuery, eventsQuery, queryKeys } from "@/services/queries";
+import {
+  attendanceQuery,
+  currentUserQuery,
+  eventTanggalQuery,
+  eventsQuery,
+  queryKeys,
+} from "@/services/queries";
 import type { AttendanceRecord } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/attendance/")({
   beforeLoad: ({ context, location }) =>
-    requireRoles(context.queryClient, PRISENSI_ROLES, location.href),
+    requireRoles(context.queryClient, ATTENDANCE_ROUTE_ROLES, location.href),
   component: AttendancePage,
 });
 
@@ -32,8 +43,12 @@ function formatTime(value: string) {
   return new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-function AttendancePage() {
+export function AttendancePage() {
   const queryClient = useQueryClient();
+  const { data: user } = useQuery(currentUserQuery());
+  const roles = user?.roles ?? [];
+  const canReadAttendance = ATTENDANCE_READ_ROLES.some((role) => roles.includes(role));
+  const canWriteAttendance = ATTENDANCE_WRITE_ROLES.some((role) => roles.includes(role));
   const events = useQuery(eventsQuery());
   const [eventId, setEventId] = useState<string>("");
   const [tanggalId, setTanggalId] = useState<string>("");
@@ -46,7 +61,7 @@ function AttendancePage() {
 
   const records = useQuery({
     ...attendanceQuery(Number(eventId), Number(tanggalId)),
-    enabled: eventId !== "" && tanggalId !== "",
+    enabled: canReadAttendance && eventId !== "" && tanggalId !== "",
   });
 
   const scan = useMutation({
@@ -71,7 +86,7 @@ function AttendancePage() {
 
   function handleScan(event: React.FormEvent) {
     event.preventDefault();
-    if (!code.trim() || scan.isPending) return;
+    if (!canWriteAttendance || !code.trim() || scan.isPending) return;
     scan.mutate();
   }
 
@@ -104,7 +119,14 @@ function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Attendance" description="Scan member IDs to record event attendance." />
+      <PageHeader
+        title="Attendance"
+        description={
+          canWriteAttendance
+            ? "Scan member IDs to record event attendance."
+            : "Review event attendance records."
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -169,7 +191,7 @@ function AttendancePage() {
         </Card>
       </div>
 
-      {eventId !== "" && tanggalId !== "" ? (
+      {canWriteAttendance && eventId !== "" && tanggalId !== "" ? (
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="font-display text-base">Scan member</CardTitle>
@@ -212,7 +234,13 @@ function AttendancePage() {
       ) : null}
 
       {tanggalId === "" ? (
-        <p className="text-sm text-muted-foreground">Pick an event and day to see attendance.</p>
+        <p className="text-sm text-muted-foreground">
+          Pick an event and day {canReadAttendance ? "to see attendance" : "to record attendance"}.
+        </p>
+      ) : !canReadAttendance ? (
+        <p className="text-sm text-muted-foreground">
+          Attendance records are available to staff roles.
+        </p>
       ) : records.isPending ? (
         <div className="space-y-4">
           <Skeleton className="h-14 w-full rounded-2xl" />

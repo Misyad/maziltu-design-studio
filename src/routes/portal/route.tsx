@@ -1,10 +1,4 @@
-import {
-  createFileRoute,
-  Link,
-  Outlet,
-  useLocation,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BadgeCheck,
@@ -18,7 +12,7 @@ import {
   Ticket,
   UserRound,
 } from "lucide-react";
-import { Suspense, useEffect } from "react";
+import { Suspense } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,9 +43,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { mediaUrl } from "@/services/api-client";
-import { meQuery } from "@/services/queries";
+import { currentUserQuery } from "@/services/queries";
 import { logout } from "@/services/mzt-api";
-import { requireUser } from "@/lib/auth";
+import { DASHBOARD_ROLES, requireUser } from "@/lib/auth";
+import { homePathFor } from "@/lib/roles";
 import { ORG } from "@/constants/content";
 
 export const Route = createFileRoute("/portal")({
@@ -79,14 +74,13 @@ function PortalLayout() {
   const router = useRouter();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { data: user } = useQuery(meQuery());
-
-  // Force a password change on first login.
-  useEffect(() => {
-    if (user?.must_change_password && location.pathname !== "/portal/ubah-password") {
-      router.navigate({ to: "/portal/ubah-password", replace: true });
-    }
-  }, [user?.must_change_password, location.pathname, router]);
+  const { data: user } = useQuery(currentUserQuery());
+  const forced = user?.must_change_password === true;
+  const canAccessDashboard = user?.roles?.some((role) => DASHBOARD_ROLES.includes(role)) ?? false;
+  const dashboardPath = user ? homePathFor(user) : "/portal";
+  const navItems = forced
+    ? NAV_ITEMS.filter((item) => item.to === "/portal/ubah-password")
+    : NAV_ITEMS;
 
   async function handleLogout() {
     await logout();
@@ -100,8 +94,8 @@ function PortalLayout() {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild size="lg">
-                <Link to="/portal">
+              {forced ? (
+                <SidebarMenuButton size="lg">
                   <span className="gradient-emerald inline-flex size-8 items-center justify-center rounded-lg font-display text-xs font-bold text-primary-foreground">
                     MZT
                   </span>
@@ -109,8 +103,20 @@ function PortalLayout() {
                     <span className="font-display text-sm font-semibold">{ORG.name}</span>
                     <span className="text-xs text-muted-foreground">Portal Alumni</span>
                   </span>
-                </Link>
-              </SidebarMenuButton>
+                </SidebarMenuButton>
+              ) : (
+                <SidebarMenuButton asChild size="lg">
+                  <Link to="/portal">
+                    <span className="gradient-emerald inline-flex size-8 items-center justify-center rounded-lg font-display text-xs font-bold text-primary-foreground">
+                      MZT
+                    </span>
+                    <span className="grid gap-0.5 text-left">
+                      <span className="font-display text-sm font-semibold">{ORG.name}</span>
+                      <span className="text-xs text-muted-foreground">Portal Alumni</span>
+                    </span>
+                  </Link>
+                </SidebarMenuButton>
+              )}
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -120,7 +126,7 @@ function PortalLayout() {
             <SidebarGroupLabel>Menu</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {NAV_ITEMS.map((item) => (
+                {navItems.map((item) => (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton
                       asChild
@@ -150,18 +156,20 @@ function PortalLayout() {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Menu admin">
-                <Link to="/dashboard">
-                  <LayoutDashboard aria-hidden />
-                  <span>Dashboard Admin</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
+        {!forced && canAccessDashboard ? (
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Menu admin">
+                  <Link to={dashboardPath}>
+                    <LayoutDashboard aria-hidden />
+                    <span>Dashboard Admin</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        ) : null}
         <SidebarRail />
       </Sidebar>
 
@@ -193,12 +201,14 @@ function PortalLayout() {
                   </p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/portal/profil">
-                    <BadgeCheck aria-hidden />
-                    Profil Saya
-                  </Link>
-                </DropdownMenuItem>
+                {!forced ? (
+                  <DropdownMenuItem asChild>
+                    <Link to="/portal/profil">
+                      <BadgeCheck aria-hidden />
+                      Profil Saya
+                    </Link>
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut aria-hidden />
                   Keluar

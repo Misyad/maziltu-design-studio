@@ -19,21 +19,25 @@ import type { AuthUser } from "@/types/api";
 
 export type GuardRoles = readonly string[];
 
-export const DASHBOARD_ROLES: GuardRoles = ["dashboard"];
-export const EVENT_ROLES: GuardRoles = ["event"];
+export const STAFF_ROLES: GuardRoles = ["dashboard", "event", "finance", "ketua", "admin"];
+export const DASHBOARD_ROLES: GuardRoles = [...STAFF_ROLES, "id_card", "prisensi"];
+export const EVENT_ROLES: GuardRoles = STAFF_ROLES;
 export const FINANCE_ROLES: GuardRoles = ["finance", "ketua", "admin"];
+export const MEMBER_ADMIN_ROLES: GuardRoles = ["ketua", "admin"];
 export const KTA_CARD_ROLES: GuardRoles = ["id_card", "ketua", "admin"];
-export const KTA_QUEUE_ROLES: GuardRoles = ["id_card", "finance", "ketua", "admin"];
-export const CHECKIN_ROLES: GuardRoles = ["prisensi", "event", "finance", "ketua", "admin"];
-export const PRISENSI_ROLES: GuardRoles = ["prisensi"];
-export const OPERATIONS_ROLES: GuardRoles = [
+export const KTA_QUEUE_ROLES: GuardRoles = [
   "dashboard",
   "event",
-  "prisensi",
   "finance",
   "ketua",
   "admin",
+  "id_card",
 ];
+export const CHECKIN_ROLES: GuardRoles = ["prisensi", "event", "finance", "ketua", "admin"];
+export const ATTENDANCE_READ_ROLES: GuardRoles = STAFF_ROLES;
+export const ATTENDANCE_WRITE_ROLES: GuardRoles = CHECKIN_ROLES;
+export const ATTENDANCE_ROUTE_ROLES: GuardRoles = [...STAFF_ROLES, "prisensi"];
+export const OPERATIONS_ROLES: GuardRoles = STAFF_ROLES;
 
 function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
@@ -45,13 +49,28 @@ function guardRedirect(to: string, from?: string): ReturnType<typeof redirect> {
   return redirect(options);
 }
 
+function isPasswordChangePath(from?: string): boolean {
+  if (!from) return false;
+  try {
+    return (
+      new URL(from, "http://localhost").pathname.replace(/\/+$/, "") === "/portal/ubah-password"
+    );
+  } catch {
+    return from.split(/[?#]/, 1)[0] === "/portal/ubah-password";
+  }
+}
+
 /** Resolve the authenticated user or soft-redirect (401 -> /login, 403 -> /forbidden). */
 export async function requireUser(queryClient: QueryClient, from?: string): Promise<AuthUser> {
   if (typeof window === "undefined") {
     throw guardRedirect("/login", from);
   }
   try {
-    return await queryClient.ensureQueryData(currentUserQuery());
+    const user = await queryClient.ensureQueryData(currentUserQuery());
+    if (user.must_change_password && !isPasswordChangePath(from)) {
+      throw guardRedirect("/portal/ubah-password", from);
+    }
+    return user;
   } catch (error) {
     if (isApiError(error) && error.status === 401) {
       throw guardRedirect("/login", from);

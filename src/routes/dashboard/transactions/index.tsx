@@ -14,10 +14,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { FINANCE_ROLES, requireRoles } from "@/lib/auth";
 import { eventsQuery, transactionsQuery } from "@/services/queries";
 import type { TransactionRecord } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/transactions/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, FINANCE_ROLES, location.href),
   component: TransactionsPage,
 });
 

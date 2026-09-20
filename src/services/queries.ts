@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
+  fetchAccountResetAudit,
   fetchActivityLog,
   fetchAttendance,
   fetchAttendanceSummary,
@@ -17,6 +18,7 @@ import {
   fetchMember,
   fetchMembers,
   fetchMe,
+  fetchMyKtaPrintRequest,
   fetchMyTicket,
   fetchMztInfo,
   fetchMyOrders,
@@ -60,6 +62,7 @@ import type {
 
 export const queryKeys = {
   currentUser: ["current-user"] as const,
+  me: ["me"] as const,
   dashboardStats: ["dashboard", "stats"] as const,
   dashboardCalendar: ["dashboard", "calendar"] as const,
   dashboardEvents: ["dashboard", "events"] as const,
@@ -78,6 +81,7 @@ export const queryKeys = {
   gateMonitoring: (eventId: number | string, params: GateMonitoringParams) =>
     ["dashboard", "operations", "events", eventId, "gates", params] as const,
   members: ["members"] as const,
+  accountResetAudit: ["members", "account-reset-audit"] as const,
   member: (idUsers: number | string) => ["members", idUsers] as const,
   events: ["events"] as const,
   event: (id: number | string) => ["events", id] as const,
@@ -101,6 +105,7 @@ export const queryKeys = {
   publicStats: ["public", "stats"] as const,
   profile: ["profile"] as const,
   idCard: ["id-card"] as const,
+  myKtaPrintRequest: ["me", "kta", "print-request"] as const,
 };
 
 export const currentUserQuery = () =>
@@ -167,6 +172,13 @@ export const gateMonitoringQuery = (eventId: number | string, params: GateMonito
 
 export const membersQuery = () =>
   queryOptions({ queryKey: queryKeys.members, queryFn: fetchMembers });
+
+export const accountResetAuditQuery = () =>
+  queryOptions({
+    queryKey: queryKeys.accountResetAudit,
+    queryFn: fetchAccountResetAudit,
+    retry: 0,
+  });
 
 export const memberQuery = (idUsers: number | string) =>
   queryOptions({ queryKey: queryKeys.member(idUsers), queryFn: () => fetchMember(idUsers) });
@@ -243,7 +255,7 @@ export const publicStatsQuery = () =>
   queryOptions({ queryKey: queryKeys.publicStats, queryFn: fetchPublicStats, retry: 0 });
 
 /** PORTAL — current authenticated identity (Phase 1). */
-export const meQuery = () => queryOptions({ queryKey: queryKeys.currentUser, queryFn: fetchMe });
+export const meQuery = () => queryOptions({ queryKey: queryKeys.me, queryFn: fetchMe });
 
 /** PORTAL — authenticated member profile (Phase 1). */
 export const profileQuery = () =>
@@ -251,6 +263,13 @@ export const profileQuery = () =>
 
 /** PORTAL — authenticated ID card (Phase 1). */
 export const idCardQuery = () => queryOptions({ queryKey: queryKeys.idCard, queryFn: fetchIdCard });
+
+export const myKtaPrintRequestQuery = () =>
+  queryOptions({
+    queryKey: queryKeys.myKtaPrintRequest,
+    queryFn: fetchMyKtaPrintRequest,
+    retry: 0,
+  });
 
 /** PORTAL — my orders (Phase 2A). */
 export const myOrdersQuery = () =>

@@ -18,12 +18,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
 import { NewsFormDialog } from "@/features/dashboard/news-form";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { STAFF_ROLES, requireRoles } from "@/lib/auth";
 import { mediaUrl } from "@/services/api-client";
 import { deleteNews } from "@/services/mzt-api";
 import { newsQuery, queryKeys } from "@/services/queries";
 import type { NewsItem } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/news/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, STAFF_ROLES, location.href),
   component: NewsPage,
 });
 

@@ -36,6 +36,13 @@ export interface AuthCheckConfig extends AxiosRequestConfig {
   authCheck?: boolean;
 }
 
+function responseCode(error: AxiosError): string | undefined {
+  const payload = error.response?.data;
+  if (!payload || typeof payload !== "object") return undefined;
+  const code = (payload as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
+}
+
 /** Resolves a backend media path to an absolute URL. */
 export function mediaUrl(path?: string | null): string | null {
   if (!path) return null;
@@ -63,13 +70,21 @@ export const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
+      const isProbe = (error.config as AuthCheckConfig | undefined)?.authCheck;
+      if (error.response?.status === 401) {
         window.localStorage.removeItem(LEGACY_TOKEN_KEY);
-        const isProbe = (error.config as AuthCheckConfig | undefined)?.authCheck;
         if (!isProbe && !window.location.pathname.startsWith("/login")) {
           window.location.assign("/login");
         }
+      }
+      if (
+        error.response?.status === 428 &&
+        responseCode(error) === "PASSWORD_CHANGE_REQUIRED" &&
+        !isProbe &&
+        window.location.pathname.replace(/\/+$/, "") !== "/portal/ubah-password"
+      ) {
+        window.location.assign("/portal/ubah-password");
       }
     }
     return Promise.reject(error);
@@ -103,19 +118,28 @@ export function ensureCsrfToken(): Promise<void> {
 
 export class ApiError extends Error {
   status: number | undefined;
+  code: string | undefined;
   errors: Record<string, string[]> | undefined;
   data: unknown;
 
-  constructor(message: string, status?: number, errors?: Record<string, string[]>, data?: unknown) {
+  constructor(
+    message: string,
+    status?: number,
+    errors?: Record<string, string[]>,
+    data?: unknown,
+    code?: string,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
     this.errors = errors;
     this.data = data;
   }
 }
 
 function toApiError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error;
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiEnvelope<unknown>>;
     const status = axiosError.response?.status;
@@ -125,6 +149,7 @@ function toApiError(error: unknown): ApiError {
       status,
       payload?.errors,
       payload?.data,
+      payload?.code,
     );
   }
   return new ApiError(error instanceof Error ? error.message : "Unknown error");

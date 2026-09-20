@@ -5,6 +5,7 @@
 
 export interface ApiEnvelope<T> {
   success: boolean;
+  code?: string;
   message?: string;
   data?: T;
   errors?: Record<string, string[]>;
@@ -51,6 +52,29 @@ export interface AuthUser {
   data?: UserProfileData | null;
   /** Phase 1 — force a password change on first login. */
   must_change_password?: boolean;
+}
+
+export interface AccountResetAuditItem {
+  id_users: number;
+  id_anggota: string;
+  nama: string;
+  eligible: boolean;
+  reason_code: string;
+  reason: string;
+}
+
+export interface AccountResetAudit {
+  audited_at: string;
+  total_accounts: number;
+  eligible_count: number;
+  ineligible_count: number;
+  reason_counts: Record<string, number>;
+  items: AccountResetAuditItem[];
+}
+
+export interface AccountResetResult {
+  temporary_password: "mzt1234";
+  must_change_password: true;
 }
 
 export interface LoginRequest {
@@ -458,12 +482,6 @@ export interface KtaCard {
   background_url: string;
 }
 
-/** Result of POST /members/bulk-account. */
-export interface BulkGenerateResult {
-  created: number;
-  skipped: number;
-}
-
 /* ------------------------------------------- Phase 2D — EMS Operational Management */
 /* Endpoints: GET /dashboard/operations/* (auth:sanctum, read-only). Field names
    mirror the Laravel Resources exactly — never rename. PII fields (id_anggota,
@@ -734,6 +752,31 @@ export interface KtaPrintRequest {
   shipped_at: string | null;
   completed_at: string | null;
   rejection_reason: string | null;
+}
+
+export interface MyKtaPrintRequest {
+  reference: string;
+  status: KtaPrintStatus;
+  delivery_method: KtaDeliveryMethod;
+  payment_status: string;
+  payment_amount: number | string | null;
+  pay_url: string | null;
+  submitted_at: string | null;
+  paid_at: string | null;
+  printed_at: string | null;
+  ready_at: string | null;
+  shipped_at: string | null;
+  completed_at: string | null;
+  rejected_at: string | null;
+  updated_at: string | null;
+  rejection_reason: string | null;
+}
+
+export interface MyKtaPrintRequestResponse {
+  success: true;
+  data: {
+    request: MyKtaPrintRequest | null;
+  };
 }
 
 export interface KtaPrintRequestCreate {

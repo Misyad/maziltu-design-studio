@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { STAFF_ROLES, requireRoles } from "@/lib/auth";
 import { mediaUrl } from "@/services/api-client";
 import {
   activityLogQuery,
@@ -22,6 +23,8 @@ import {
 import type { DashboardEvent } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, STAFF_ROLES, location.href),
   component: OverviewPage,
 });
 

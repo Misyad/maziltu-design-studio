@@ -11,12 +11,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { STAFF_ROLES, requireRoles } from "@/lib/auth";
 import { mediaUrl } from "@/services/api-client";
 import { updateCarousel, updateMztInfo, updatePesantrenInfo } from "@/services/mzt-api";
 import { carouselQuery, mztInfoQuery, pesantrenInfoQuery, queryKeys } from "@/services/queries";
 import type { OrgInfo } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/content/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, STAFF_ROLES, location.href),
   component: ContentPage,
 });
 
@@ -47,7 +50,7 @@ function InfoForm({
 }: {
   title: string;
   description: string;
-  query: { data?: OrgInfo; isPending: boolean };
+  query: { data: OrgInfo | undefined; isPending: boolean };
   mutation: ReturnType<typeof useMutation<unknown, Error, FormData>>;
   photoUrl: string | null;
 }) {

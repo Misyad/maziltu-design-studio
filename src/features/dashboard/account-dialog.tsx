@@ -1,184 +1,200 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Loader2, UserCheck, UserX } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { Check, Copy, KeyRound, Loader2, TriangleAlert } from "lucide-react";
+import { useRef, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
-import { generateAccount, resetAccount, setAccountStatus } from "@/services/mzt-api";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ApiError } from "@/services/api-client";
+import { resetAccount } from "@/services/mzt-api";
 import { queryKeys } from "@/services/queries";
-import { memberHasAccount } from "@/lib/account-status";
-import type { Member } from "@/types/api";
+import type { AccountResetAuditItem, Member } from "@/types/api";
 
 interface AccountDialogProps {
   member: Member | null;
+  auditItem: AccountResetAuditItem | null;
   onOpenChange: (open: boolean) => void;
 }
 
-function PasswordResult({ label, password }: { label: string; password: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-muted p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-mono text-sm font-semibold tracking-widest">{password}</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Berikan password ini kepada anggota. Ia akan diminta mengganti saat login pertama.
-      </p>
-    </div>
-  );
+function resetErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) return "Gagal mereset password. Silakan coba lagi.";
+  if (error.status === 403) return "Anda tidak memiliki izin untuk mereset akun ini.";
+  if (error.status === 409) return "Akun tidak lagi memenuhi syarat reset. Muat ulang audit akun.";
+  if (error.status === 422) {
+    return error.errors?.["confirmation_id_anggota"]?.[0] ?? error.message;
+  }
+  if (error.status === 503) return "Layanan reset akun sedang tidak tersedia. Coba lagi nanti.";
+  return error.message;
 }
 
-export function AccountDialog({ member, onOpenChange }: AccountDialogProps) {
+export function AccountDialog({ member, auditItem, onOpenChange }: AccountDialogProps) {
   const queryClient = useQueryClient();
-  const [result, setResult] = useState<{
-    label: string;
-    password?: string;
-    message?: string;
-  } | null>(null);
+  const submitting = useRef(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const matches = !!member && confirmation === member.id_anggota;
 
-  const generate = useMutation({
-    mutationFn: () => {
-      if (!member?.id_users) throw new Error("ID akun tidak valid.");
-      return generateAccount(member.id_users);
-    },
-    onSuccess: (res) => {
-      setResult({ label: "Akun berhasil dibuat", password: res.password });
-      queryClient.invalidateQueries({ queryKey: queryKeys.members });
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Akun sudah ada / gagal");
-    },
-  });
+  function clearSensitiveState() {
+    submitting.current = false;
+    setConfirmation("");
+    setTemporaryPassword(null);
+    setError(null);
+    setIsPending(false);
+    setCopied(false);
+  }
 
-  const reset = useMutation({
-    mutationFn: () => {
-      if (!member?.id_users) throw new Error("ID akun tidak valid.");
-      return resetAccount(member.id_users);
-    },
-    onSuccess: (res) => {
-      setResult({ label: "Password berhasil di-reset", password: res.password });
-      queryClient.invalidateQueries({ queryKey: queryKeys.members });
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Gagal mereset password");
-    },
-  });
+  function handleOpenChange(open: boolean) {
+    if (!open && isPending) return;
+    if (!open) clearSensitiveState();
+    onOpenChange(open);
+  }
 
-  const activate = useMutation({
-    mutationFn: (active: "1" | "0") => {
-      if (!member?.id_users) throw new Error("ID akun tidak valid.");
-      return setAccountStatus(member.id_users, active);
-    },
-    onSuccess: (res) => {
-      toast.success(res.message ?? "Berhasil");
-      queryClient.invalidateQueries({ queryKey: queryKeys.members });
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Gagal mengubah status");
-    },
-  });
+  async function handleReset() {
+    if (!member || !auditItem?.eligible || !matches || submitting.current) return;
+    submitting.current = true;
+    setIsPending(true);
+    setError(null);
+    try {
+      const result = await resetAccount(member.id_users, confirmation);
+      setTemporaryPassword(result.temporary_password);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.members }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.accountResetAudit }),
+      ]);
+    } catch (resetError) {
+      setError(resetErrorMessage(resetError));
+      submitting.current = false;
+    } finally {
+      setIsPending(false);
+    }
+  }
 
-  const isLoading: boolean = generate.isPending || reset.isPending || activate.isPending;
-  const hasAccount = member ? memberHasAccount(member) : false;
+  async function copyPassword() {
+    if (!temporaryPassword) return;
+    try {
+      await navigator.clipboard.writeText(temporaryPassword);
+      setCopied(true);
+    } catch {
+      setError("Password tidak dapat disalin otomatis. Salin secara manual.");
+    }
+  }
 
   return (
-    <Dialog
-      open={!!member}
-      onOpenChange={(open) => {
-        if (!open) {
-          onOpenChange(false);
-          setResult(null);
-        }
-      }}
-    >
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={!!member} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="sm:max-w-md"
+        onEscapeKeyDown={(event) => isPending && event.preventDefault()}
+        onInteractOutside={(event) => isPending && event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="size-5 text-primary" aria-hidden />
-            Manage account
+            Reset password akun
           </DialogTitle>
           <DialogDescription>
-            {member?.nama} ({member?.id_anggota}) — kelola akun akses.
+            {member?.nama} ({member?.id_anggota})
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {hasAccount ? (
-            <p className="rounded-xl border border-border/70 bg-muted p-3 text-sm text-muted-foreground">
-              Akun sudah tersedia. Gunakan <span className="font-semibold">Reset Password</span>{" "}
-              apabila anggota lupa password.
-            </p>
-          ) : null}
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              className="rounded-full"
-              disabled={isLoading || hasAccount}
-              title={hasAccount ? "Akun sudah tersedia — gunakan Reset Password" : undefined}
-              onClick={() => generate.mutate()}
-            >
-              {generate.isPending ? (
-                <Loader2 className="animate-spin" aria-hidden />
-              ) : (
-                <KeyRound aria-hidden />
-              )}
-              Generate Akun
-            </Button>
-            <Button
-              variant="outline"
-              className="rounded-full"
-              disabled={isLoading || !hasAccount}
-              title={hasAccount ? undefined : "Belum ada akun yang bisa di-reset"}
-              onClick={() => reset.mutate()}
-            >
-              {reset.isPending ? (
-                <Loader2 className="animate-spin" aria-hidden />
-              ) : (
-                <KeyRound aria-hidden />
-              )}
-              Reset Password
-            </Button>
+        {temporaryPassword ? (
+          <div className="space-y-4">
+            <Alert>
+              <KeyRound aria-hidden />
+              <AlertTitle>Password sementara</AlertTitle>
+              <AlertDescription>
+                Password ini hanya ditampilkan sekali. Anggota wajib menggantinya setelah login.
+              </AlertDescription>
+            </Alert>
+            <div className="flex items-center gap-2 rounded-xl border bg-muted p-3">
+              <code className="flex-1 text-center text-lg font-semibold tracking-widest">
+                {temporaryPassword}
+              </code>
+              <Button type="button" variant="outline" size="icon" onClick={copyPassword}>
+                {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+                <span className="sr-only">Salin password sementara</span>
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                className="rounded-full"
+                onClick={() => handleOpenChange(false)}
+              >
+                Selesai
+              </Button>
+            </DialogFooter>
           </div>
+        ) : (
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <TriangleAlert aria-hidden />
+              <AlertTitle>Tindakan sensitif</AlertTitle>
+              <AlertDescription>
+                Password lama akan langsung tidak berlaku dan anggota dipaksa membuat password baru.
+                Reset ini tidak dapat dibatalkan.
+              </AlertDescription>
+            </Alert>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="ghost"
-              className="rounded-full"
-              disabled={isLoading}
-              onClick={() => activate.mutate("1")}
-            >
-              <UserCheck aria-hidden />
-              Aktifkan
-            </Button>
-            <Button
-              variant="ghost"
-              className="rounded-full text-destructive hover:text-destructive"
-              disabled={isLoading}
-              onClick={() => activate.mutate("0")}
-            >
-              <UserX aria-hidden />
-              Nonaktifkan
-            </Button>
+            <div className="space-y-2">
+              <Label htmlFor="account-reset-confirmation">
+                Ketik ID anggota{" "}
+                <span className="font-mono font-semibold">{member?.id_anggota}</span>
+              </Label>
+              <Input
+                id="account-reset-confirmation"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                disabled={isPending}
+                autoComplete="off"
+                aria-invalid={confirmation.length > 0 && !matches}
+              />
+              {confirmation.length > 0 && !matches ? (
+                <p className="text-xs text-destructive">ID anggota harus sama persis.</p>
+              ) : null}
+            </div>
+
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => handleOpenChange(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isPending || !matches || !auditItem?.eligible}
+                onClick={handleReset}
+              >
+                {isPending ? (
+                  <Loader2 className="animate-spin" aria-hidden />
+                ) : (
+                  <KeyRound aria-hidden />
+                )}
+                {isPending ? "Mereset…" : "Reset password"}
+              </Button>
+            </DialogFooter>
           </div>
-
-          {result?.password ? (
-            <PasswordResult label={result.label} password={result.password} />
-          ) : null}
-          {result?.message && !result.password ? (
-            <p className="rounded-xl bg-muted p-3 text-sm">{result.message}</p>
-          ) : null}
-
-          <Separator />
-          <p className="text-xs text-muted-foreground">
-            Password hanya ditampilkan sekali setelah aksi. Simpan sebelum menutup pop-up.
-          </p>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

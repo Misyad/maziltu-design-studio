@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Pencil, Plus, Printer, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { KeyRound, Power } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -16,58 +16,77 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
-import { IdCardDialog } from "@/features/dashboard/id-card";
-import { MemberFormDialog } from "@/features/dashboard/member-form";
 import { AccountDialog } from "@/features/dashboard/account-dialog";
+import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
 import { PageHeader } from "@/features/dashboard/page-header";
-import { mediaUrl } from "@/services/api-client";
-import { bulkGenerateAccounts, deleteMember } from "@/services/mzt-api";
-import { membersQuery, queryKeys } from "@/services/queries";
 import { accountStatus } from "@/lib/account-status";
-import type { Member } from "@/types/api";
+import { MEMBER_ADMIN_ROLES, STAFF_ROLES, requireRoles } from "@/lib/auth";
+import { mediaUrl } from "@/services/api-client";
+import { setAccountStatus } from "@/services/mzt-api";
+import {
+  accountResetAuditQuery,
+  currentUserQuery,
+  membersQuery,
+  queryKeys,
+} from "@/services/queries";
+import type { AccountResetAuditItem, Member } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/members/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, STAFF_ROLES, location.href),
   component: MembersPage,
 });
 
-function MembersPage() {
+function formatAuditTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+}
+
+function isAccountActive(member: Member): boolean {
+  return member.account_is_active === true || member.account_is_active === 1;
+}
+
+export function MembersPage() {
   const queryClient = useQueryClient();
   const members = useQuery(membersQuery());
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Member | null>(null);
-  const [deleting, setDeleting] = useState<Member | null>(null);
-  const [printing, setPrinting] = useState<Member | null>(null);
+  const currentUser = useQuery(currentUserQuery());
+  const canManage =
+    currentUser.data?.roles.some((role) => MEMBER_ADMIN_ROLES.includes(role)) ?? false;
+  const audit = useQuery({ ...accountResetAuditQuery(), enabled: canManage });
+  const auditByUser = useMemo(
+    () => new Map(audit.data?.items.map((item) => [item.id_users, item]) ?? []),
+    [audit.data?.items],
+  );
   const [accountMember, setAccountMember] = useState<Member | null>(null);
+  const [statusMember, setStatusMember] = useState<Member | null>(null);
 
-  const bulkMutation = useMutation({
-    mutationFn: () => bulkGenerateAccounts(),
-    onSuccess: (result) => {
-      toast.success(`Bulk generate selesai: ${result.created} dibuat, ${result.skipped} dilewati`);
-      queryClient.invalidateQueries({ queryKey: queryKeys.members });
+  const statusMutation = useMutation({
+    mutationFn: () => {
+      if (!statusMember) throw new Error("Anggota tidak dipilih.");
+      return setAccountStatus(statusMember.id_users, !isAccountActive(statusMember));
+    },
+    onSuccess: async () => {
+      const activated = statusMember ? !isAccountActive(statusMember) : false;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.members }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.accountResetAudit }),
+      ]);
+      toast.success(activated ? "Akun diaktifkan" : "Akun dinonaktifkan");
+      setStatusMember(null);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Bulk generate gagal");
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteMember(deleting!.id_users),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.members });
-      toast.success("Member deleted");
-      setDeleting(null);
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Delete failed");
+      toast.error(error instanceof Error ? error.message : "Status akun gagal diubah");
     },
   });
 
   const columns: readonly DataTableColumn<Member>[] = [
     {
       key: "nama",
-      header: "Member",
+      header: "Anggota",
       sortable: true,
       sortValue: (row) => row.nama.toLowerCase(),
       cell: (row) => (
@@ -91,176 +110,234 @@ function MembersPage() {
       cell: (row) => <span className="text-sm">{row.niqobah || "—"}</span>,
     },
     {
-      key: "no_hp",
-      header: "Phone",
-      cell: (row) => <span className="text-sm text-muted-foreground">{row.no_hp || "—"}</span>,
-    },
-    {
-      key: "alamat",
-      header: "Address",
+      key: "contact",
+      header: "Kontak",
       cell: (row) => (
-        <span className="block max-w-60 truncate text-sm text-muted-foreground">
-          {row.alamat || "—"}
-        </span>
+        <div className="max-w-56 text-sm text-muted-foreground">
+          <p className="truncate">{row.no_hp || "—"}</p>
+          <p className="truncate text-xs">{row.email || "—"}</p>
+        </div>
       ),
     },
     {
       key: "status",
-      header: "Status Akun",
+      header: "Status akun",
       sortable: true,
       sortValue: (row) => accountStatus(row).label,
       cell: (row) => {
         const status = accountStatus(row);
         return (
-          <Badge variant={status.variant} title={row.last_login ?? undefined}>
-            {status.label}
-          </Badge>
+          <div>
+            <Badge variant={status.variant}>{status.label}</Badge>
+            {row.last_login ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Login terakhir {formatAuditTime(row.last_login)}
+              </p>
+            ) : null}
+          </div>
         );
       },
     },
-    {
-      key: "actions",
-      header: "",
-      className: "w-28 text-right",
-      cell: (row) => (
-        <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="rounded-lg"
-            aria-label={`Print ID card for ${row.nama}`}
-            onClick={() => setPrinting(row)}
-          >
-            <Printer aria-hidden />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="rounded-lg"
-            aria-label={`Edit ${row.nama}`}
-            onClick={() => {
-              setEditing(row);
-              setFormOpen(true);
-            }}
-          >
-            <Pencil aria-hidden />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="rounded-lg"
-            aria-label={`Manage account for ${row.nama}`}
-            onClick={() => setAccountMember(row)}
-          >
-            <KeyRound aria-hidden />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="rounded-lg text-destructive hover:text-destructive"
-            aria-label={`Delete ${row.nama}`}
-            onClick={() => setDeleting(row)}
-          >
-            <Trash2 aria-hidden />
-          </Button>
-        </div>
-      ),
-    },
+    ...(canManage
+      ? [
+          {
+            key: "reset-eligibility",
+            header: "Kelayakan reset",
+            cell: (row: Member) => {
+              const item = auditByUser.get(row.id_users);
+              if (!item) {
+                return (
+                  <span className="text-sm text-muted-foreground">
+                    {audit.isPending ? "Memuat audit…" : "Tidak diaudit"}
+                  </span>
+                );
+              }
+              return (
+                <div className="max-w-56">
+                  <Badge variant={item.eligible ? "default" : "secondary"}>
+                    {item.eligible ? "Memenuhi syarat" : "Tidak memenuhi syarat"}
+                  </Badge>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.reason}</p>
+                </div>
+              );
+            },
+          },
+          {
+            key: "actions",
+            header: "Aksi akun",
+            className: "w-32 text-right",
+            cell: (row: Member) => {
+              const auditItem = auditByUser.get(row.id_users);
+              const active = isAccountActive(row);
+              return (
+                <div className="flex justify-end gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={
+                      active ? "rounded-lg text-destructive hover:text-destructive" : "rounded-lg"
+                    }
+                    aria-label={`${active ? "Nonaktifkan" : "Aktifkan"} akun ${row.nama}`}
+                    onClick={() => setStatusMember(row)}
+                  >
+                    <Power aria-hidden />
+                  </Button>
+                  {auditItem?.eligible ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-lg"
+                      aria-label={`Reset password ${row.nama}`}
+                      onClick={() => setAccountMember(row)}
+                    >
+                      <KeyRound aria-hidden />
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            },
+          },
+        ]
+      : []),
   ];
+
+  const selectedAuditItem: AccountResetAuditItem | null = accountMember
+    ? (auditByUser.get(accountMember.id_users) ?? null)
+    : null;
+  const activating = statusMember ? !isAccountActive(statusMember) : false;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Members"
-        description="Manage the member registry across all branches."
-        actions={
-          <>
-            <Button
-              variant="outline"
-              className="rounded-full"
-              disabled={bulkMutation.isPending}
-              onClick={() => bulkMutation.mutate()}
-            >
-              {bulkMutation.isPending ? (
-                <Skeleton className="size-4 rounded-full bg-primary-foreground/40" />
-              ) : null}
-              Bulk generate account
-            </Button>
-            <Button
-              className="rounded-full"
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              <Plus aria-hidden />
-              New member
-            </Button>
-          </>
-        }
+        title="Akun anggota"
+        description="Pantau status akun, aktifkan atau nonaktifkan akses, dan reset password akun yang memenuhi syarat."
       />
+
+      {canManage ? (
+        audit.isPending ? (
+          <Skeleton className="h-32 w-full rounded-2xl" />
+        ) : audit.isError ? (
+          <Card>
+            <CardContent className="py-6 text-sm text-destructive">
+              Audit reset akun tidak dapat dimuat. Tombol reset dinonaktifkan.
+            </CardContent>
+          </Card>
+        ) : audit.data ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Audit kelayakan reset akun</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-4">
+              <div>
+                <p className="text-2xl font-semibold">{audit.data.total_accounts}</p>
+                <p className="text-xs text-muted-foreground">Total akun</p>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-primary">{audit.data.eligible_count}</p>
+                <p className="text-xs text-muted-foreground">Memenuhi syarat</p>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold">{audit.data.ineligible_count}</p>
+                <p className="text-xs text-muted-foreground">Tidak memenuhi syarat</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">{formatAuditTime(audit.data.audited_at)}</p>
+                <p className="text-xs text-muted-foreground">Waktu audit</p>
+              </div>
+              {Object.keys(audit.data.reason_counts).length > 0 ? (
+                <div className="flex flex-wrap gap-2 sm:col-span-4">
+                  {Object.entries(audit.data.reason_counts).map(([reason, count]) => (
+                    <Badge key={reason} variant="outline">
+                      {reason}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null
+      ) : null}
 
       {members.isPending ? (
         <div className="space-y-4">
           <Skeleton className="h-14 w-full rounded-2xl" />
           <Skeleton className="h-80 w-full rounded-2xl" />
         </div>
+      ) : members.isError ? (
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-destructive">
+            Daftar akun anggota tidak dapat dimuat.
+          </CardContent>
+        </Card>
       ) : (
         <DataTable
           rows={members.data ?? []}
           columns={columns}
           rowKey={(row) => row.id_users}
-          searchPlaceholder="Search members…"
+          searchPlaceholder="Cari nama, ID anggota, niqobah, atau nomor telepon…"
           search={(row, query) =>
             `${row.nama} ${row.id_anggota} ${row.niqobah} ${row.no_hp}`
               .toLowerCase()
               .includes(query)
           }
+          emptyState={
+            <p className="text-center text-sm text-muted-foreground">
+              Tidak ada akun anggota yang dapat dikelola.
+            </p>
+          }
         />
       )}
 
-      <MemberFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        member={editing}
-        key={editing?.id_users ?? "new"}
-      />
+      {canManage ? (
+        <>
+          <AlertDialog
+            open={!!statusMember}
+            onOpenChange={(open) => !open && !statusMutation.isPending && setStatusMember(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {activating ? "Aktifkan akun anggota?" : "Nonaktifkan akun anggota?"}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {activating
+                    ? `Akses ${statusMember?.nama} (${statusMember?.id_anggota}) akan diaktifkan kembali.`
+                    : `Akses ${statusMember?.nama} (${statusMember?.id_anggota}) akan langsung dinonaktifkan.`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={statusMutation.isPending}>Batal</AlertDialogCancel>
+                <AlertDialogAction
+                  className={
+                    activating
+                      ? undefined
+                      : "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  }
+                  disabled={statusMutation.isPending}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    statusMutation.mutate();
+                  }}
+                >
+                  {statusMutation.isPending
+                    ? "Menyimpan…"
+                    : activating
+                      ? "Aktifkan akun"
+                      : "Nonaktifkan akun"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-      <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete member?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove {deleting?.nama} ({deleting?.id_anggota}) from the
-              registry.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteMutation.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                deleteMutation.mutate();
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <IdCardDialog member={printing} onOpenChange={(open) => !open && setPrinting(null)} />
-
-      <AccountDialog
-        member={accountMember}
-        onOpenChange={(open) => !open && setAccountMember(null)}
-      />
+          <AccountDialog
+            member={accountMember}
+            auditItem={selectedAuditItem}
+            onOpenChange={(open) => !open && setAccountMember(null)}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

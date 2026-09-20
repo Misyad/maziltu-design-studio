@@ -4,10 +4,13 @@ import { Activity, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type DataTableColumn } from "@/features/dashboard/data-table";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { FINANCE_ROLES, requireRoles } from "@/lib/auth";
 import { activityLogQuery } from "@/services/queries";
 import type { ActivityLogEntry } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/activity/")({
+  beforeLoad: ({ context, location }) =>
+    requireRoles(context.queryClient, FINANCE_ROLES, location.href),
   component: ActivityPage,
 });
 
