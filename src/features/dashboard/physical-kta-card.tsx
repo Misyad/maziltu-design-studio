@@ -1,14 +1,15 @@
-import { mediaUrl } from "@/services/api-client";
+import { assetUrl, mediaUrl } from "@/services/api-client";
 import type { KtaCard } from "@/types/api";
 
 export const KTA_PRINT_AREA_ID = "kta-print-area";
 
 export function PhysicalKtaCard({ card }: { card: KtaCard }) {
   const photo = mediaUrl(card.foto);
+  const background = assetUrl(card.background_url);
 
   return (
     <div className="kta-card" data-testid="physical-kta-card">
-      <img className="kta-card__background" src={card.background_url} alt="" aria-hidden />
+      <img className="kta-card__background" src={background} alt="" aria-hidden />
       <div className="kta-card__photo">
         {photo ? (
           <img src={photo} alt={`Foto ${card.nama}`} />

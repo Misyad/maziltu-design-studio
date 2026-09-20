@@ -43,6 +43,11 @@ function responseCode(error: AxiosError): string | undefined {
   return typeof code === "string" ? code : undefined;
 }
 
+export function assetUrl(path: string): string {
+  if (/^https?:\/\//.test(path)) return path;
+  return `${API_ORIGIN}/${path.replace(/^\/+/, "")}`;
+}
+
 /** Resolves a backend media path to an absolute URL. */
 export function mediaUrl(path?: string | null): string | null {
   if (!path) return null;

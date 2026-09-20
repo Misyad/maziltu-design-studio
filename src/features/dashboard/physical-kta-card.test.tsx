@@ -44,6 +44,14 @@ describe("PhysicalKtaCard", () => {
     );
   });
 
+  it("resolves a relative background URL against the backend origin", () => {
+    render(<PhysicalKtaCard card={{ ...card, background_url: "/assets/kta-background.jpg" }} />);
+
+    expect(
+      screen.getByTestId("physical-kta-card").querySelector(".kta-card__background"),
+    ).toHaveAttribute("src", "http://localhost:8000/assets/kta-background.jpg");
+  });
+
   it("shows an accessible fallback when the photo is missing", () => {
     render(<PhysicalKtaCard card={{ ...card, foto: null }} />);
 
