@@ -16,6 +16,9 @@ http://:80 {
 	handle /storage/* {
 		reverse_proxy backend:80
 	}
+	handle /assets/kta-background.jpg {
+		reverse_proxy backend:80
+	}
 
 	# Everything else -> the Nitro (node-server) frontend
 	handle {

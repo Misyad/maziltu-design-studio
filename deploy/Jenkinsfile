@@ -294,6 +294,14 @@ pipeline {
                             echo "  /api/public/stats -> code=$code"
                             [ "$code" = "200" ] || exit 1
 
+                            asset_result=$(curl -sS -o /tmp/mzt_kta_background.jpg -w "%{http_code}|%{content_type}" \
+                                "http://${HOST_IP}:${PUBLIC_PORT}/assets/kta-background.jpg")
+                            asset_code=${asset_result%%|*}
+                            asset_type=${asset_result#*|}
+                            echo "  /assets/kta-background.jpg -> code=$asset_code type=$asset_type"
+                            [ "$asset_code" = "200" ] || exit 1
+                            case "$asset_type" in image/jpeg*) ;; *) exit 1 ;; esac
+
                             echo "== [Level 2] application (DB readable, success:true) =="
                             echo "  body: $(cat /tmp/mzt_health.json)"
                             grep -q '"success":true' /tmp/mzt_health.json || exit 1
