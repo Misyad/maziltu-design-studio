@@ -1,16 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, PackageCheck, Printer, Truck, Store } from "lucide-react";
+import { Loader2, PackageCheck, Printer } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/services/api-client";
 import { createKtaPrintRequest, fetchKtaPrintRequest } from "@/services/mzt-api";
-import type {
-  KtaDeliveryMethod,
-  KtaPrintRequest,
-  KtaPrintRequestCreate,
-  KtaPrintStatus,
-} from "@/types/api";
+import type { KtaPrintRequest, KtaPrintStatus } from "@/types/api";
 
 const STATUS_LABEL: Record<KtaPrintStatus, string> = {
   menunggu_pembayaran: "Menunggu Pembayaran",
@@ -57,10 +52,6 @@ export function KtaPrintRequestBlock({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [method, setMethod] = useState<KtaDeliveryMethod>("pickup");
-  const [recipientName, setRecipientName] = useState("");
-  const [recipientPhone, setRecipientPhone] = useState("");
-  const [address, setAddress] = useState("");
 
   const own = useQuery({
     queryKey: ["kta-print", "own", printToken],
@@ -70,23 +61,16 @@ export function KtaPrintRequestBlock({
   });
 
   const request = own.data?.data?.request ?? null;
-  const basePrice = amountValue(baseAmount);
+  const basePrice = amountValue(request?.base_amount) ?? amountValue(baseAmount);
   const customerTotal = amountValue(request?.payment_amount);
   const gatewayFee =
-    customerTotal !== null && basePrice !== null && customerTotal >= basePrice
+    amountValue(request?.gateway_fee) ??
+    (customerTotal !== null && basePrice !== null && customerTotal >= basePrice
       ? customerTotal - basePrice
-      : null;
+      : null);
 
   const create = useMutation({
-    mutationFn: () => {
-      const payload: KtaPrintRequestCreate = { print_token: printToken, delivery_method: method };
-      if (method === "delivery") {
-        payload.recipient_name = recipientName.trim();
-        payload.recipient_phone = recipientPhone.trim();
-        payload.shipping_address = address.trim();
-      }
-      return createKtaPrintRequest(payload);
-    },
+    mutationFn: () => createKtaPrintRequest({ print_token: printToken }),
     onSuccess: () => {
       toast.success("Pengajuan KTA dibuat. Silakan selesaikan pembayaran.");
       setOpen(false);
@@ -136,12 +120,6 @@ export function KtaPrintRequestBlock({
           <div>
             <dt className="text-xs uppercase text-muted-foreground">Referensi</dt>
             <dd className="mt-0.5 font-mono text-xs">{request.reference}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase text-muted-foreground">Metode</dt>
-            <dd className="mt-0.5 capitalize">
-              {request.delivery_method === "pickup" ? "Diambil" : "Dikirim"}
-            </dd>
           </div>
           <div>
             <dt className="text-xs uppercase text-muted-foreground">Status</dt>
@@ -200,6 +178,13 @@ export function KtaPrintRequestBlock({
           <p className="mt-4 text-sm text-destructive">Ditolak: {request.rejection_reason}</p>
         )}
 
+        {request.delivery_method ? (
+          <p className="mt-4 text-xs text-muted-foreground">
+            Data lama — metode penerimaan:{" "}
+            {request.delivery_method === "pickup" ? "diambil" : "dikirim"}.
+          </p>
+        ) : null}
+
         <PrintTimeline request={request} />
       </div>
     );
@@ -229,76 +214,9 @@ export function KtaPrintRequestBlock({
       }}
     >
       <p className="text-sm font-semibold">Ajukan pencetakan KTA fisik?</p>
-      <p className="mt-1 text-xs text-muted-foreground">Pilih metode penerimaan kartu.</p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          data-testid="kta-print-pickup"
-          aria-pressed={method === "pickup"}
-          onClick={() => setMethod("pickup")}
-          className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-colors ${
-            method === "pickup" ? "border-primary bg-primary-soft" : "border-border/70 bg-card"
-          }`}
-        >
-          <Store className="size-4 text-primary" aria-hidden />
-          Diambil
-        </button>
-        <button
-          type="button"
-          data-testid="kta-print-delivery"
-          aria-pressed={method === "delivery"}
-          onClick={() => setMethod("delivery")}
-          className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-colors ${
-            method === "delivery" ? "border-primary bg-primary-soft" : "border-border/70 bg-card"
-          }`}
-        >
-          <Truck className="size-4 text-primary" aria-hidden />
-          Dikirim
-        </button>
-      </div>
-
-      {method === "delivery" && (
-        <div className="mt-4 space-y-3">
-          <div>
-            <label htmlFor="kta-recipient" className="text-sm font-medium">
-              Nama penerima
-            </label>
-            <input
-              id="kta-recipient"
-              required
-              value={recipientName}
-              onChange={(e) => setRecipientName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
-            />
-          </div>
-          <div>
-            <label htmlFor="kta-recipient-phone" className="text-sm font-medium">
-              Nomor HP penerima
-            </label>
-            <input
-              id="kta-recipient-phone"
-              required
-              value={recipientPhone}
-              onChange={(e) => setRecipientPhone(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
-            />
-          </div>
-          <div>
-            <label htmlFor="kta-address" className="text-sm font-medium">
-              Alamat pengiriman
-            </label>
-            <textarea
-              id="kta-address"
-              required
-              rows={3}
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="mt-1 w-full resize-none rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
-            />
-          </div>
-        </div>
-      )}
+      <p className="mt-1 text-xs text-muted-foreground">
+        Harga akan disnapshot saat pengajuan dibuat. KTA diproses setelah pembayaran terverifikasi.
+      </p>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <Button type="submit" disabled={create.isPending} className="flex-1 rounded-full">
@@ -326,10 +244,6 @@ function PrintTimeline({ request }: { request: KtaPrintRequest }) {
     { label: "Diajukan", at: request.submitted_at },
     { label: "Dibayar", at: request.paid_at },
     { label: "Dicetak", at: request.printed_at },
-    {
-      label: request.delivery_method === "pickup" ? "Siap diambil" : "Dikirim",
-      at: request.ready_at ?? request.shipped_at,
-    },
     { label: "Selesai", at: request.completed_at },
   ];
 

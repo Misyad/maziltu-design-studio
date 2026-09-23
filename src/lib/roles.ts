@@ -9,16 +9,23 @@ export function hasAdminRole(roles: readonly (AppRole | string)[] | undefined): 
 }
 
 export type HomePath =
-  "/dashboard" | "/dashboard/id-card" | "/dashboard/checkin" | "/portal" | "/portal/ubah-password";
+  | "/dashboard"
+  | "/dashboard/id-card"
+  | "/dashboard/scanner"
+  | "/portal"
+  | "/account/setup"
+  | "/portal/ubah-password";
 
 export function homePathFor(user: {
   roles?: readonly (AppRole | string)[];
+  account_setup_required?: boolean;
   must_change_password?: boolean;
 }): HomePath {
+  if (user.account_setup_required) return "/account/setup";
   if (user.must_change_password) return "/portal/ubah-password";
   if (hasAdminRole(user.roles)) return "/dashboard";
   if (user.roles?.includes("id_card")) return "/dashboard/id-card";
-  if (user.roles?.includes("prisensi")) return "/dashboard/checkin";
+  if (user.roles?.includes("prisensi")) return "/dashboard/scanner";
   return "/portal";
 }
 

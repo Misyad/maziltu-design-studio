@@ -28,12 +28,6 @@ export function HomeAbout() {
               className="aspect-4/5 size-full object-cover sm:aspect-4/3 lg:aspect-4/5"
             />
           </div>
-          <div className="absolute -right-2 -bottom-8 hidden w-56 rounded-3xl border border-border bg-card p-5 shadow-elevated sm:block lg:-right-8">
-            <p className="font-display text-3xl font-bold text-primary">17</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              years serving members and their families
-            </p>
-          </div>
         </Reveal>
 
         <div>
@@ -95,13 +89,27 @@ export function HomeStatistics() {
             align="center"
           />
         </Reveal>
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {statistics.map((stat, index) => (
-            <Reveal key={stat.label} delay={index * 0.08}>
-              <StatCard icon={stat.icon} value={stat.value} label={stat.label} suffix="+" />
-            </Reveal>
-          ))}
-        </div>
+        {statistics.isPending ? (
+          <p className="mt-14 text-center text-sm text-muted-foreground" role="status">
+            Memuat statistik…
+          </p>
+        ) : statistics.isError ? (
+          <p className="mt-14 text-center text-sm text-destructive" role="alert">
+            Statistik belum dapat dimuat.
+          </p>
+        ) : statistics.data.length === 0 ? (
+          <p className="mt-14 text-center text-sm text-muted-foreground">
+            Statistik belum tersedia.
+          </p>
+        ) : (
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {statistics.data.map((stat, index) => (
+              <Reveal key={stat.label} delay={index * 0.08}>
+                <StatCard icon={stat.icon} value={stat.value} label={stat.label} suffix="+" />
+              </Reveal>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

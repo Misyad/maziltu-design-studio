@@ -95,13 +95,27 @@ function AboutPage() {
             align="center"
           />
         </Reveal>
-        <RevealGroup className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {statistics.map((stat, index) => (
-            <motion.div key={stat.label} variants={revealItem}>
-              <StatCard icon={stat.icon} value={stat.value} label={stat.label} suffix="+" />
-            </motion.div>
-          ))}
-        </RevealGroup>
+        {statistics.isPending ? (
+          <p className="mt-14 text-center text-sm text-muted-foreground" role="status">
+            Memuat statistik…
+          </p>
+        ) : statistics.isError ? (
+          <p className="mt-14 text-center text-sm text-destructive" role="alert">
+            Statistik belum dapat dimuat.
+          </p>
+        ) : statistics.data.length === 0 ? (
+          <p className="mt-14 text-center text-sm text-muted-foreground">
+            Statistik belum tersedia.
+          </p>
+        ) : (
+          <RevealGroup className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {statistics.data.map((stat) => (
+              <motion.div key={stat.label} variants={revealItem}>
+                <StatCard icon={stat.icon} value={stat.value} label={stat.label} suffix="+" />
+              </motion.div>
+            ))}
+          </RevealGroup>
+        )}
       </section>
     </>
   );

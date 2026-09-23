@@ -63,10 +63,6 @@ function renderDialog() {
 describe("AccountDialog", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText: vi.fn().mockResolvedValue(undefined) },
-    });
   });
 
   afterEach(() => cleanup());
@@ -76,11 +72,10 @@ describe("AccountDialog", () => {
       data: {
         success: true,
         message: "Password reset.",
-        data: { temporary_password: "mzt1234", must_change_password: true },
+        data: { must_change_password: true },
       },
     });
     const user = userEvent.setup();
-    const writeText = vi.spyOn(navigator.clipboard, "writeText");
     renderDialog();
 
     const reset = screen.getByRole("button", { name: "Reset password" });
@@ -94,16 +89,13 @@ describe("AccountDialog", () => {
     expect(reset).toBeEnabled();
     await user.click(reset);
 
-    expect(await screen.findByText("mzt1234")).toBeInTheDocument();
-    expect(screen.getAllByText("mzt1234")).toHaveLength(1);
+    expect(await screen.findByText("Reset akun berhasil")).toBeInTheDocument();
+    expect(screen.queryByText("mzt1234")).not.toBeInTheDocument();
     expect(put).toHaveBeenCalledOnce();
     expect(put).toHaveBeenCalledWith("/members/7/account", {
       confirm: true,
       confirmation_id_anggota: "MZT000007",
     });
-
-    await user.click(screen.getByRole("button", { name: "Salin password sementara" }));
-    expect(writeText).toHaveBeenCalledWith("mzt1234");
   });
 
   it("disables controls while pending and prevents duplicate resets", async () => {
@@ -128,18 +120,18 @@ describe("AccountDialog", () => {
     resolveRequest({
       data: {
         success: true,
-        data: { temporary_password: "mzt1234", must_change_password: true },
+        data: { must_change_password: true },
       },
     });
-    expect(await screen.findByText("mzt1234")).toBeInTheDocument();
+    expect(await screen.findByText("Reset akun berhasil")).toBeInTheDocument();
     expect(put).toHaveBeenCalledOnce();
   });
 
-  it("clears the temporary password when the dialog closes", async () => {
+  it("clears the success state when the dialog closes", async () => {
     vi.spyOn(apiClient, "put").mockResolvedValue({
       data: {
         success: true,
-        data: { temporary_password: "mzt1234", must_change_password: true },
+        data: { must_change_password: true },
       },
     });
     const user = userEvent.setup();
@@ -147,13 +139,13 @@ describe("AccountDialog", () => {
 
     await user.type(screen.getByLabelText(/Ketik ID anggota/), "MZT000007");
     await user.click(screen.getByRole("button", { name: "Reset password" }));
-    expect(await screen.findByText("mzt1234")).toBeInTheDocument();
+    expect(await screen.findByText("Reset akun berhasil")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Selesai" }));
-    await waitFor(() => expect(screen.queryByText("mzt1234")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Reset akun berhasil")).not.toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Buka reset" }));
 
-    expect(screen.queryByText("mzt1234")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reset akun berhasil")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reset password" })).toBeDisabled();
   });
 });

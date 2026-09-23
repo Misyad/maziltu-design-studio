@@ -26,7 +26,7 @@ const editSchema = z.object({
 
 type EditValues = z.infer<typeof editSchema>;
 
-function Field({ label, value }: { label: string; value?: string | null }) {
+function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>

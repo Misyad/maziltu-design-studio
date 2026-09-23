@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { KtaPrintRequestBlock } from "@/features/kta/kta-print-request";
-import { ApiError } from "@/services/api-client";
+import { ApiError, memberApplicationsEnabled } from "@/services/api-client";
 import { ktaCheck, ktaVerify } from "@/services/mzt-api";
 import type { KtaCheckRequest, KtaDisambiguateField, KtaVerifiedResult } from "@/types/api";
 
@@ -612,12 +612,9 @@ export function CekKtaForm() {
   );
 }
 
-/**
- * CTA shown on terminal states. The registry has no public self-service
- * registration yet, so this routes to the existing contact channel instead of
- * inventing a second registration system (PRD v3.0 §4/§11).
- */
 function RegisterCta() {
+  const applicationsEnabled = memberApplicationsEnabled();
+
   return (
     <div
       className="mt-6 rounded-2xl border border-border/60 bg-surface p-5"
@@ -625,11 +622,14 @@ function RegisterCta() {
     >
       <p className="text-sm font-semibold">Data anggota belum ditemukan</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Kami belum menemukan data Anda di database anggota MZT. Silakan hubungi admin untuk
-        pendaftaran anggota.
+        {applicationsEnabled
+          ? "Kami belum menemukan data Anda di database anggota MZT. Silakan ajukan pendaftaran anggota baru."
+          : "Kami belum menemukan data Anda di database anggota MZT. Silakan hubungi admin untuk pendaftaran anggota."}
       </p>
       <Button asChild className="mt-4 w-full rounded-full">
-        <a href="/contact">Daftar Sebagai Anggota</a>
+        <a href={applicationsEnabled ? "/daftar-anggota" : "/contact"}>
+          {applicationsEnabled ? "Daftar Sebagai Anggota" : "Hubungi Admin"}
+        </a>
       </Button>
     </div>
   );

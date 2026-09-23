@@ -10,7 +10,6 @@ function request(overrides: Partial<MyKtaPrintRequest> = {}): MyKtaPrintRequest 
   return {
     reference: "KTA-PORTAL-42",
     status: "menunggu_pembayaran",
-    delivery_method: "pickup",
     payment_status: "pending",
     payment_amount: "25375.00",
     pay_url: "https://paymenku.com/pay/PORTAL-42",
@@ -68,24 +67,24 @@ describe("MyKtaPrintStatus", () => {
     await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
   });
 
-  it("links members without a request to the public verification flow", async () => {
+  it("lets members create a request directly from their account", async () => {
+    const user = userEvent.setup();
     vi.spyOn(apiClient, "get").mockResolvedValue(respondWith(null));
+    const createdRequest = request({ status: "menunggu_cetak", payment_status: "paid" });
+    const post = vi.spyOn(apiClient, "post").mockResolvedValue(respondWith(createdRequest));
 
     renderStatus();
 
-    expect(await screen.findByRole("link", { name: "Ajukan KTA Fisik" })).toHaveAttribute(
-      "href",
-      "/cek-kta",
-    );
-    expect(apiClient.get).toHaveBeenCalledWith("/me/kta/print-request", undefined);
+    await user.click(await screen.findByRole("button", { name: "Ajukan KTA Fisik" }));
+
+    await waitFor(() => expect(post).toHaveBeenCalledWith("/me/kta/print-request", undefined, {}));
+    expect(await screen.findByText("KTA-PORTAL-42")).toBeInTheDocument();
   });
 
   it.each<[KtaPrintStatus, string]>([
     ["menunggu_pembayaran", "Menunggu Pembayaran"],
     ["menunggu_cetak", "Menunggu Cetak"],
     ["sudah_dicetak", "Sudah Dicetak"],
-    ["siap_diambil", "Siap Diambil"],
-    ["dikirim", "Sedang Dikirim"],
     ["selesai", "Selesai"],
     ["ditolak", "Ditolak"],
     ["pembayaran_expired", "Pembayaran Kedaluwarsa"],

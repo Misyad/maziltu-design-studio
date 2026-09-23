@@ -13,8 +13,6 @@ import type { AuthUser } from "@/types/api";
  *  - 401 -> soft redirect to /login
  *  - 403 -> /forbidden
  *
- * On the server there is no session cookie, so protected routes always redirect
- * to /login during SSR (same behaviour as the old token-check).
  */
 
 export type GuardRoles = readonly string[];
@@ -49,14 +47,12 @@ function guardRedirect(to: string, from?: string): ReturnType<typeof redirect> {
   return redirect(options);
 }
 
-function isPasswordChangePath(from?: string): boolean {
+function isPath(from: string | undefined, expected: string): boolean {
   if (!from) return false;
   try {
-    return (
-      new URL(from, "http://localhost").pathname.replace(/\/+$/, "") === "/portal/ubah-password"
-    );
+    return new URL(from, "http://localhost").pathname.replace(/\/+$/, "") === expected;
   } catch {
-    return from.split(/[?#]/, 1)[0] === "/portal/ubah-password";
+    return from.split(/[?#]/, 1)[0] === expected;
   }
 }
 
@@ -67,7 +63,14 @@ export async function requireUser(queryClient: QueryClient, from?: string): Prom
   }
   try {
     const user = await queryClient.ensureQueryData(currentUserQuery());
-    if (user.must_change_password && !isPasswordChangePath(from)) {
+    if (user.account_setup_required && !isPath(from, "/account/setup")) {
+      throw guardRedirect("/account/setup", from);
+    }
+    if (
+      user.must_change_password &&
+      !user.account_setup_required &&
+      !isPath(from, "/portal/ubah-password")
+    ) {
       throw guardRedirect("/portal/ubah-password", from);
     }
     return user;
@@ -94,4 +97,23 @@ export async function requireRoles(
     throw guardRedirect("/forbidden", from);
   }
   return user;
+}
+
+export async function requireApplicant(
+  queryClient: QueryClient,
+  from?: string,
+): Promise<import("@/types/api").MemberApplication> {
+  if (typeof window === "undefined") throw guardRedirect("/pendaftar/login", from);
+  const { applicantMeQuery } = await import("@/services/queries");
+  try {
+    return await queryClient.ensureQueryData(applicantMeQuery());
+  } catch (error) {
+    if (isApiError(error) && error.status === 401) {
+      throw guardRedirect("/pendaftar/login", from);
+    }
+    if (isApiError(error) && error.status === 403) {
+      throw guardRedirect("/forbidden", from);
+    }
+    throw error;
+  }
 }

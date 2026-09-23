@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { isRedirect, redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
@@ -15,6 +16,7 @@ import {
   KTA_QUEUE_ROLES,
   MEMBER_ADMIN_ROLES,
   STAFF_ROLES,
+  requireApplicant,
   requireRoles,
   requireUser,
 } from "@/lib/auth";
@@ -37,6 +39,12 @@ function makeRejectingQueryClient(error: unknown) {
 }
 
 describe("R3 route guards — requireUser", () => {
+  it("runs cookie-dependent member guards only in the browser", () => {
+    for (const route of ["src/routes/portal/route.tsx", "src/routes/dashboard/route.tsx"]) {
+      expect(readFileSync(route, "utf8")).toContain("ssr: false");
+    }
+  });
+
   it("resolves the user when the session is valid", async () => {
     const user = { id: 1, roles: ["anggota"] };
     await expect(requireUser(makeQueryClient(user))).resolves.toEqual(user);
@@ -81,6 +89,54 @@ describe("R3 route guards — requireUser", () => {
     await expect(
       requireUser(makeQueryClient(user), "/portal/ubah-password/?required=1"),
     ).resolves.toEqual(user);
+  });
+
+  it("prioritizes account setup over the forced password-change route", async () => {
+    const user = {
+      id: 1,
+      roles: ["admin"],
+      account_setup_required: true,
+      must_change_password: true,
+    };
+
+    try {
+      await requireUser(makeQueryClient(user), "/portal/ubah-password");
+      throw new Error("expected redirect");
+    } catch (error) {
+      expect((error as Response & { options: { to: string } }).options.to).toBe("/account/setup");
+    }
+  });
+
+  it("allows account setup only on its dedicated route", async () => {
+    const user = { id: 1, roles: ["anggota"], account_setup_required: true };
+    await expect(requireUser(makeQueryClient(user), "/account/setup/?required=1")).resolves.toEqual(
+      user,
+    );
+  });
+});
+
+describe("applicant route guard", () => {
+  it("runs the cookie-dependent applicant guard only in the browser", () => {
+    const source = readFileSync("src/routes/pendaftar/route.tsx", "utf8");
+
+    expect(source).toContain("ssr: false");
+  });
+
+  it("resolves an authenticated applicant application", async () => {
+    const application = { uuid: "application-1", status: "submitted" };
+    await expect(requireApplicant(makeQueryClient(application), "/pendaftar")).resolves.toBe(
+      application,
+    );
+  });
+
+  it("redirects an expired applicant session to its own login", async () => {
+    try {
+      await requireApplicant(makeRejectingQueryClient(apiError(401)), "/pendaftar");
+      throw new Error("expected redirect");
+    } catch (error) {
+      expect(isRedirect(error)).toBe(true);
+      expect((error as Response & { options: { to: string } }).options.to).toBe("/pendaftar/login");
+    }
   });
 });
 
@@ -199,7 +255,7 @@ describe("post-login landing", () => {
 
   it("routes dedicated operators and portal users", () => {
     expect(homePathFor({ roles: ["id_card"] })).toBe("/dashboard/id-card");
-    expect(homePathFor({ roles: ["prisensi"] })).toBe("/dashboard/checkin");
+    expect(homePathFor({ roles: ["prisensi"] })).toBe("/dashboard/scanner");
     expect(homePathFor({ roles: ["anggota"] })).toBe("/portal");
   });
 
@@ -209,7 +265,14 @@ describe("post-login landing", () => {
     }
   });
 
-  it("keeps forced password-change priority", () => {
+  it("keeps account setup ahead of forced password changes", () => {
+    expect(
+      homePathFor({
+        roles: ["admin", "id_card"],
+        account_setup_required: true,
+        must_change_password: true,
+      }),
+    ).toBe("/account/setup");
     expect(homePathFor({ roles: ["admin", "id_card"], must_change_password: true })).toBe(
       "/portal/ubah-password",
     );

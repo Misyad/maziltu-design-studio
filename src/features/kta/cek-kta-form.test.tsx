@@ -46,6 +46,7 @@ describe("CekKtaForm — public KTA status page", () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
   });
 
   it("renders both lookup modes and defaults to name + dob", () => {
@@ -283,7 +284,39 @@ describe("CekKtaForm — public KTA status page", () => {
 
     const mr = await screen.findByTestId("kta-manual-review");
     expect(mr).toHaveTextContent(/verifikasi manual/i);
+    expect(screen.getByRole("link", { name: "Daftar Sebagai Anggota" })).toHaveAttribute(
+      "href",
+      "/daftar-anggota",
+    );
     expect(screen.queryByTestId("kta-result")).not.toBeInTheDocument();
+  });
+
+  it("links terminal KTA states to member registration only when applications are enabled", async () => {
+    vi.stubEnv("VITE_MEMBER_APPLICATIONS_ENABLED", "true");
+    const user = userEvent.setup();
+    vi.spyOn(apiClient, "post")
+      .mockResolvedValueOnce({
+        data: { success: true, data: { stage: "challenge", challenge_token: "tok-enabled" } },
+      } as never)
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: { stage: "manual_review", message: "Data belum dapat diverifikasi otomatis." },
+        },
+      } as never);
+
+    renderForm();
+    await user.type(screen.getByLabelText("Nama lengkap"), "Identik Total");
+    await user.type(screen.getByLabelText("Tanggal lahir"), "03/03/1992");
+    await user.click(screen.getByRole("button", { name: /cek status/i }));
+    await user.click(await screen.findByRole("button", { name: /saya punya nomor hp/i }));
+    await user.type(await screen.findByLabelText("4 digit terakhir nomor HP"), "0000");
+    await user.click(screen.getByRole("button", { name: /^verifikasi$/i }));
+
+    expect(await screen.findByRole("link", { name: "Daftar Sebagai Anggota" })).toHaveAttribute(
+      "href",
+      "/daftar-anggota",
+    );
   });
 
   it("locks the flow when the backend reports 403", async () => {

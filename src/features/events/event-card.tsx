@@ -2,15 +2,15 @@ import { CalendarDays, MapPin, MoveUpRight, Ticket } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { PlaceholderEvent } from "@/constants/content";
+import type { PublicEventCard } from "@/services/public-content";
 import { cn } from "@/lib/utils";
-const STATUS_LABEL: Record<PlaceholderEvent["status"], string> = {
+const STATUS_LABEL: Record<PublicEventCard["status"], string> = {
   Upcomming: "Upcoming",
   Ongoing: "Happening now",
   Complate: "Completed",
 };
 
-const STATUS_CLASS: Record<PlaceholderEvent["status"], string> = {
+const STATUS_CLASS: Record<PublicEventCard["status"], string> = {
   Upcomming: "bg-primary-soft text-accent-foreground",
   Ongoing: "bg-gold-soft text-gold",
   Complate: "bg-muted text-muted-foreground",
@@ -25,7 +25,7 @@ export function formatPrice(harga: number) {
   }).format(harga);
 }
 
-export function EventCard({ event, className }: { event: PlaceholderEvent; className?: string }) {
+export function EventCard({ event, className }: { event: PublicEventCard; className?: string }) {
   return (
     <article
       className={cn(
@@ -33,15 +33,21 @@ export function EventCard({ event, className }: { event: PlaceholderEvent; class
         className,
       )}
     >
-      <div className="relative aspect-16/10 overflow-hidden">
-        <img
-          src={event.image}
-          alt={event.judul_event}
-          width={event.imageWidth}
-          height={event.imageHeight}
-          loading="lazy"
-          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+      <div className="relative aspect-16/10 overflow-hidden bg-muted">
+        {event.image ? (
+          <img
+            src={event.image}
+            alt={event.judul_event}
+            width={event.imageWidth}
+            height={event.imageHeight}
+            loading="lazy"
+            className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center text-muted-foreground">
+            <CalendarDays className="size-10" aria-hidden />
+          </div>
+        )}
         <Badge
           className={cn(
             "absolute top-4 left-4 rounded-full border-0 px-3 py-1 text-xs font-semibold",

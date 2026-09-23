@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoginForm } from "@/features/auth/login-form";
 import { currentUserQuery } from "@/services/queries";
-import { ApiError } from "@/services/api-client";
+import {
+  ApiError,
+  memberAccountActivationEnabled,
+  memberApplicationsEnabled,
+} from "@/services/api-client";
 import { homePathFor } from "@/lib/roles";
 import { ORG } from "@/constants/content";
 
@@ -13,9 +17,7 @@ export const Route = createFileRoute("/login")({
     try {
       const user = await context.queryClient.ensureQueryData(currentUserQuery());
       const { redirect } = await import("@tanstack/react-router");
-      const options = { to: homePathFor(user), replace: true } as Parameters<
-        typeof redirect
-      >[0];
+      const options = { to: homePathFor(user), replace: true } as Parameters<typeof redirect>[0];
       if (location.href) (options as { from?: string }).from = location.href;
       throw redirect(options);
     } catch (error) {
@@ -56,11 +58,34 @@ function LoginPage() {
         </div>
 
         <div className="flex flex-col justify-center bg-card p-8 sm:p-12">
-          <span className="font-display text-lg font-semibold">Sign in</span>
+          <span className="font-display text-lg font-semibold">Masuk</span>
           <p className="mt-1 mb-8 text-sm text-muted-foreground">
-            Use your member number and password.
+            Gunakan nomor anggota dan password Anda.
           </p>
           <LoginForm />
+          <div className="mt-6 grid gap-2 border-t pt-5 text-center text-sm">
+            <Link to="/lupa-password" className="font-medium text-primary hover:underline">
+              Lupa password?
+            </Link>
+            {memberAccountActivationEnabled() ? (
+              <Link to="/aktivasi-akun" className="text-muted-foreground hover:text-foreground">
+                Aktivasi akun anggota lama
+              </Link>
+            ) : null}
+            <Link to="/cek-kta" className="text-muted-foreground hover:text-foreground">
+              Cari nomor anggota
+            </Link>
+            {memberApplicationsEnabled() ? (
+              <>
+                <Link to="/daftar-anggota" className="text-muted-foreground hover:text-foreground">
+                  Daftar sebagai anggota baru
+                </Link>
+                <Link to="/pendaftar/login" className="text-muted-foreground hover:text-foreground">
+                  Masuk sebagai pendaftar
+                </Link>
+              </>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

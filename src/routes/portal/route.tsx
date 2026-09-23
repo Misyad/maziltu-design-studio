@@ -50,6 +50,7 @@ import { homePathFor } from "@/lib/roles";
 import { ORG } from "@/constants/content";
 
 export const Route = createFileRoute("/portal")({
+  ssr: false,
   beforeLoad: ({ context, location }) => requireUser(context.queryClient, location.href),
   component: PortalLayout,
 });
@@ -75,12 +76,15 @@ function PortalLayout() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { data: user } = useQuery(currentUserQuery());
-  const forced = user?.must_change_password === true;
+  const setupRequired = user?.account_setup_required === true;
+  const forced = setupRequired || user?.must_change_password === true;
   const canAccessDashboard = user?.roles?.some((role) => DASHBOARD_ROLES.includes(role)) ?? false;
   const dashboardPath = user ? homePathFor(user) : "/portal";
-  const navItems = forced
-    ? NAV_ITEMS.filter((item) => item.to === "/portal/ubah-password")
-    : NAV_ITEMS;
+  const navItems = setupRequired
+    ? [{ to: "/account/setup", label: "Pengaturan Akun", icon: KeyRound }]
+    : forced
+      ? NAV_ITEMS.filter((item) => item.to === "/portal/ubah-password")
+      : NAV_ITEMS;
 
   async function handleLogout() {
     await logout();

@@ -16,7 +16,14 @@ import type {
   AttendanceRequest,
   AttendanceSummary,
   AccountResetAudit,
+  AccountActivationCheckRequest,
+  AccountActivationResult,
+  AccountActivationVerifyRequest,
   AccountResetResult,
+  AccountSetupCompleteRequest,
+  ApplicantLoginRequest,
+  ApplicantLoginResponse,
+  ApplicantUser,
   AuthUser,
   CarouselSlide,
   CheckInRequest,
@@ -27,6 +34,7 @@ import type {
   DashboardOverview,
   DashboardStats,
   EventItem,
+  EventPaymentChoice,
   EventTanggal,
   GateMonitoringResponse,
   IdCardData,
@@ -35,7 +43,9 @@ import type {
   LoginRequest,
   LoginResponse,
   Member,
+  MemberApplication,
   MemberRoleManagement,
+  MemberApplicationsResponse,
   NewsItem,
   OperationalEvent,
   OperationalSummary,
@@ -74,6 +84,101 @@ export function fetchCurrentUser() {
 export async function logout() {
   await ensureCsrfToken();
   await apiPost<unknown>("/logout");
+}
+
+export async function checkAccountActivation(payload: AccountActivationCheckRequest) {
+  await ensureCsrfToken();
+  return apiPostRaw<{
+    success: boolean;
+    message?: string;
+    data?: AccountActivationResult;
+  }>("/public/account-activation/check", payload);
+}
+
+export async function verifyAccountActivation(payload: AccountActivationVerifyRequest) {
+  await ensureCsrfToken();
+  return apiPostRaw<{
+    success: boolean;
+    message?: string;
+    data?: AccountActivationResult;
+  }>("/public/account-activation/verify", payload);
+}
+
+export async function setupAccountEmail(payload: { email: string }) {
+  await ensureCsrfToken();
+  return apiPostRaw<{ success: boolean; message?: string }>("/account/setup/email", payload);
+}
+
+export async function verifyAccountEmail(payload: { code: string }) {
+  await ensureCsrfToken();
+  return apiPostRaw<{ success: boolean; message?: string }>("/account/setup/email/verify", payload);
+}
+
+export async function completeAccountSetup(payload: AccountSetupCompleteRequest) {
+  await ensureCsrfToken();
+  return apiPostRaw<{ success: boolean; message?: string }>("/account/setup/complete", payload);
+}
+
+export async function submitMemberApplication(form: FormData) {
+  await ensureCsrfToken();
+  if (!form.has("submission_token")) form.set("submission_token", crypto.randomUUID());
+  return apiPost<{ application: MemberApplication }>("/public/member-applications", form).then(
+    (data) => data.application,
+  );
+}
+
+export async function applicantLogin(payload: ApplicantLoginRequest) {
+  await ensureCsrfToken();
+  return apiPostRaw<ApplicantLoginResponse>("/applicant/login", payload);
+}
+
+export function fetchApplicantMe() {
+  return apiGetRaw<{
+    success: boolean;
+    data: { applicant?: ApplicantUser; application: MemberApplication };
+  }>("/applicant/me", { authCheck: true }).then((response) => response.data.application);
+}
+
+export async function applicantLogout() {
+  await ensureCsrfToken();
+  await apiPost<unknown>("/applicant/logout");
+}
+
+export async function resendApplicantEmail() {
+  await ensureCsrfToken();
+  return apiPostRaw<{ success: boolean; message?: string }>("/applicant/email/resend");
+}
+
+export async function verifyApplicantEmail(payload: { code: string }) {
+  await ensureCsrfToken();
+  return apiPostRaw<{
+    success: boolean;
+    message?: string;
+    data?: { application: MemberApplication };
+  }>("/applicant/email/verify", payload);
+}
+
+export async function updateApplicantApplication(form: FormData) {
+  await ensureCsrfToken();
+  form.set("_method", "PUT");
+  return apiPost<{ application: MemberApplication }>("/applicant/application", form).then(
+    (data) => data.application,
+  );
+}
+
+export async function requestPasswordReset(payload: { email: string }) {
+  await ensureCsrfToken();
+  return apiPostRaw<{ success: boolean; message?: string }>("/public/password/forgot", payload);
+}
+
+export async function resetPassword(payload: {
+  token: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}) {
+  await ensureCsrfToken();
+  return apiPostRaw<{ success: boolean; message?: string }>("/public/password/reset", payload);
 }
 
 /* ------------------------------------------------------------- dashboard */
@@ -173,8 +278,10 @@ export const deleteEvent = (id: number | string) => apiDelete<unknown>(`/events/
 /* POST /events/{id}/register creates an order for the authenticated alumni.
    Backend replies with `{ success, message, data }` and non-2xx on rejection
    (409 duplicate / 403 closed / full), so callers must handle ApiError.status. */
-export const registerEvent = (id: number | string) =>
-  apiPostRaw<{ success: boolean; message?: string; data?: Order }>(`/events/${id}/register`);
+export const registerEvent = (id: number | string, paymentChoice: EventPaymentChoice) =>
+  apiPostRaw<{ success: boolean; message?: string; data?: Order }>(`/events/${id}/register`, {
+    payment_choice: paymentChoice,
+  });
 
 export const fetchMyOrders = () => apiGet<Order[]>("/my-orders");
 export const fetchOrder = (uuid: string) => apiGet<Order>(`/orders/${uuid}`);
@@ -208,6 +315,22 @@ export const submitAttendance = (payload: AttendanceRequest) =>
 // so callers must handle ApiError.status === 409 (payload is on error.data).
 export const checkIn = (payload: CheckInRequest) =>
   apiPostRaw<{ success: boolean; message?: string; data?: CheckInResult }>("/checkin", payload);
+
+export const lookupScannerParticipant = (payload: import("@/types/api").ScannerLookupRequest) =>
+  apiPostRaw<{
+    success: boolean;
+    message?: string;
+    data?: import("@/types/api").ScannerLookupResult;
+  }>("/checkin/lookup", payload);
+
+export const admitScannerParticipantOnsite = (
+  payload: import("@/types/api").OnsiteAdmissionRequest,
+) =>
+  apiPostRaw<{
+    success: boolean;
+    message?: string;
+    data?: import("@/types/api").ScannerLookupResult;
+  }>("/checkin/onsite", payload);
 
 /* ---------------------------------------------------------- transactions */
 
@@ -269,6 +392,10 @@ export const fetchMyKtaPrintRequest = () =>
   apiGetRaw<import("@/types/api").MyKtaPrintRequestResponse>("/me/kta/print-request").then(
     (response) => response.data.request,
   );
+export const createMyKtaPrintRequest = () =>
+  apiPostRaw<import("@/types/api").MyKtaPrintRequestResponse>("/me/kta/print-request").then(
+    (response) => response.data.request,
+  );
 export const updateProfileJson = (payload: ProfileUpdateRequest | FormData) =>
   apiPut<AlumniProfile>("/profile", payload);
 export const changePassword = (payload: PasswordChangeRequest) =>
@@ -305,26 +432,27 @@ export const revokeTicket = async (uuid: string, note?: string | null) => {
 /* --------------------------- Phase 3 — Payment Verification Queue */
 
 export const fetchVerificationQueue = (params?: VerificationQueueParams) =>
-  apiGet<VerificationQueueResponse>(`/payments${buildQuery((params ?? {}) as Record<string, number | string | null | undefined>)}`);
+  apiGet<VerificationQueueResponse>(
+    `/payments${buildQuery((params ?? {}) as Record<string, number | string | null | undefined>)}`,
+  );
 
 export const verifyPayment = (uuid: string, payload: { status: string; note?: string | null }) =>
-  apiPutRaw<{ success: boolean; message?: string; data?: { payment: PaymentItem; changed: boolean } }>(
-    `/payments/${uuid}/verify`,
-    payload,
-  );
+  apiPutRaw<{
+    success: boolean;
+    message?: string;
+    data?: { payment: PaymentItem; changed: boolean };
+  }>(`/payments/${uuid}/verify`, payload);
 
 export const fetchPaymentDetail = (uuid: string) =>
-  apiGet<{ payment: PaymentItem; outstanding: { total: number; paid: number; outstanding: number; payment_status: string } }>(
-    `/payments/${uuid}`,
-  );
+  apiGet<{
+    payment: PaymentItem;
+    outstanding: { total: number; paid: number; outstanding: number; payment_status: string };
+  }>(`/payments/${uuid}`);
 
 export const fetchAccountResetAudit = () =>
   apiGet<AccountResetAudit>("/members/account-reset-audit");
 
-export const resetAccount = (
-  idUsers: number | string,
-  confirmationIdAnggota: string,
-) =>
+export const resetAccount = (idUsers: number | string, confirmationIdAnggota: string) =>
   apiPut<AccountResetResult>(`/members/${idUsers}/account`, {
     confirm: true,
     confirmation_id_anggota: confirmationIdAnggota,
@@ -334,6 +462,33 @@ export const setAccountStatus = (idUsers: number | string, active: boolean) =>
   apiPutRaw<{ success: boolean; message?: string }>(`/members/${idUsers}/status`, {
     is_active: active ? "1" : "0",
   });
+
+export const fetchMemberApplications = () =>
+  apiGet<MemberApplicationsResponse>("/member-applications").then((data) => data.applications);
+
+export const fetchMemberApplication = (uuid: string) =>
+  apiGet<{ application: MemberApplication }>(`/member-applications/${uuid}`).then(
+    (data) => data.application,
+  );
+
+async function updateMemberApplicationStatus(
+  uuid: string,
+  action: "under-review" | "approve" | "reject",
+  payload?: { reason: string },
+) {
+  await ensureCsrfToken();
+  return apiPut<{ application: MemberApplication }>(
+    `/member-applications/${uuid}/${action}`,
+    payload,
+  ).then((data) => data.application);
+}
+
+export const markMemberApplicationUnderReview = (uuid: string) =>
+  updateMemberApplicationStatus(uuid, "under-review");
+export const approveMemberApplication = (uuid: string) =>
+  updateMemberApplicationStatus(uuid, "approve");
+export const rejectMemberApplication = (uuid: string, reason: string) =>
+  updateMemberApplicationStatus(uuid, "reject", { reason });
 
 /* ------------------------------------------------- Phase 3 — Audit Timeline (M-05) */
 
@@ -361,10 +516,11 @@ export const ktaCheck = (payload: import("@/types/api").KtaCheckRequest) =>
  * `data.verified === true` reveals the masked result.
  */
 export const ktaVerify = (payload: import("@/types/api").KtaVerifyRequest) =>
-  apiPostRaw<{ success: boolean; message?: string; data?: import("@/types/api").KtaVerifyResponse }>(
-    "/public/kta/verify",
-    payload,
-  );
+  apiPostRaw<{
+    success: boolean;
+    message?: string;
+    data?: import("@/types/api").KtaVerifyResponse;
+  }>("/public/kta/verify", payload);
 
 /* ---------------------------------- Physical KTA print request (v3.0) */
 
@@ -373,20 +529,22 @@ export const ktaVerify = (payload: import("@/types/api").KtaVerifyRequest) =>
  * print token — never from the browser.
  */
 export const fetchKtaPrintRequest = (printToken: string) =>
-  apiGetRaw<{ success: boolean; message?: string; data?: { request: import("@/types/api").KtaPrintRequest | null } }>(
-    `/public/kta/print-request?print_token=${encodeURIComponent(printToken)}`,
-  );
+  apiGetRaw<{
+    success: boolean;
+    message?: string;
+    data?: { request: import("@/types/api").KtaPrintRequest | null };
+  }>(`/public/kta/print-request?print_token=${encodeURIComponent(printToken)}`);
 
 export const createKtaPrintRequest = (payload: import("@/types/api").KtaPrintRequestCreate) =>
-  apiPostRaw<{ success: boolean; message?: string; data?: { request: import("@/types/api").KtaPrintRequest } }>(
-    "/public/kta/print-request",
-    payload,
-  );
+  apiPostRaw<{
+    success: boolean;
+    message?: string;
+    data?: { request: import("@/types/api").KtaPrintRequest };
+  }>("/public/kta/print-request", payload);
 
 /** Admin print queue (verifier roles). */
 export const fetchKtaPrintQueue = (params?: {
   status?: string | null;
-  delivery_method?: string | null;
   q?: string | null;
   page?: number | null;
   per_page?: number | null;
@@ -396,11 +554,12 @@ export const fetchKtaPrintQueue = (params?: {
   );
 
 export const fetchKtaPrintDetail = (id: number | string) =>
-  apiGet<{ request: import("@/types/api").KtaPrintRequestAdminDetail }>(`/kta/print-requests/${id}`);
+  apiGet<{ request: import("@/types/api").KtaPrintRequestAdminDetail }>(
+    `/kta/print-requests/${id}`,
+  );
 
 export const fetchKtaCards = () => apiGet<KtaCardSummary[]>("/kta/cards");
-export const fetchKtaCard = (idUsers: number | string) =>
-  apiGet<KtaCard>(`/kta/cards/${idUsers}`);
+export const fetchKtaCard = (idUsers: number | string) => apiGet<KtaCard>(`/kta/cards/${idUsers}`);
 export const fetchKtaPrintRequestCard = (requestId: number | string) =>
   apiGet<KtaCard>(`/kta/print-requests/${requestId}/card`);
 
@@ -408,7 +567,14 @@ export const updateKtaPrintStatus = (
   id: number | string,
   payload: { status: string; reason?: string | null },
 ) =>
-  apiPutRaw<{ success: boolean; message?: string; data?: { request: import("@/types/api").KtaPrintRequestAdminRow } }>(
-    `/kta/print-requests/${id}/status`,
-    payload,
-  );
+  apiPutRaw<{
+    success: boolean;
+    message?: string;
+    data?: { request: import("@/types/api").KtaPrintRequestAdminRow };
+  }>(`/kta/print-requests/${id}/status`, payload);
+
+export const fetchKtaPriceSettings = () =>
+  apiGet<import("@/types/api").KtaPriceSettingsResponse>("/kta/settings/price");
+
+export const updateKtaPriceSettings = (amount: number) =>
+  apiPut<import("@/types/api").KtaPriceSettingsResponse>("/kta/settings/price", { amount });

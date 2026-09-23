@@ -1,12 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, CalendarDays, LayoutDashboard, Users, type LucideIcon } from "lucide-react";
-import {
-  PLACEHOLDER_EVENTS,
-  PLACEHOLDER_NEWS,
-  STATISTICS,
-  type PlaceholderEvent,
-  type PlaceholderNews,
-} from "@/constants/content";
 import { mediaUrl } from "@/services/api-client";
 import {
   publicCarouselQuery,
@@ -22,19 +15,52 @@ export interface PublicStatItem {
   icon: LucideIcon;
 }
 
+export interface PublicEventCard {
+  id: number;
+  judul_event: string;
+  slug: string;
+  lokasi: string;
+  harga: number;
+  deskripsi: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  status: "Upcomming" | "Ongoing" | "Complate";
+  image: string | null;
+  imageWidth: number;
+  imageHeight: number;
+}
+
+export interface PublicNewsCard {
+  id: number;
+  judul: string;
+  slug: string;
+  deskripsi: string;
+  pembuat: string;
+  created_at: string;
+  image: string | null;
+  imageWidth: number;
+  imageHeight: number;
+}
+
+export interface PublicContentState<T> {
+  data: T;
+  isPending: boolean;
+  isError: boolean;
+  refetch: () => void;
+}
+
 function parseDate(value: string): Date | null {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** Renders backend date values (ISO or dd/mm/yyyy) as dd/mm/yyyy. */
 export function formatDateShort(value: string): string {
   const date = parseDate(value);
   if (!date) return value;
   return date.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export function eventStatus(start: string, end: string): PlaceholderEvent["status"] {
+export function eventStatus(start: string, end: string): PublicEventCard["status"] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const startDate = parseDate(start);
@@ -52,12 +78,10 @@ function parseHarga(harga: number | string): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-/** Converts the backend `harga` (string like "Rp. 100.000" or number) to a number. */
 export function parsePrice(harga: number | string): number {
   return parseHarga(harga);
 }
 
-/** Strips HTML tags (backend `deskripsi` is stored as markup) for card previews. */
 export function stripHtml(value: string): string {
   if (typeof document === "undefined") return value;
   const el = document.createElement("div");
@@ -65,7 +89,7 @@ export function stripHtml(value: string): string {
   return el.textContent ?? "";
 }
 
-function toPublicEvent(event: EventItem): PlaceholderEvent {
+function toPublicEvent(event: EventItem): PublicEventCard {
   return {
     id: event.id,
     judul_event: event.judul_event,
@@ -76,21 +100,21 @@ function toPublicEvent(event: EventItem): PlaceholderEvent {
     tanggal_mulai: formatDateShort(event.tanggal_mulai),
     tanggal_selesai: formatDateShort(event.tanggal_selesai),
     status: eventStatus(event.tanggal_mulai, event.tanggal_selesai),
-    image: mediaUrl(event.banner) ?? PLACEHOLDER_EVENTS[0]?.image ?? "",
+    image: mediaUrl(event.banner),
     imageWidth: 1200,
     imageHeight: 800,
   };
 }
 
-function toPublicNewsItem(item: NewsItem): PlaceholderNews {
+function toPublicNewsItem(item: NewsItem): PublicNewsCard {
   return {
     id: item.id,
     judul: item.judul,
     slug: item.slug || `berita-${item.id}`,
     deskripsi: stripHtml(item.deskripsi),
-    pembuat: item.pembuat ?? "Secretariat",
+    pembuat: item.pembuat ?? "Sekretariat",
     created_at: item.created_at,
-    image: mediaUrl(item.foto) ?? PLACEHOLDER_NEWS[0]?.image ?? "",
+    image: mediaUrl(item.foto),
     imageWidth: 1200,
     imageHeight: 800,
   };
@@ -98,35 +122,49 @@ function toPublicNewsItem(item: NewsItem): PlaceholderNews {
 
 function toStatistics(stats: PublicStats): PublicStatItem[] {
   return [
-    { label: "Registered members", value: stats.total_anggota, icon: Users },
-    { label: "Events completed", value: stats.event_selesai, icon: BadgeCheck },
-    { label: "Upcoming events", value: stats.event_mendatang, icon: CalendarDays },
-    { label: "Active events", value: stats.event, icon: LayoutDashboard },
+    { label: "Anggota terdaftar", value: stats.total_anggota, icon: Users },
+    { label: "Event selesai", value: stats.event_selesai, icon: BadgeCheck },
+    { label: "Event mendatang", value: stats.event_mendatang, icon: CalendarDays },
+    { label: "Event aktif", value: stats.event, icon: LayoutDashboard },
   ];
 }
 
-/** PUBLIC events with graceful fallback to placeholder content. */
-export function usePublicEvents(): PlaceholderEvent[] {
-  const { data } = useQuery(publicEventsQuery());
-  const events = (data ?? []).map(toPublicEvent);
-  return events.length > 0 ? events : [...PLACEHOLDER_EVENTS];
+export function usePublicEvents(): PublicContentState<PublicEventCard[]> {
+  const query = useQuery(publicEventsQuery());
+  return {
+    data: (query.data ?? []).map(toPublicEvent),
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
+  };
 }
 
-/** PUBLIC news with graceful fallback to placeholder content. */
-export function usePublicNews(): PlaceholderNews[] {
-  const { data } = useQuery(publicNewsQuery());
-  const items = (data ?? []).map(toPublicNewsItem);
-  return items.length > 0 ? items : [...PLACEHOLDER_NEWS];
+export function usePublicNews(): PublicContentState<PublicNewsCard[]> {
+  const query = useQuery(publicNewsQuery());
+  return {
+    data: (query.data ?? []).map(toPublicNewsItem),
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
+  };
 }
 
-/** PUBLIC hero carousel images, or null to keep the static hero image. */
-export function usePublicCarousel(): CarouselSlide[] | null {
-  const { data } = useQuery(publicCarouselQuery());
-  return data && data.length > 0 ? data : null;
+export function usePublicCarousel(): PublicContentState<CarouselSlide[]> {
+  const query = useQuery(publicCarouselQuery());
+  return {
+    data: query.data ?? [],
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
+  };
 }
 
-/** PUBLIC statistics with graceful fallback to placeholder content. */
-export function usePublicStatistics(): PublicStatItem[] {
-  const { data } = useQuery(publicStatsQuery());
-  return data ? toStatistics(data) : [...STATISTICS];
+export function usePublicStatistics(): PublicContentState<PublicStatItem[]> {
+  const query = useQuery(publicStatsQuery());
+  return {
+    data: query.data ? toStatistics(query.data) : [],
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
+  };
 }

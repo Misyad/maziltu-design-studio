@@ -1,14 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { MoveUpRight, Newspaper } from "lucide-react";
+import { AlertTriangle, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
 import { FeaturedNewsCard, NewsCard } from "@/features/news/news-card";
 import { Reveal } from "@/components/shared/reveal";
 import { SectionTitle } from "@/components/shared/section-title";
 import { usePublicNews } from "@/services/public-content";
 
 export function HomeNews() {
-  const items = usePublicNews();
-  const [featured, ...rest] = items;
+  const news = usePublicNews();
+  const [featured, ...rest] = news.data;
 
   return (
     <section className="container-page py-20 lg:py-28">
@@ -28,26 +30,44 @@ export function HomeNews() {
         </div>
       </Reveal>
 
-      <Reveal className="mt-14">
-        <FeaturedNewsCard item={featured} />
-      </Reveal>
-
-      <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {rest.map((item, index) => (
-          <Reveal key={item.id} delay={index * 0.08} className="h-full">
-            <NewsCard item={item} />
+      {news.isPending ? (
+        <div className="mt-14 space-y-8" role="status">
+          <Skeleton className="h-96 rounded-[2rem]" />
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((item) => (
+              <Skeleton key={item} className="h-80 rounded-3xl" />
+            ))}
+          </div>
+        </div>
+      ) : news.isError ? (
+        <EmptyState
+          className="mt-14"
+          icon={AlertTriangle}
+          title="Berita belum dapat dimuat"
+          description="Coba muat ulang data berita."
+          action={<Button onClick={news.refetch}>Coba lagi</Button>}
+        />
+      ) : !featured ? (
+        <EmptyState
+          className="mt-14"
+          icon={Newspaper}
+          title="Belum ada berita"
+          description="Berita yang dipublikasikan akan tampil di sini."
+        />
+      ) : (
+        <>
+          <Reveal className="mt-14">
+            <FeaturedNewsCard item={featured} />
           </Reveal>
-        ))}
-      </div>
-
-      <Reveal className="mt-12 flex justify-center" delay={0.1}>
-        <Button asChild className="rounded-full px-7">
-          <Link to="/news">
-            Browse all stories
-            <MoveUpRight className="size-4" aria-hidden />
-          </Link>
-        </Button>
-      </Reveal>
+          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {rest.slice(0, 3).map((item, index) => (
+              <Reveal key={item.id} delay={index * 0.08} className="h-full">
+                <NewsCard item={item} />
+              </Reveal>
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }

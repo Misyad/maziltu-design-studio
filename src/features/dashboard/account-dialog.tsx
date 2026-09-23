@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, KeyRound, Loader2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, KeyRound, Loader2, TriangleAlert } from "lucide-react";
 import { useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -39,19 +39,17 @@ export function AccountDialog({ member, auditItem, onOpenChange }: AccountDialog
   const queryClient = useQueryClient();
   const submitting = useRef(false);
   const [confirmation, setConfirmation] = useState("");
-  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
+  const [resetComplete, setResetComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
-  const [copied, setCopied] = useState(false);
   const matches = !!member && confirmation === member.id_anggota;
 
   function clearSensitiveState() {
     submitting.current = false;
     setConfirmation("");
-    setTemporaryPassword(null);
+    setResetComplete(false);
     setError(null);
     setIsPending(false);
-    setCopied(false);
   }
 
   function handleOpenChange(open: boolean) {
@@ -66,8 +64,8 @@ export function AccountDialog({ member, auditItem, onOpenChange }: AccountDialog
     setIsPending(true);
     setError(null);
     try {
-      const result = await resetAccount(member.id_users, confirmation);
-      setTemporaryPassword(result.temporary_password);
+      await resetAccount(member.id_users, confirmation);
+      setResetComplete(true);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.members }),
         queryClient.invalidateQueries({ queryKey: queryKeys.accountResetAudit }),
@@ -77,16 +75,6 @@ export function AccountDialog({ member, auditItem, onOpenChange }: AccountDialog
       submitting.current = false;
     } finally {
       setIsPending(false);
-    }
-  }
-
-  async function copyPassword() {
-    if (!temporaryPassword) return;
-    try {
-      await navigator.clipboard.writeText(temporaryPassword);
-      setCopied(true);
-    } catch {
-      setError("Password tidak dapat disalin otomatis. Salin secara manual.");
     }
   }
 
@@ -107,24 +95,16 @@ export function AccountDialog({ member, auditItem, onOpenChange }: AccountDialog
           </DialogDescription>
         </DialogHeader>
 
-        {temporaryPassword ? (
+        {resetComplete ? (
           <div className="space-y-4">
             <Alert>
-              <KeyRound aria-hidden />
-              <AlertTitle>Password sementara</AlertTitle>
+              <CheckCircle2 aria-hidden />
+              <AlertTitle>Reset akun berhasil</AlertTitle>
               <AlertDescription>
-                Password ini hanya ditampilkan sekali. Anggota wajib menggantinya setelah login.
+                Anggota dapat menggunakan kredensial awal yang berlaku dan wajib menyelesaikan
+                pengaturan akun setelah login.
               </AlertDescription>
             </Alert>
-            <div className="flex items-center gap-2 rounded-xl border bg-muted p-3">
-              <code className="flex-1 text-center text-lg font-semibold tracking-widest">
-                {temporaryPassword}
-              </code>
-              <Button type="button" variant="outline" size="icon" onClick={copyPassword}>
-                {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-                <span className="sr-only">Salin password sementara</span>
-              </Button>
-            </div>
             <DialogFooter>
               <Button
                 type="button"

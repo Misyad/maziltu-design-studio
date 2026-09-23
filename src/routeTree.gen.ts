@@ -11,26 +11,36 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AktivasiAkunRouteImport } from './routes/aktivasi-akun'
 import { Route as CekKtaRouteImport } from './routes/cek-kta'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DaftarAnggotaRouteImport } from './routes/daftar-anggota'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LupaPasswordRouteImport } from './routes/lupa-password'
 import { Route as NewsRouteImport } from './routes/news'
+import { Route as PendaftarRouteRouteImport } from './routes/pendaftar/route'
 import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as ProgramsRouteImport } from './routes/programs'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AccountSetupRouteImport } from './routes/account/setup'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as EventsIndexRouteImport } from './routes/events/index'
 import { Route as EventsIdRouteImport } from './routes/events/$id'
 import { Route as NewsIdRouteImport } from './routes/news.$id'
+import { Route as PendaftarIndexRouteImport } from './routes/pendaftar/index'
+import { Route as PendaftarLoginRouteImport } from './routes/pendaftar/login'
 import { Route as PortalIndexRouteImport } from './routes/portal/index'
+import { Route as PortalAktivasiAkunRouteImport } from './routes/portal/aktivasi-akun'
 import { Route as PortalBeritaRouteImport } from './routes/portal/berita'
 import { Route as PortalEventRouteImport } from './routes/portal/event'
 import { Route as PortalIdCardRouteImport } from './routes/portal/id-card'
 import { Route as PortalProfilRouteImport } from './routes/portal/profil'
 import { Route as PortalUbahPasswordRouteImport } from './routes/portal/ubah-password'
 import { Route as DashboardActivityIndexRouteImport } from './routes/dashboard/activity/index'
+import { Route as DashboardApplicationsIndexRouteImport } from './routes/dashboard/applications/index'
 import { Route as DashboardAttendanceIndexRouteImport } from './routes/dashboard/attendance/index'
 import { Route as DashboardAuditTimelineIndexRouteImport } from './routes/dashboard/audit-timeline/index'
 import { Route as DashboardCheckinIndexRouteImport } from './routes/dashboard/checkin/index'
@@ -44,12 +54,15 @@ import { Route as DashboardMembersIndexRouteImport } from './routes/dashboard/me
 import { Route as DashboardNewsIndexRouteImport } from './routes/dashboard/news/index'
 import { Route as DashboardOperationsIndexRouteImport } from './routes/dashboard/operations/index'
 import { Route as DashboardProfileIndexRouteImport } from './routes/dashboard/profile/index'
+import { Route as DashboardScannerIndexRouteImport } from './routes/dashboard/scanner/index'
 import { Route as DashboardTicketsIndexRouteImport } from './routes/dashboard/tickets/index'
 import { Route as DashboardTicketsUuidRouteImport } from './routes/dashboard/tickets/$uuid'
 import { Route as DashboardTransactionsIndexRouteImport } from './routes/dashboard/transactions/index'
 import { Route as PortalOrdersIndexRouteImport } from './routes/portal/orders/index'
 import { Route as PortalOrdersUuidRouteImport } from './routes/portal/orders/$uuid'
 import { Route as DashboardFinanceTicketsIndexRouteImport } from './routes/dashboard/finance/tickets/index'
+import { Route as DashboardKtaSettingsIndexRouteImport } from './routes/dashboard/kta/settings/index'
+import { Route as DashboardMembersRegistrationsIndexRouteImport } from './routes/dashboard/members/registrations/index'
 import { Route as DashboardOperationsEventsIdAttendanceRouteImport } from './routes/dashboard/operations/events.$id.attendance'
 import { Route as DashboardOperationsEventsIdAttendeesRouteImport } from './routes/dashboard/operations/events.$id.attendees'
 import { Route as DashboardOperationsEventsIdGatesRouteImport } from './routes/dashboard/operations/events.$id.gates'
@@ -64,6 +77,11 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AktivasiAkunRoute = AktivasiAkunRouteImport.update({
+  id: '/aktivasi-akun',
+  path: '/aktivasi-akun',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CekKtaRoute = CekKtaRouteImport.update({
   id: '/cek-kta',
   path: '/cek-kta',
@@ -72,6 +90,11 @@ const CekKtaRoute = CekKtaRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DaftarAnggotaRoute = DaftarAnggotaRouteImport.update({
+  id: '/daftar-anggota',
+  path: '/daftar-anggota',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
@@ -94,9 +117,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LupaPasswordRoute = LupaPasswordRouteImport.update({
+  id: '/lupa-password',
+  path: '/lupa-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NewsRoute = NewsRouteImport.update({
   id: '/news',
   path: '/news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PendaftarRouteRoute = PendaftarRouteRouteImport.update({
+  id: '/pendaftar',
+  path: '/pendaftar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalRouteRoute = PortalRouteRouteImport.update({
@@ -107,6 +140,16 @@ const PortalRouteRoute = PortalRouteRouteImport.update({
 const ProgramsRoute = ProgramsRouteImport.update({
   id: '/programs',
   path: '/programs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountSetupRoute = AccountSetupRouteImport.update({
+  id: '/account/setup',
+  path: '/account/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
@@ -129,9 +172,24 @@ const NewsIdRoute = NewsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => NewsRoute,
 } as any)
+const PendaftarIndexRoute = PendaftarIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PendaftarRouteRoute,
+} as any)
+const PendaftarLoginRoute = PendaftarLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => PendaftarRouteRoute,
+} as any)
 const PortalIndexRoute = PortalIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalAktivasiAkunRoute = PortalAktivasiAkunRouteImport.update({
+  id: '/aktivasi-akun',
+  path: '/aktivasi-akun',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalBeritaRoute = PortalBeritaRouteImport.update({
@@ -164,6 +222,12 @@ const DashboardActivityIndexRoute = DashboardActivityIndexRouteImport.update({
   path: '/activity/',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const DashboardApplicationsIndexRoute =
+  DashboardApplicationsIndexRouteImport.update({
+    id: '/applications/',
+    path: '/applications/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
 const DashboardAttendanceIndexRoute =
   DashboardAttendanceIndexRouteImport.update({
     id: '/attendance/',
@@ -233,6 +297,11 @@ const DashboardProfileIndexRoute = DashboardProfileIndexRouteImport.update({
   path: '/profile/',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const DashboardScannerIndexRoute = DashboardScannerIndexRouteImport.update({
+  id: '/scanner/',
+  path: '/scanner/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 const DashboardTicketsIndexRoute = DashboardTicketsIndexRouteImport.update({
   id: '/tickets/',
   path: '/tickets/',
@@ -265,6 +334,18 @@ const DashboardFinanceTicketsIndexRoute =
     path: '/finance/tickets/',
     getParentRoute: () => DashboardRouteRoute,
   } as any)
+const DashboardKtaSettingsIndexRoute =
+  DashboardKtaSettingsIndexRouteImport.update({
+    id: '/kta/settings/',
+    path: '/kta/settings/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+const DashboardMembersRegistrationsIndexRoute =
+  DashboardMembersRegistrationsIndexRouteImport.update({
+    id: '/members/registrations/',
+    path: '/members/registrations/',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
 const DashboardOperationsEventsIdAttendanceRoute =
   DashboardOperationsEventsIdAttendanceRouteImport.update({
     id: '/operations/events/$id/attendance',
@@ -287,17 +368,25 @@ const DashboardOperationsEventsIdGatesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/pendaftar': typeof PendaftarRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/aktivasi-akun': typeof AktivasiAkunRoute
   '/cek-kta': typeof CekKtaRoute
   '/contact': typeof ContactRoute
+  '/daftar-anggota': typeof DaftarAnggotaRoute
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
+  '/lupa-password': typeof LupaPasswordRoute
   '/news': typeof NewsRouteWithChildren
   '/programs': typeof ProgramsRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/account/setup': typeof AccountSetupRoute
   '/events/$id': typeof EventsIdRoute
   '/news/$id': typeof NewsIdRoute
+  '/pendaftar/login': typeof PendaftarLoginRoute
+  '/portal/aktivasi-akun': typeof PortalAktivasiAkunRoute
   '/portal/berita': typeof PortalBeritaRoute
   '/portal/event': typeof PortalEventRoute
   '/portal/id-card': typeof PortalIdCardRoute
@@ -305,11 +394,13 @@ export interface FileRoutesByFullPath {
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/pendaftar/': typeof PendaftarIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
+  '/dashboard/applications/': typeof DashboardApplicationsIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
   '/dashboard/audit-timeline/': typeof DashboardAuditTimelineIndexRoute
   '/dashboard/checkin/': typeof DashboardCheckinIndexRoute
@@ -322,10 +413,13 @@ export interface FileRoutesByFullPath {
   '/dashboard/news/': typeof DashboardNewsIndexRoute
   '/dashboard/operations/': typeof DashboardOperationsIndexRoute
   '/dashboard/profile/': typeof DashboardProfileIndexRoute
+  '/dashboard/scanner/': typeof DashboardScannerIndexRoute
   '/dashboard/tickets/': typeof DashboardTicketsIndexRoute
   '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
   '/portal/orders/': typeof PortalOrdersIndexRoute
   '/dashboard/finance/tickets/': typeof DashboardFinanceTicketsIndexRoute
+  '/dashboard/kta/settings/': typeof DashboardKtaSettingsIndexRoute
+  '/dashboard/members/registrations/': typeof DashboardMembersRegistrationsIndexRoute
   '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
   '/dashboard/operations/events/$id/attendees': typeof DashboardOperationsEventsIdAttendeesRoute
   '/dashboard/operations/events/$id/gates': typeof DashboardOperationsEventsIdGatesRoute
@@ -333,15 +427,22 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/aktivasi-akun': typeof AktivasiAkunRoute
   '/cek-kta': typeof CekKtaRoute
   '/contact': typeof ContactRoute
+  '/daftar-anggota': typeof DaftarAnggotaRoute
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
+  '/lupa-password': typeof LupaPasswordRoute
   '/news': typeof NewsRouteWithChildren
   '/programs': typeof ProgramsRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/account/setup': typeof AccountSetupRoute
   '/events/$id': typeof EventsIdRoute
   '/news/$id': typeof NewsIdRoute
+  '/pendaftar/login': typeof PendaftarLoginRoute
+  '/portal/aktivasi-akun': typeof PortalAktivasiAkunRoute
   '/portal/berita': typeof PortalBeritaRoute
   '/portal/event': typeof PortalEventRoute
   '/portal/id-card': typeof PortalIdCardRoute
@@ -349,11 +450,13 @@ export interface FileRoutesByTo {
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard': typeof DashboardIndexRoute
   '/events': typeof EventsIndexRoute
+  '/pendaftar': typeof PendaftarIndexRoute
   '/portal': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity': typeof DashboardActivityIndexRoute
+  '/dashboard/applications': typeof DashboardApplicationsIndexRoute
   '/dashboard/attendance': typeof DashboardAttendanceIndexRoute
   '/dashboard/audit-timeline': typeof DashboardAuditTimelineIndexRoute
   '/dashboard/checkin': typeof DashboardCheckinIndexRoute
@@ -366,10 +469,13 @@ export interface FileRoutesByTo {
   '/dashboard/news': typeof DashboardNewsIndexRoute
   '/dashboard/operations': typeof DashboardOperationsIndexRoute
   '/dashboard/profile': typeof DashboardProfileIndexRoute
+  '/dashboard/scanner': typeof DashboardScannerIndexRoute
   '/dashboard/tickets': typeof DashboardTicketsIndexRoute
   '/dashboard/transactions': typeof DashboardTransactionsIndexRoute
   '/portal/orders': typeof PortalOrdersIndexRoute
   '/dashboard/finance/tickets': typeof DashboardFinanceTicketsIndexRoute
+  '/dashboard/kta/settings': typeof DashboardKtaSettingsIndexRoute
+  '/dashboard/members/registrations': typeof DashboardMembersRegistrationsIndexRoute
   '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
   '/dashboard/operations/events/$id/attendees': typeof DashboardOperationsEventsIdAttendeesRoute
   '/dashboard/operations/events/$id/gates': typeof DashboardOperationsEventsIdGatesRoute
@@ -378,17 +484,25 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/pendaftar': typeof PendaftarRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/aktivasi-akun': typeof AktivasiAkunRoute
   '/cek-kta': typeof CekKtaRoute
   '/contact': typeof ContactRoute
+  '/daftar-anggota': typeof DaftarAnggotaRoute
   '/forbidden': typeof ForbiddenRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
+  '/lupa-password': typeof LupaPasswordRoute
   '/news': typeof NewsRouteWithChildren
   '/programs': typeof ProgramsRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/account/setup': typeof AccountSetupRoute
   '/events/$id': typeof EventsIdRoute
   '/news/$id': typeof NewsIdRoute
+  '/pendaftar/login': typeof PendaftarLoginRoute
+  '/portal/aktivasi-akun': typeof PortalAktivasiAkunRoute
   '/portal/berita': typeof PortalBeritaRoute
   '/portal/event': typeof PortalEventRoute
   '/portal/id-card': typeof PortalIdCardRoute
@@ -396,11 +510,13 @@ export interface FileRoutesById {
   '/portal/ubah-password': typeof PortalUbahPasswordRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/pendaftar/': typeof PendaftarIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
+  '/dashboard/applications/': typeof DashboardApplicationsIndexRoute
   '/dashboard/attendance/': typeof DashboardAttendanceIndexRoute
   '/dashboard/audit-timeline/': typeof DashboardAuditTimelineIndexRoute
   '/dashboard/checkin/': typeof DashboardCheckinIndexRoute
@@ -413,10 +529,13 @@ export interface FileRoutesById {
   '/dashboard/news/': typeof DashboardNewsIndexRoute
   '/dashboard/operations/': typeof DashboardOperationsIndexRoute
   '/dashboard/profile/': typeof DashboardProfileIndexRoute
+  '/dashboard/scanner/': typeof DashboardScannerIndexRoute
   '/dashboard/tickets/': typeof DashboardTicketsIndexRoute
   '/dashboard/transactions/': typeof DashboardTransactionsIndexRoute
   '/portal/orders/': typeof PortalOrdersIndexRoute
   '/dashboard/finance/tickets/': typeof DashboardFinanceTicketsIndexRoute
+  '/dashboard/kta/settings/': typeof DashboardKtaSettingsIndexRoute
+  '/dashboard/members/registrations/': typeof DashboardMembersRegistrationsIndexRoute
   '/dashboard/operations/events/$id/attendance': typeof DashboardOperationsEventsIdAttendanceRoute
   '/dashboard/operations/events/$id/attendees': typeof DashboardOperationsEventsIdAttendeesRoute
   '/dashboard/operations/events/$id/gates': typeof DashboardOperationsEventsIdGatesRoute
@@ -426,17 +545,25 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/pendaftar'
     | '/portal'
     | '/about'
+    | '/aktivasi-akun'
     | '/cek-kta'
     | '/contact'
+    | '/daftar-anggota'
     | '/forbidden'
     | '/gallery'
     | '/login'
+    | '/lupa-password'
     | '/news'
     | '/programs'
+    | '/reset-password'
+    | '/account/setup'
     | '/events/$id'
     | '/news/$id'
+    | '/pendaftar/login'
+    | '/portal/aktivasi-akun'
     | '/portal/berita'
     | '/portal/event'
     | '/portal/id-card'
@@ -444,11 +571,13 @@ export interface FileRouteTypes {
     | '/portal/ubah-password'
     | '/dashboard/'
     | '/events/'
+    | '/pendaftar/'
     | '/portal/'
     | '/dashboard/finance/verification'
     | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity/'
+    | '/dashboard/applications/'
     | '/dashboard/attendance/'
     | '/dashboard/audit-timeline/'
     | '/dashboard/checkin/'
@@ -461,10 +590,13 @@ export interface FileRouteTypes {
     | '/dashboard/news/'
     | '/dashboard/operations/'
     | '/dashboard/profile/'
+    | '/dashboard/scanner/'
     | '/dashboard/tickets/'
     | '/dashboard/transactions/'
     | '/portal/orders/'
     | '/dashboard/finance/tickets/'
+    | '/dashboard/kta/settings/'
+    | '/dashboard/members/registrations/'
     | '/dashboard/operations/events/$id/attendance'
     | '/dashboard/operations/events/$id/attendees'
     | '/dashboard/operations/events/$id/gates'
@@ -472,15 +604,22 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/aktivasi-akun'
     | '/cek-kta'
     | '/contact'
+    | '/daftar-anggota'
     | '/forbidden'
     | '/gallery'
     | '/login'
+    | '/lupa-password'
     | '/news'
     | '/programs'
+    | '/reset-password'
+    | '/account/setup'
     | '/events/$id'
     | '/news/$id'
+    | '/pendaftar/login'
+    | '/portal/aktivasi-akun'
     | '/portal/berita'
     | '/portal/event'
     | '/portal/id-card'
@@ -488,11 +627,13 @@ export interface FileRouteTypes {
     | '/portal/ubah-password'
     | '/dashboard'
     | '/events'
+    | '/pendaftar'
     | '/portal'
     | '/dashboard/finance/verification'
     | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity'
+    | '/dashboard/applications'
     | '/dashboard/attendance'
     | '/dashboard/audit-timeline'
     | '/dashboard/checkin'
@@ -505,10 +646,13 @@ export interface FileRouteTypes {
     | '/dashboard/news'
     | '/dashboard/operations'
     | '/dashboard/profile'
+    | '/dashboard/scanner'
     | '/dashboard/tickets'
     | '/dashboard/transactions'
     | '/portal/orders'
     | '/dashboard/finance/tickets'
+    | '/dashboard/kta/settings'
+    | '/dashboard/members/registrations'
     | '/dashboard/operations/events/$id/attendance'
     | '/dashboard/operations/events/$id/attendees'
     | '/dashboard/operations/events/$id/gates'
@@ -516,17 +660,25 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/pendaftar'
     | '/portal'
     | '/about'
+    | '/aktivasi-akun'
     | '/cek-kta'
     | '/contact'
+    | '/daftar-anggota'
     | '/forbidden'
     | '/gallery'
     | '/login'
+    | '/lupa-password'
     | '/news'
     | '/programs'
+    | '/reset-password'
+    | '/account/setup'
     | '/events/$id'
     | '/news/$id'
+    | '/pendaftar/login'
+    | '/portal/aktivasi-akun'
     | '/portal/berita'
     | '/portal/event'
     | '/portal/id-card'
@@ -534,11 +686,13 @@ export interface FileRouteTypes {
     | '/portal/ubah-password'
     | '/dashboard/'
     | '/events/'
+    | '/pendaftar/'
     | '/portal/'
     | '/dashboard/finance/verification'
     | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity/'
+    | '/dashboard/applications/'
     | '/dashboard/attendance/'
     | '/dashboard/audit-timeline/'
     | '/dashboard/checkin/'
@@ -551,10 +705,13 @@ export interface FileRouteTypes {
     | '/dashboard/news/'
     | '/dashboard/operations/'
     | '/dashboard/profile/'
+    | '/dashboard/scanner/'
     | '/dashboard/tickets/'
     | '/dashboard/transactions/'
     | '/portal/orders/'
     | '/dashboard/finance/tickets/'
+    | '/dashboard/kta/settings/'
+    | '/dashboard/members/registrations/'
     | '/dashboard/operations/events/$id/attendance'
     | '/dashboard/operations/events/$id/attendees'
     | '/dashboard/operations/events/$id/gates'
@@ -563,15 +720,21 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  PendaftarRouteRoute: typeof PendaftarRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
+  AktivasiAkunRoute: typeof AktivasiAkunRoute
   CekKtaRoute: typeof CekKtaRoute
   ContactRoute: typeof ContactRoute
+  DaftarAnggotaRoute: typeof DaftarAnggotaRoute
   ForbiddenRoute: typeof ForbiddenRoute
   GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
+  LupaPasswordRoute: typeof LupaPasswordRoute
   NewsRoute: typeof NewsRouteWithChildren
   ProgramsRoute: typeof ProgramsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  AccountSetupRoute: typeof AccountSetupRoute
   EventsIdRoute: typeof EventsIdRoute
   EventsIndexRoute: typeof EventsIndexRoute
 }
@@ -592,6 +755,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aktivasi-akun': {
+      id: '/aktivasi-akun'
+      path: '/aktivasi-akun'
+      fullPath: '/aktivasi-akun'
+      preLoaderRoute: typeof AktivasiAkunRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cek-kta': {
       id: '/cek-kta'
       path: '/cek-kta'
@@ -604,6 +774,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/daftar-anggota': {
+      id: '/daftar-anggota'
+      path: '/daftar-anggota'
+      fullPath: '/daftar-anggota'
+      preLoaderRoute: typeof DaftarAnggotaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -634,11 +811,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lupa-password': {
+      id: '/lupa-password'
+      path: '/lupa-password'
+      fullPath: '/lupa-password'
+      preLoaderRoute: typeof LupaPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/news': {
       id: '/news'
       path: '/news'
       fullPath: '/news'
       preLoaderRoute: typeof NewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pendaftar': {
+      id: '/pendaftar'
+      path: '/pendaftar'
+      fullPath: '/pendaftar'
+      preLoaderRoute: typeof PendaftarRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portal': {
@@ -653,6 +844,20 @@ declare module '@tanstack/react-router' {
       path: '/programs'
       fullPath: '/programs'
       preLoaderRoute: typeof ProgramsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/setup': {
+      id: '/account/setup'
+      path: '/account/setup'
+      fullPath: '/account/setup'
+      preLoaderRoute: typeof AccountSetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
@@ -683,11 +888,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NewsIdRouteImport
       parentRoute: typeof NewsRoute
     }
+    '/pendaftar/': {
+      id: '/pendaftar/'
+      path: '/'
+      fullPath: '/pendaftar/'
+      preLoaderRoute: typeof PendaftarIndexRouteImport
+      parentRoute: typeof PendaftarRouteRoute
+    }
+    '/pendaftar/login': {
+      id: '/pendaftar/login'
+      path: '/login'
+      fullPath: '/pendaftar/login'
+      preLoaderRoute: typeof PendaftarLoginRouteImport
+      parentRoute: typeof PendaftarRouteRoute
+    }
     '/portal/': {
       id: '/portal/'
       path: '/'
       fullPath: '/portal/'
       preLoaderRoute: typeof PortalIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/aktivasi-akun': {
+      id: '/portal/aktivasi-akun'
+      path: '/aktivasi-akun'
+      fullPath: '/portal/aktivasi-akun'
+      preLoaderRoute: typeof PortalAktivasiAkunRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/berita': {
@@ -730,6 +956,13 @@ declare module '@tanstack/react-router' {
       path: '/activity'
       fullPath: '/dashboard/activity/'
       preLoaderRoute: typeof DashboardActivityIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/applications/': {
+      id: '/dashboard/applications/'
+      path: '/applications'
+      fullPath: '/dashboard/applications/'
+      preLoaderRoute: typeof DashboardApplicationsIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
     '/dashboard/attendance/': {
@@ -823,6 +1056,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProfileIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/dashboard/scanner/': {
+      id: '/dashboard/scanner/'
+      path: '/scanner'
+      fullPath: '/dashboard/scanner/'
+      preLoaderRoute: typeof DashboardScannerIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/tickets/': {
       id: '/dashboard/tickets/'
       path: '/tickets'
@@ -865,6 +1105,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardFinanceTicketsIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/dashboard/kta/settings/': {
+      id: '/dashboard/kta/settings/'
+      path: '/kta/settings'
+      fullPath: '/dashboard/kta/settings/'
+      preLoaderRoute: typeof DashboardKtaSettingsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/members/registrations/': {
+      id: '/dashboard/members/registrations/'
+      path: '/members/registrations'
+      fullPath: '/dashboard/members/registrations/'
+      preLoaderRoute: typeof DashboardMembersRegistrationsIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/operations/events/$id/attendance': {
       id: '/dashboard/operations/events/$id/attendance'
       path: '/operations/events/$id/attendance'
@@ -894,6 +1148,7 @@ interface DashboardRouteRouteChildren {
   DashboardFinanceVerificationRoute: typeof DashboardFinanceVerificationRoute
   DashboardTicketsUuidRoute: typeof DashboardTicketsUuidRoute
   DashboardActivityIndexRoute: typeof DashboardActivityIndexRoute
+  DashboardApplicationsIndexRoute: typeof DashboardApplicationsIndexRoute
   DashboardAttendanceIndexRoute: typeof DashboardAttendanceIndexRoute
   DashboardAuditTimelineIndexRoute: typeof DashboardAuditTimelineIndexRoute
   DashboardCheckinIndexRoute: typeof DashboardCheckinIndexRoute
@@ -906,9 +1161,12 @@ interface DashboardRouteRouteChildren {
   DashboardNewsIndexRoute: typeof DashboardNewsIndexRoute
   DashboardOperationsIndexRoute: typeof DashboardOperationsIndexRoute
   DashboardProfileIndexRoute: typeof DashboardProfileIndexRoute
+  DashboardScannerIndexRoute: typeof DashboardScannerIndexRoute
   DashboardTicketsIndexRoute: typeof DashboardTicketsIndexRoute
   DashboardTransactionsIndexRoute: typeof DashboardTransactionsIndexRoute
   DashboardFinanceTicketsIndexRoute: typeof DashboardFinanceTicketsIndexRoute
+  DashboardKtaSettingsIndexRoute: typeof DashboardKtaSettingsIndexRoute
+  DashboardMembersRegistrationsIndexRoute: typeof DashboardMembersRegistrationsIndexRoute
   DashboardOperationsEventsIdAttendanceRoute: typeof DashboardOperationsEventsIdAttendanceRoute
   DashboardOperationsEventsIdAttendeesRoute: typeof DashboardOperationsEventsIdAttendeesRoute
   DashboardOperationsEventsIdGatesRoute: typeof DashboardOperationsEventsIdGatesRoute
@@ -919,6 +1177,7 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardFinanceVerificationRoute: DashboardFinanceVerificationRoute,
   DashboardTicketsUuidRoute: DashboardTicketsUuidRoute,
   DashboardActivityIndexRoute: DashboardActivityIndexRoute,
+  DashboardApplicationsIndexRoute: DashboardApplicationsIndexRoute,
   DashboardAttendanceIndexRoute: DashboardAttendanceIndexRoute,
   DashboardAuditTimelineIndexRoute: DashboardAuditTimelineIndexRoute,
   DashboardCheckinIndexRoute: DashboardCheckinIndexRoute,
@@ -931,9 +1190,13 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardNewsIndexRoute: DashboardNewsIndexRoute,
   DashboardOperationsIndexRoute: DashboardOperationsIndexRoute,
   DashboardProfileIndexRoute: DashboardProfileIndexRoute,
+  DashboardScannerIndexRoute: DashboardScannerIndexRoute,
   DashboardTicketsIndexRoute: DashboardTicketsIndexRoute,
   DashboardTransactionsIndexRoute: DashboardTransactionsIndexRoute,
   DashboardFinanceTicketsIndexRoute: DashboardFinanceTicketsIndexRoute,
+  DashboardKtaSettingsIndexRoute: DashboardKtaSettingsIndexRoute,
+  DashboardMembersRegistrationsIndexRoute:
+    DashboardMembersRegistrationsIndexRoute,
   DashboardOperationsEventsIdAttendanceRoute:
     DashboardOperationsEventsIdAttendanceRoute,
   DashboardOperationsEventsIdAttendeesRoute:
@@ -945,7 +1208,22 @@ const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
   DashboardRouteRouteChildren,
 )
 
+interface PendaftarRouteRouteChildren {
+  PendaftarLoginRoute: typeof PendaftarLoginRoute
+  PendaftarIndexRoute: typeof PendaftarIndexRoute
+}
+
+const PendaftarRouteRouteChildren: PendaftarRouteRouteChildren = {
+  PendaftarLoginRoute: PendaftarLoginRoute,
+  PendaftarIndexRoute: PendaftarIndexRoute,
+}
+
+const PendaftarRouteRouteWithChildren = PendaftarRouteRoute._addFileChildren(
+  PendaftarRouteRouteChildren,
+)
+
 interface PortalRouteRouteChildren {
+  PortalAktivasiAkunRoute: typeof PortalAktivasiAkunRoute
   PortalBeritaRoute: typeof PortalBeritaRoute
   PortalEventRoute: typeof PortalEventRoute
   PortalIdCardRoute: typeof PortalIdCardRoute
@@ -957,6 +1235,7 @@ interface PortalRouteRouteChildren {
 }
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
+  PortalAktivasiAkunRoute: PortalAktivasiAkunRoute,
   PortalBeritaRoute: PortalBeritaRoute,
   PortalEventRoute: PortalEventRoute,
   PortalIdCardRoute: PortalIdCardRoute,
@@ -984,15 +1263,21 @@ const NewsRouteWithChildren = NewsRoute._addFileChildren(NewsRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  PendaftarRouteRoute: PendaftarRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
   AboutRoute: AboutRoute,
+  AktivasiAkunRoute: AktivasiAkunRoute,
   CekKtaRoute: CekKtaRoute,
   ContactRoute: ContactRoute,
+  DaftarAnggotaRoute: DaftarAnggotaRoute,
   ForbiddenRoute: ForbiddenRoute,
   GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
+  LupaPasswordRoute: LupaPasswordRoute,
   NewsRoute: NewsRouteWithChildren,
   ProgramsRoute: ProgramsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  AccountSetupRoute: AccountSetupRoute,
   EventsIdRoute: EventsIdRoute,
   EventsIndexRoute: EventsIndexRoute,
 }

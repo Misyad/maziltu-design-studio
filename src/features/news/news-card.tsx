@@ -1,6 +1,6 @@
 import { CalendarDays, UserRound } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import type { PlaceholderNews } from "@/constants/content";
+import type { PublicNewsCard } from "@/services/public-content";
 import { cn } from "@/lib/utils";
 
 export function formatDate(value: string) {
@@ -11,7 +11,7 @@ export function formatDate(value: string) {
   });
 }
 
-export function NewsCard({ item, className }: { item: PlaceholderNews; className?: string }) {
+export function NewsCard({ item, className }: { item: PublicNewsCard; className?: string }) {
   return (
     <article
       className={cn(
@@ -19,15 +19,21 @@ export function NewsCard({ item, className }: { item: PlaceholderNews; className
         className,
       )}
     >
-      <div className="aspect-16/10 overflow-hidden">
-        <img
-          src={item.image}
-          alt={item.judul}
-          width={item.imageWidth}
-          height={item.imageHeight}
-          loading="lazy"
-          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+      <div className="aspect-16/10 overflow-hidden bg-muted">
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.judul}
+            width={item.imageWidth}
+            height={item.imageHeight}
+            loading="lazy"
+            className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center text-muted-foreground">
+            <CalendarDays className="size-10" aria-hidden />
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col p-6">
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
@@ -57,18 +63,24 @@ export function NewsCard({ item, className }: { item: PlaceholderNews; className
   );
 }
 
-export function FeaturedNewsCard({ item }: { item: PlaceholderNews }) {
+export function FeaturedNewsCard({ item }: { item: PublicNewsCard }) {
   return (
     <article className="group grid overflow-hidden rounded-[2rem] border border-border/70 bg-card shadow-soft transition-shadow duration-300 hover:shadow-elevated lg:grid-cols-2">
-      <div className="aspect-4/3 overflow-hidden lg:aspect-auto lg:h-full">
-        <img
-          src={item.image}
-          alt={item.judul}
-          width={item.imageWidth}
-          height={item.imageHeight}
-          loading="lazy"
-          className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
+      <div className="aspect-4/3 overflow-hidden bg-muted lg:aspect-auto lg:h-full">
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.judul}
+            width={item.imageWidth}
+            height={item.imageHeight}
+            loading="lazy"
+            className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex size-full min-h-64 items-center justify-center text-muted-foreground">
+            <CalendarDays className="size-12" aria-hidden />
+          </div>
+        )}
       </div>
       <div className="flex flex-col justify-center p-8 lg:p-12">
         <span className="eyebrow">Featured story</span>

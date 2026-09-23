@@ -1,16 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  CalendarDays,
+  AlertTriangle,
+  Banknote,
   Camera,
   CheckCircle2,
-  Clock,
   Loader2,
   QrCode,
   RotateCcw,
   ScanLine,
-  Ticket,
-  UserRound,
   XCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -29,23 +27,22 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { formatPrice } from "@/features/events/event-card";
 import { CHECKIN_ROLES, requireRoles } from "@/lib/auth";
 import { ApiError } from "@/services/api-client";
-import { checkIn } from "@/services/mzt-api";
+import {
+  admitScannerParticipantOnsite,
+  checkIn,
+  lookupScannerParticipant,
+} from "@/services/mzt-api";
 import { eventTanggalQuery, eventsQuery, queryKeys } from "@/services/queries";
-import type { CheckInDuplicate, CheckInResult } from "@/types/api";
+import type { CheckInDuplicate, ScannerLookupResult } from "@/types/api";
 
 export const Route = createFileRoute("/dashboard/checkin/")({
   beforeLoad: ({ context, location }) =>
     requireRoles(context.queryClient, CHECKIN_ROLES, location.href),
-  component: CheckInPage,
+  component: ScannerPage,
 });
-
-type ResultState =
-  | { kind: "idle" }
-  | { kind: "valid"; data: CheckInResult }
-  | { kind: "duplicate"; firstScannedAt: string | null; firstScannedBy: number | null }
-  | { kind: "invalid"; message: string };
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -55,151 +52,234 @@ function formatDateTime(value: string | null) {
   });
 }
 
-function CheckInPage() {
+function amount(value: number | string | null) {
+  if (value === null) return "—";
+  const parsed = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(parsed) ? formatPrice(parsed) : "—";
+}
+
+function scannerError(error: unknown) {
+  const text = error instanceof Error ? `${error.name} ${error.message}`.toLowerCase() : "";
+  if (text.includes("permission") || text.includes("notallowed")) {
+    return "Izin kamera ditolak. Izinkan kamera di pengaturan browser atau gunakan input manual.";
+  }
+  if (text.includes("notfound") || text.includes("device") || text.includes("camera")) {
+    return "Kamera tidak tersedia. Pastikan perangkat memiliki kamera atau gunakan input manual.";
+  }
+  if (text.includes("secure") || text.includes("support")) {
+    return "Perangkat atau browser tidak kompatibel. Gunakan browser terbaru atau input manual.";
+  }
+  return "Kamera belum dapat digunakan. Coba lagi atau gunakan input manual.";
+}
+
+export function ScannerPage() {
   const queryClient = useQueryClient();
   const events = useQuery(eventsQuery());
-
   const [eventId, setEventId] = useState("");
   const [tanggalId, setTanggalId] = useState("");
   const [gate, setGate] = useState("");
-  const [manualUuid, setManualUuid] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [onsiteAmount, setOnsiteAmount] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [result, setResult] = useState<ResultState>({ kind: "idle" });
+  const [participant, setParticipant] = useState<ScannerLookupResult | null>(null);
 
   const tanggal = useQuery({
     ...eventTanggalQuery(Number(eventId)),
     enabled: eventId !== "",
   });
 
-  const checkInMutation = useMutation({
-    mutationFn: (uuid: string) =>
-      checkIn({
-        ticket_uuid: uuid.trim(),
+  const lookup = useMutation({
+    mutationFn: (value: string) =>
+      lookupScannerParticipant({
+        identifier: value.trim(),
+        id_event: Number(eventId),
         id_tanggal: Number(tanggalId),
-        gate: gate.trim() || null,
       }),
     onSuccess: (response) => {
-      if (response.data) {
-        setResult({ kind: "valid", data: response.data });
+      if (!response.data) {
+        toast.error("Data peserta tidak ditemukan");
+        return;
       }
-      toast.success(response.message ?? "Check-in berhasil");
-      if (eventId !== "" && tanggalId !== "") {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.attendance(Number(eventId), Number(tanggalId)),
-        });
-      }
-      setManualUuid("");
+      setParticipant(response.data);
+      setIdentifier("");
+      setOnsiteAmount("");
+      setCameraActive(false);
     },
     onError: (error) => {
-      if (error instanceof ApiError) {
-        if (error.status === 409) {
-          const dup = error.data as CheckInDuplicate | undefined;
-          setResult({
-            kind: "duplicate",
-            firstScannedAt: dup?.first_scanned_at ?? null,
-            firstScannedBy: dup?.first_scanned_by ?? null,
-          });
-        } else if (error.status === 403) {
-          setResult({ kind: "invalid", message: "Tidak memiliki izin check-in" });
-        } else if (error.status === 404) {
-          setResult({ kind: "invalid", message: "Tiket tidak ditemukan" });
-        } else if (error.status === 422) {
-          setResult({ kind: "invalid", message: "Tiket atau tanggal kegiatan tidak valid" });
-        } else {
-          setResult({ kind: "invalid", message: "Gagal melakukan check-in" });
-        }
-      } else {
-        setResult({ kind: "invalid", message: "Gagal melakukan check-in" });
+      setParticipant(null);
+      if (error instanceof ApiError && error.status === 404) {
+        toast.error("Tiket atau peserta tidak ditemukan");
+        return;
       }
-      toast.error(error instanceof Error ? error.message : "Gagal check-in");
+      if (error instanceof ApiError && error.status === 422) {
+        toast.error("Tiket tidak berlaku untuk event atau tanggal ini");
+        return;
+      }
+      toast.error(error instanceof ApiError ? error.message : "Pencarian peserta gagal");
     },
   });
 
-  // Keep the QR scanner callback pointing at the latest submitter without
-  // restarting the camera whenever the closure changes.
-  const submitRef = useRef<(uuid: string) => boolean>(() => false);
-  submitRef.current = (uuid: string) => {
-    const trimmed = uuid.trim();
-    if (!trimmed || checkInMutation.isPending || eventId === "" || tanggalId === "") {
-      return false;
-    }
-    checkInMutation.mutate(trimmed);
+  const attendance = useMutation({
+    mutationFn: () => {
+      if (!participant) throw new Error("Peserta belum dipilih");
+      return checkIn({
+        ticket_uuid: participant.ticket.uuid,
+        id_tanggal: Number(tanggalId),
+        gate: gate.trim() || null,
+      });
+    },
+    onSuccess: (response) => {
+      const scannedAt = response.data?.attendance.scanned_at ?? new Date().toISOString();
+      setParticipant((current) =>
+        current
+          ? {
+              ...current,
+              ticket: { ...current.ticket, status: "checked_in" },
+              attendance: {
+                status: "present",
+                scanned_at: scannedAt,
+                scanned_by: response.data?.attendance.scanned_by ?? null,
+                gate: response.data?.attendance.gate ?? (gate.trim() || null),
+              },
+            }
+          : null,
+      );
+      invalidateAttendance();
+      toast.success(response.message ?? "Kehadiran berhasil dikonfirmasi");
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 409) {
+        const duplicate = error.data as CheckInDuplicate | undefined;
+        setParticipant((current) =>
+          current
+            ? {
+                ...current,
+                attendance: {
+                  ...current.attendance,
+                  status: "present",
+                  scanned_at: duplicate?.first_scanned_at ?? current.attendance.scanned_at,
+                  scanned_by: duplicate?.first_scanned_by ?? current.attendance.scanned_by,
+                },
+              }
+            : null,
+        );
+        toast.error("Peserta sudah hadir");
+        return;
+      }
+      toast.error(error instanceof ApiError ? error.message : "Konfirmasi kehadiran gagal");
+    },
+  });
+
+  const onsite = useMutation({
+    mutationFn: () => {
+      if (!participant) throw new Error("Peserta belum dipilih");
+      return admitScannerParticipantOnsite({
+        ticket_uuid: participant.ticket.uuid,
+        id_tanggal: Number(tanggalId),
+        gate: gate.trim() || null,
+        amount: Number(onsiteAmount),
+      });
+    },
+    onSuccess: (response) => {
+      if (response.data) setParticipant(response.data);
+      setOnsiteAmount("");
+      invalidateAttendance();
+      toast.success(response.message ?? "Pembayaran dan kehadiran berhasil disimpan");
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 409) {
+        toast.error(error.message || "Pembayaran atau kehadiran sudah tercatat");
+        return;
+      }
+      if (error instanceof ApiError && error.status === 422) {
+        toast.error(error.message || "Nominal pembayaran tidak valid");
+        return;
+      }
+      toast.error(error instanceof ApiError ? error.message : "Pembayaran onsite gagal disimpan");
+    },
+  });
+
+  function invalidateAttendance() {
+    if (!eventId || !tanggalId) return;
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.attendance(Number(eventId), Number(tanggalId)),
+    });
+  }
+
+  const submitRef = useRef<(value: string) => boolean>(() => false);
+  submitRef.current = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed || lookup.isPending || !eventId || !tanggalId) return false;
+    lookup.mutate(trimmed);
     return true;
   };
 
   useEffect(() => {
     if (!cameraActive || typeof window === "undefined") return;
-
     let disposed = false;
-    let scanner: { clear: () => void } | null = null;
+    let scanner: { clear: () => Promise<void> | void } | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
 
     async function start() {
-      const { Html5Qrcode } = await import("html5-qrcode");
-      if (disposed) return;
-
-      const instance = new Html5Qrcode("qr-reader");
-      scanner = instance;
-
       try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        if (disposed) return;
+        const instance = new Html5Qrcode("scanner-reader");
+        scanner = instance;
         await instance.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
+          { fps: 10, qrbox: { width: 260, height: 180 } },
           (decodedText) => {
-            if (submitRef.current(decodedText)) {
-              setCameraActive(false);
-            }
+            if (submitRef.current(decodedText)) setCameraActive(false);
           },
           () => undefined,
         );
-      } catch {
+        timeout = setTimeout(() => {
+          if (!disposed) {
+            setCameraError(
+              "Pemindaian belum menemukan kode. Arahkan QR/barcode dengan jelas atau gunakan input manual.",
+            );
+            setCameraActive(false);
+          }
+        }, 30000);
+      } catch (error) {
         if (!disposed) {
-          setCameraError("Kamera tidak dapat diakses — gunakan input manual.");
+          setCameraError(scannerError(error));
           setCameraActive(false);
         }
       }
     }
 
     void start();
-
     return () => {
       disposed = true;
-      if (scanner) {
-        try {
-          scanner.clear();
-        } catch {
-          // Already stopped — nothing to tear down.
-        }
-      }
+      if (timeout) clearTimeout(timeout);
+      if (scanner) void Promise.resolve(scanner.clear()).catch(() => undefined);
     };
   }, [cameraActive]);
 
-  function toggleCamera() {
-    if (cameraActive) {
-      setCameraActive(false);
-    } else {
-      setCameraError(null);
-      setResult({ kind: "idle" });
-      setCameraActive(true);
-    }
+  function reset() {
+    setParticipant(null);
+    setIdentifier("");
+    setOnsiteAmount("");
+    lookup.reset();
+    attendance.reset();
+    onsite.reset();
   }
 
-  function handleManualSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (checkInMutation.isPending) return;
-    submitRef.current(manualUuid);
-  }
-
-  function resetResult() {
-    setResult({ kind: "idle" });
-    setManualUuid("");
-  }
-
-  const ready = eventId !== "" && tanggalId !== "";
+  const ready = Boolean(eventId && tanggalId);
+  const isPaid = participant?.payment.status === "paid";
+  const isPresent = participant?.attendance.status === "present";
+  const canPayOnsite = participant?.payment.choice === "pay_at_venue" && !isPaid;
+  const onsiteAmountValid = Number.isInteger(Number(onsiteAmount)) && Number(onsiteAmount) > 0;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Check-In" description="Scan QR tiket untuk mencatat kehadiran peserta." />
+      <PageHeader
+        title="Scanner Peserta"
+        description="Pindai QR atau barcode, periksa peserta, lalu konfirmasi pembayaran dan kehadiran."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -210,13 +290,15 @@ function CheckInPage() {
           <CardContent>
             {events.isPending ? (
               <Skeleton className="h-10 w-full rounded-xl" />
+            ) : events.isError ? (
+              <p className="text-sm text-destructive">Event tidak dapat dimuat.</p>
             ) : (
               <Select
                 value={eventId}
                 onValueChange={(value) => {
                   setEventId(value);
                   setTanggalId("");
-                  setResult({ kind: "idle" });
+                  reset();
                 }}
               >
                 <SelectTrigger className="w-full">
@@ -240,16 +322,18 @@ function CheckInPage() {
             <CardDescription>Pilih hari kegiatan.</CardDescription>
           </CardHeader>
           <CardContent>
-            {eventId === "" ? (
+            {!eventId ? (
               <p className="py-2 text-sm text-muted-foreground">Pilih event terlebih dahulu.</p>
             ) : tanggal.isPending ? (
               <Skeleton className="h-10 w-full rounded-xl" />
+            ) : tanggal.isError ? (
+              <p className="text-sm text-destructive">Tanggal kegiatan tidak dapat dimuat.</p>
             ) : (
               <Select
                 value={tanggalId}
                 onValueChange={(value) => {
                   setTanggalId(value);
-                  setResult({ kind: "idle" });
+                  reset();
                 }}
               >
                 <SelectTrigger className="w-full">
@@ -271,19 +355,23 @@ function CheckInPage() {
         </Card>
       </div>
 
-      {ready ? (
+      {!ready ? (
+        <p className="text-sm text-muted-foreground">Pilih event dan tanggal untuk mulai.</p>
+      ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="font-display text-base">Pindai QR</CardTitle>
-              <CardDescription>Gunakan kamera atau ketik UUID tiket secara manual.</CardDescription>
+              <CardTitle className="font-display text-base">Pindai Tiket</CardTitle>
+              <CardDescription>
+                Kamera mendukung QR dan barcode. Input manual selalu tersedia.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex-1 space-y-1.5">
-                  <Label htmlFor="gate">Gate</Label>
+                  <Label htmlFor="scanner-gate">Gate</Label>
                   <Input
-                    id="gate"
+                    id="scanner-gate"
                     value={gate}
                     onChange={(event) => setGate(event.target.value)}
                     placeholder="Gate A"
@@ -293,7 +381,10 @@ function CheckInPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={toggleCamera}
+                  onClick={() => {
+                    setCameraError(null);
+                    setCameraActive((active) => !active);
+                  }}
                   className="rounded-full"
                 >
                   {cameraActive ? <XCircle aria-hidden /> : <Camera aria-hidden />}
@@ -303,41 +394,55 @@ function CheckInPage() {
 
               {cameraActive ? (
                 <div
-                  id="qr-reader"
-                  className="mx-auto aspect-square max-w-sm overflow-hidden rounded-2xl border border-border"
+                  id="scanner-reader"
+                  className="mx-auto aspect-video max-w-md overflow-hidden rounded-2xl border border-border"
                 />
               ) : null}
 
-              {cameraError ? <p className="text-sm text-destructive">{cameraError}</p> : null}
+              {cameraError ? (
+                <div
+                  className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+                  role="alert"
+                >
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  <p>{cameraError}</p>
+                </div>
+              ) : null}
 
-              <form onSubmit={handleManualSubmit} className="flex items-end gap-3">
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  submitRef.current(identifier);
+                }}
+                className="flex items-end gap-3"
+              >
                 <div className="relative flex-1">
                   <QrCode
                     className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
                     aria-hidden
                   />
-                  <Label htmlFor="manual-uuid" className="sr-only">
-                    UUID tiket
+                  <Label htmlFor="scanner-identifier" className="sr-only">
+                    Identifier tiket
                   </Label>
                   <Input
-                    id="manual-uuid"
-                    value={manualUuid}
-                    onChange={(event) => setManualUuid(event.target.value)}
+                    id="scanner-identifier"
+                    value={identifier}
+                    onChange={(event) => setIdentifier(event.target.value)}
                     className="font-mono pl-10"
-                    placeholder="UUID tiket…"
+                    placeholder="QR, barcode, atau UUID tiket…"
                   />
                 </div>
                 <Button
                   type="submit"
-                  disabled={!manualUuid.trim() || checkInMutation.isPending}
+                  disabled={!identifier.trim() || lookup.isPending}
                   className="rounded-full"
                 >
-                  {checkInMutation.isPending ? (
+                  {lookup.isPending ? (
                     <Loader2 className="animate-spin" aria-hidden />
                   ) : (
                     <ScanLine aria-hidden />
                   )}
-                  Check-in
+                  Cari
                 </Button>
               </form>
             </CardContent>
@@ -345,119 +450,131 @@ function CheckInPage() {
 
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="font-display text-base">Hasil</CardTitle>
-              <CardDescription>Status scan tiket.</CardDescription>
+              <CardTitle className="font-display text-base">Peserta</CardTitle>
+              <CardDescription>Scan tidak otomatis mencatat kehadiran.</CardDescription>
             </CardHeader>
             <CardContent>
-              {result.kind === "idle" ? (
+              {!participant ? (
                 <p className="py-6 text-sm text-muted-foreground">
-                  Pindai atau ketik UUID tiket untuk mulai.
+                  Pindai tiket untuk melihat data peserta.
                 </p>
-              ) : null}
-
-              {result.kind === "valid" ? (
-                <div className="space-y-4">
-                  <Badge className="bg-emerald-600 text-white">
-                    <CheckCircle2 className="size-3.5" aria-hidden />
-                    Valid — Check-in berhasil
-                  </Badge>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="flex items-center gap-2">
-                      <UserRound className="size-4 text-muted-foreground" aria-hidden />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">Peserta</p>
-                        <p className="truncate font-medium">
-                          {result.data.participant?.name ?? "—"}
-                        </p>
-                        <p className="font-mono text-xs text-muted-foreground">
-                          {result.data.participant?.id_anggota ?? "—"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Ticket className="size-4 text-muted-foreground" aria-hidden />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">Nomor Tiket</p>
-                        <p className="truncate font-mono font-medium">
-                          {result.data.ticket.nomor_ticket}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">Event</p>
-                        <p className="truncate font-medium">{result.data.event.event_name}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Clock className="size-4 text-muted-foreground" aria-hidden />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">Waktu Check-in</p>
-                        <p className="truncate font-medium">
-                          {formatDateTime(result.data.attendance.scanned_at)}
-                        </p>
-                      </div>
-                    </div>
+              ) : (
+                <div className="space-y-5">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant={isPaid ? "default" : "outline"}>
+                      Pembayaran: {isPaid ? "Lunas" : "Belum Bayar"}
+                    </Badge>
+                    <Badge variant={isPresent ? "default" : "secondary"}>
+                      Kehadiran: {isPresent ? "Hadir" : "Belum Hadir"}
+                    </Badge>
                   </div>
 
-                  <Button variant="outline" onClick={resetResult} className="rounded-full">
+                  <dl className="grid gap-4 text-sm sm:grid-cols-2">
+                    <Detail label="Nama" value={participant.participant.name} />
+                    <Detail label="Nomor Anggota" value={participant.participant.id_anggota} mono />
+                    <Detail label="Event" value={participant.event.event_name} />
+                    <Detail label="Nomor Tiket" value={participant.ticket.nomor_ticket} mono />
+                    <Detail
+                      label="Metode Pembayaran"
+                      value={
+                        participant.payment.choice === "pay_at_venue"
+                          ? "Bayar di tempat"
+                          : "Bayar sekarang"
+                      }
+                    />
+                    <Detail label="Nominal" value={amount(participant.payment.amount)} />
+                    {participant.payment.source ? (
+                      <Detail label="Sumber" value={participant.payment.source} />
+                    ) : null}
+                    {participant.payment.paid_at ? (
+                      <Detail label="Dibayar" value={formatDateTime(participant.payment.paid_at)} />
+                    ) : null}
+                    {isPresent ? (
+                      <Detail
+                        label="Waktu Hadir"
+                        value={formatDateTime(participant.attendance.scanned_at)}
+                      />
+                    ) : null}
+                  </dl>
+
+                  {isPresent ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+                      <CheckCircle2 className="size-4" aria-hidden />
+                      Peserta sudah hadir. Tidak ada kehadiran baru yang dibuat.
+                    </div>
+                  ) : canPayOnsite ? (
+                    <div className="space-y-3 rounded-xl border p-4">
+                      <div>
+                        <Label htmlFor="onsite-amount">Nominal pembayaran onsite</Label>
+                        <Input
+                          id="onsite-amount"
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          step={1}
+                          value={onsiteAmount}
+                          onChange={(event) => setOnsiteAmount(event.target.value)}
+                          className="mt-2"
+                        />
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Backend memvalidasi nominal terhadap harga registrasi.
+                        </p>
+                      </div>
+                      <Button
+                        className="w-full rounded-full"
+                        disabled={!onsiteAmount || !onsiteAmountValid || onsite.isPending}
+                        onClick={() => onsite.mutate()}
+                      >
+                        {onsite.isPending ? (
+                          <Loader2 className="animate-spin" aria-hidden />
+                        ) : (
+                          <Banknote aria-hidden />
+                        )}
+                        Simpan Pembayaran dan Kehadiran
+                      </Button>
+                    </div>
+                  ) : isPaid ? (
+                    <Button
+                      className="w-full rounded-full"
+                      disabled={attendance.isPending}
+                      onClick={() => attendance.mutate()}
+                    >
+                      {attendance.isPending ? (
+                        <Loader2 className="animate-spin" aria-hidden />
+                      ) : (
+                        <CheckCircle2 aria-hidden />
+                      )}
+                      Konfirmasi Hadir
+                    </Button>
+                  ) : (
+                    <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                      Pembayaran belum lunas. Kehadiran belum dapat dikonfirmasi.
+                    </p>
+                  )}
+
+                  <Button variant="outline" className="rounded-full" onClick={reset}>
                     <RotateCcw aria-hidden />
                     Scan berikutnya
                   </Button>
                 </div>
-              ) : null}
-
-              {result.kind === "duplicate" ? (
-                <div className="space-y-4">
-                  <Badge variant="secondary" className="bg-amber-500/15 text-amber-700">
-                    <XCircle className="size-3.5" aria-hidden />
-                    Duplikat — tiket sudah digunakan
-                  </Badge>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-muted-foreground">
-                      Pertama kali dipindai:{" "}
-                      <span className="font-medium text-foreground">
-                        {formatDateTime(result.firstScannedAt)}
-                      </span>
-                    </p>
-                    <p className="text-muted-foreground">
-                      Oleh petugas ID:{" "}
-                      <span className="font-mono font-medium text-foreground">
-                        {result.firstScannedBy ?? "—"}
-                      </span>
-                    </p>
-                  </div>
-                  <Button variant="outline" onClick={resetResult} className="rounded-full">
-                    <RotateCcw aria-hidden />
-                    Scan berikutnya
-                  </Button>
-                </div>
-              ) : null}
-
-              {result.kind === "invalid" ? (
-                <div className="space-y-4">
-                  <Badge variant="destructive">
-                    <XCircle className="size-3.5" aria-hidden />
-                    Tidak valid
-                  </Badge>
-                  <p className="text-sm text-muted-foreground">{result.message}</p>
-                  <Button variant="outline" onClick={resetResult} className="rounded-full">
-                    <RotateCcw aria-hidden />
-                    Coba lagi
-                  </Button>
-                </div>
-              ) : null}
+              )}
             </CardContent>
           </Card>
         </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">Pilih event dan tanggal untuk mulai.</p>
       )}
+    </div>
+  );
+}
+
+function Detail({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        {label}
+      </dt>
+      <dd className={mono ? "mt-1 break-words font-mono text-xs" : "mt-1 break-words font-medium"}>
+        {value || "—"}
+      </dd>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/features/events/event-card";
 import { PageHeader } from "@/features/dashboard/page-header";
 import { myOrdersQuery } from "@/services/queries";
-import type { Order, OrderStatus, PaymentStatus } from "@/types/api";
+import type { EventPaymentChoice, Order, OrderStatus, PaymentStatus } from "@/types/api";
 import { formatDateShort } from "@/services/public-content";
 
 export const Route = createFileRoute("/portal/orders/")({
@@ -41,6 +41,11 @@ const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   refund: "Refund",
 };
 
+const PAYMENT_CHOICE_LABEL: Record<EventPaymentChoice, string> = {
+  pay_now: "Bayar sekarang",
+  pay_at_venue: "Bayar di tempat",
+};
+
 function formatAmount(value: number | string): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
   return formatPrice(Number.isNaN(num) ? 0 : num);
@@ -63,8 +68,13 @@ function OrderCard({ order }: { order: Order }) {
               <CalendarDays className="size-4" aria-hidden />
               {order.event_start_at ? formatDateShort(order.event_start_at) : "Belum dijadwalkan"}
             </span>
+            <span>
+              Metode: {order.payment_choice ? PAYMENT_CHOICE_LABEL[order.payment_choice] : "—"}
+            </span>
             <span>Pembayaran: {PAYMENT_STATUS_LABEL[order.payment_status]}</span>
-            <span className="font-medium text-foreground">{formatAmount(order.total_amount)}</span>
+            <span className="font-medium text-foreground">
+              {formatAmount(order.payment_amount ?? order.total_amount)}
+            </span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">

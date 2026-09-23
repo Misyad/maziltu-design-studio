@@ -12,7 +12,7 @@ const easing = [0.22, 1, 0.36, 1] as const;
 export function HomeHero() {
   const carousel = usePublicCarousel();
   const statistics = usePublicStatistics();
-  const heroImage = mediaUrl(carousel?.[0]?.foto) ?? IMAGES.hero.src;
+  const heroImage = mediaUrl(carousel.data[0]?.foto) ?? IMAGES.hero.src;
 
   return (
     <section className="relative isolate overflow-hidden">
@@ -72,17 +72,29 @@ export function HomeHero() {
           transition={{ duration: 0.7, delay: 0.25, ease: easing }}
           className="mt-16 grid max-w-3xl grid-cols-2 gap-x-8 gap-y-6 border-t border-white/20 pt-8 sm:grid-cols-4"
         >
-          {statistics.map((stat) => (
-            <div key={stat.label}>
-              <dt className="sr-only">{stat.label}</dt>
-              <dd>
-                <span className="block font-display text-2xl font-bold text-white sm:text-3xl">
-                  <AnimatedCounter value={stat.value} suffix="+" />
-                </span>
-                <span className="mt-1 block text-xs text-white/70 sm:text-sm">{stat.label}</span>
-              </dd>
+          {statistics.isPending ? (
+            <div className="col-span-full text-sm text-white/70" role="status">
+              Memuat statistik…
             </div>
-          ))}
+          ) : statistics.isError ? (
+            <div className="col-span-full text-sm text-white/70" role="alert">
+              Statistik belum dapat dimuat.
+            </div>
+          ) : statistics.data.length === 0 ? (
+            <div className="col-span-full text-sm text-white/70">Statistik belum tersedia.</div>
+          ) : (
+            statistics.data.map((stat) => (
+              <div key={stat.label}>
+                <dt className="sr-only">{stat.label}</dt>
+                <dd>
+                  <span className="block font-display text-2xl font-bold text-white sm:text-3xl">
+                    <AnimatedCounter value={stat.value} suffix="+" />
+                  </span>
+                  <span className="mt-1 block text-xs text-white/70 sm:text-sm">{stat.label}</span>
+                </dd>
+              </div>
+            ))
+          )}
         </motion.dl>
       </div>
     </section>

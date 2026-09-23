@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Printer } from "lucide-react";
+import { Printer, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
 import { KTA_PRINT_AREA_ID, PhysicalKtaCard } from "@/features/dashboard/physical-kta-card";
-import { KTA_QUEUE_ROLES, requireRoles } from "@/lib/auth";
+import { KTA_QUEUE_ROLES, MEMBER_ADMIN_ROLES, requireRoles } from "@/lib/auth";
 import { canViewKtaCards, isVerifier } from "@/lib/roles";
 import { ApiError } from "@/services/api-client";
 import { updateKtaPrintStatus } from "@/services/mzt-api";
@@ -55,13 +55,7 @@ const STATUS_LABEL: Record<KtaPrintStatus, string> = {
 
 /** Queue reset (no explicit status) → production statuses only. */
 const QUEUE_VALUE = "queue";
-const PRINTABLE_STATUSES = new Set<KtaPrintStatus>([
-  "menunggu_cetak",
-  "sudah_dicetak",
-  "siap_diambil",
-  "dikirim",
-  "selesai",
-]);
+const PRINTABLE_STATUSES = new Set<KtaPrintStatus>(["menunggu_cetak", "sudah_dicetak", "selesai"]);
 const RUPIAH = new Intl.NumberFormat("id-ID", {
   style: "currency",
   currency: "IDR",
@@ -78,6 +72,8 @@ export function KtaQueuePage() {
   const [printing, setPrinting] = useState<KtaPrintRequestAdminRow | null>(null);
   const canManage = isVerifier(currentUser.data?.roles);
   const canPrint = canViewKtaCards(currentUser.data?.roles);
+  const canManageSettings =
+    currentUser.data?.roles?.some((role) => MEMBER_ADMIN_ROLES.includes(role)) ?? false;
   const perPage = 15;
 
   const queue = useQuery(
@@ -106,12 +102,7 @@ export function KtaQueuePage() {
       return [{ label: "Tandai Sudah Dicetak", status: "sudah_dicetak" }];
     }
     if (row.status === "sudah_dicetak") {
-      return row.delivery_method === "pickup"
-        ? [{ label: "Siap Diambil", status: "siap_diambil" }]
-        : [{ label: "Dikirim", status: "dikirim" }];
-    }
-    if (row.status === "siap_diambil" || row.status === "dikirim") {
-      return [{ label: "Selesai", status: "selesai" }];
+      return [{ label: "Tandai Selesai", status: "selesai" }];
     }
     return [];
   }
@@ -135,6 +126,16 @@ export function KtaQueuePage() {
       <PageHeader
         title="Cetak KTA Fisik"
         description="Antrean cetak KTA fisik — pembayaran dikonfirmasi otomatis melalui Paymenku."
+        actions={
+          canManageSettings ? (
+            <Button asChild variant="outline" className="rounded-full">
+              <Link to="/dashboard/kta/settings">
+                <Settings2 aria-hidden />
+                Pengaturan Harga
+              </Link>
+            </Button>
+          ) : undefined
+        }
       />
 
       <Card>
@@ -200,7 +201,7 @@ export function KtaQueuePage() {
                       <th className="px-4 py-2 text-left">No. Anggota</th>
                       <th className="px-4 py-2 text-left">Referensi</th>
                       <th className="px-4 py-2 text-left">Pembayaran</th>
-                      <th className="px-4 py-2 text-left">Metode</th>
+                      <th className="px-4 py-2 text-left">Nominal</th>
                       <th className="px-4 py-2 text-left">Status</th>
                       <th className="px-4 py-2 text-right">Aksi</th>
                     </tr>
@@ -216,8 +217,10 @@ export function KtaQueuePage() {
                             {row.payment_status}
                           </Badge>
                         </td>
-                        <td className="px-4 py-2 capitalize">
-                          {row.delivery_method === "pickup" ? "Diambil" : "Dikirim"}
+                        <td className="px-4 py-2">
+                          {row.payment_amount === null
+                            ? "—"
+                            : RUPIAH.format(Number(row.payment_amount))}
                         </td>
                         <td className="px-4 py-2">{STATUS_LABEL[row.status]}</td>
                         <td className="px-4 py-2 text-right">
@@ -402,23 +405,33 @@ function KtaDetailDialog({
         ) : (
           <div className="space-y-5 text-sm">
             <dl className="grid gap-4 sm:grid-cols-2">
-              <DetailField label="Metode pengiriman">
-                {data.delivery_method === "pickup" ? "Diambil" : "Dikirim"}
-              </DetailField>
               <DetailField label="Status pembayaran">{data.payment_status}</DetailField>
-              <DetailField label="Nominal pembayaran">
+              <DetailField label="Harga KTA">
+                {data.base_amount == null ? "—" : RUPIAH.format(Number(data.base_amount))}
+              </DetailField>
+              <DetailField label="Biaya gateway">
+                {data.gateway_fee == null ? "—" : RUPIAH.format(Number(data.gateway_fee))}
+              </DetailField>
+              <DetailField label="Total pembayaran">
                 {data.payment_amount === null ? "—" : RUPIAH.format(Number(data.payment_amount))}
               </DetailField>
               <DetailField label="Status cetak">{STATUS_LABEL[data.status]}</DetailField>
-              {data.delivery_method === "delivery" && (
+              {data.delivery_method ? (
+                <DetailField label="Metode penerimaan lama">
+                  {data.delivery_method === "pickup" ? "Diambil" : "Dikirim"}
+                </DetailField>
+              ) : null}
+              {data.delivery_method === "delivery" ? (
                 <>
-                  <DetailField label="Nama penerima">{data.recipient_name || "—"}</DetailField>
-                  <DetailField label="Nomor HP penerima">{data.recipient_phone || "—"}</DetailField>
-                  <DetailField label="Alamat pengiriman" className="sm:col-span-2">
+                  <DetailField label="Nama penerima lama">{data.recipient_name || "—"}</DetailField>
+                  <DetailField label="Nomor HP penerima lama">
+                    {data.recipient_phone || "—"}
+                  </DetailField>
+                  <DetailField label="Alamat pengiriman lama" className="sm:col-span-2">
                     {data.shipping_address || "—"}
                   </DetailField>
                 </>
-              )}
+              ) : null}
               {data.notes && (
                 <DetailField label="Catatan" className="sm:col-span-2">
                   {data.notes}

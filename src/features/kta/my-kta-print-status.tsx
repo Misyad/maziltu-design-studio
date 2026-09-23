@@ -1,11 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Clock3, CreditCard, PackageCheck } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  Loader2,
+  PackageCheck,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { myKtaPrintRequestQuery } from "@/services/queries";
+import { toast } from "sonner";
+import { ApiError } from "@/services/api-client";
+import { createMyKtaPrintRequest } from "@/services/mzt-api";
+import { myKtaPrintRequestQuery, queryKeys } from "@/services/queries";
 import type { KtaPrintStatus, MyKtaPrintRequest } from "@/types/api";
 
 const STATUS_LABELS: Record<KtaPrintStatus, string> = {
@@ -36,13 +46,13 @@ const rupiah = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 0,
 });
 
-function formatAmount(value: number | string | null): string | null {
-  if (value === null) return null;
+function formatAmount(value: number | string | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
   const amount = typeof value === "string" ? Number(value) : value;
   return Number.isFinite(amount) ? rupiah.format(amount) : null;
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
@@ -64,7 +74,18 @@ function StatusCardShell({ children }: { children: React.ReactNode }) {
 }
 
 export function MyKtaPrintStatus() {
+  const queryClient = useQueryClient();
   const query = useQuery(myKtaPrintRequestQuery());
+  const create = useMutation({
+    mutationFn: createMyKtaPrintRequest,
+    onSuccess: (request) => {
+      queryClient.setQueryData(queryKeys.myKtaPrintRequest, request);
+      toast.success("Pengajuan KTA dibuat");
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : "Pengajuan KTA gagal dibuat");
+    },
+  });
 
   if (query.isPending) {
     return (
@@ -122,12 +143,19 @@ export function MyKtaPrintStatus() {
             <div>
               <p className="font-semibold">Belum ada pengajuan KTA fisik</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Verifikasi keanggotaan untuk mengajukan pencetakan kartu.
+                Ajukan pencetakan kartu langsung dari akun anggota Anda.
               </p>
             </div>
           </div>
-          <Button asChild variant="outline" className="w-full shrink-0 rounded-full sm:w-auto">
-            <a href="/cek-kta">Ajukan KTA Fisik</a>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full shrink-0 rounded-full sm:w-auto"
+            disabled={create.isPending}
+            onClick={() => create.mutate()}
+          >
+            {create.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            Ajukan KTA Fisik
           </Button>
         </CardContent>
       </StatusCardShell>
@@ -138,6 +166,8 @@ export function MyKtaPrintStatus() {
 }
 
 function ExistingRequest({ request }: { request: MyKtaPrintRequest }) {
+  const baseAmount = formatAmount(request.base_amount);
+  const gatewayFee = formatAmount(request.gateway_fee);
   const amount = formatAmount(request.payment_amount);
   const latePayment =
     request.status === "pembayaran_expired" &&
@@ -153,7 +183,7 @@ function ExistingRequest({ request }: { request: MyKtaPrintRequest }) {
           <div className="min-w-0">
             <CardTitle className="font-display text-lg">Status KTA Fisik Saya</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Pantau pembayaran, pencetakan, dan penyerahan kartu Anda.
+              Pantau pembayaran dan proses pencetakan kartu Anda.
             </p>
           </div>
         </div>
@@ -169,31 +199,49 @@ function ExistingRequest({ request }: { request: MyKtaPrintRequest }) {
       </CardHeader>
 
       <CardContent className="space-y-5 px-5 pb-5 sm:px-6 sm:pb-6">
-        <dl className="grid min-w-0 gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid min-w-0 gap-4 text-sm sm:grid-cols-3">
           <Detail label="Referensi" value={request.reference} mono />
-          <Detail
-            label="Metode penerimaan"
-            value={request.delivery_method === "pickup" ? "Diambil" : "Dikirim"}
-          />
           <Detail label="Diajukan" value={formatDate(request.submitted_at)} />
           <Detail label="Terakhir diperbarui" value={formatDate(request.updated_at)} />
         </dl>
 
-        {(amount || (request.status === "menunggu_pembayaran" && request.pay_url)) && (
-          <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Total pembayaran
-              </p>
-              <p className="mt-1 font-display text-lg font-semibold">{amount ?? "—"}</p>
-            </div>
-            {request.status === "menunggu_pembayaran" && request.pay_url && (
-              <Button asChild className="w-full rounded-full sm:w-auto">
+        {request.delivery_method ? (
+          <p className="text-xs text-muted-foreground">
+            Data lama — metode penerimaan:{" "}
+            {request.delivery_method === "pickup" ? "diambil" : "dikirim"}.
+          </p>
+        ) : null}
+
+        {(baseAmount ||
+          gatewayFee ||
+          amount ||
+          (request.status === "menunggu_pembayaran" && request.pay_url)) && (
+          <div className="rounded-xl border border-border/60 bg-surface p-4">
+            <dl className="space-y-2 text-sm">
+              {baseAmount ? (
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-muted-foreground">Harga KTA</dt>
+                  <dd className="font-medium">{baseAmount}</dd>
+                </div>
+              ) : null}
+              {gatewayFee ? (
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-muted-foreground">Biaya gateway</dt>
+                  <dd className="font-medium">{gatewayFee}</dd>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between gap-4 border-t border-border/60 pt-2">
+                <dt className="font-semibold">Total pembayaran</dt>
+                <dd className="font-display font-semibold">{amount ?? "—"}</dd>
+              </div>
+            </dl>
+            {request.status === "menunggu_pembayaran" && request.pay_url ? (
+              <Button asChild className="mt-4 w-full rounded-full sm:w-auto">
                 <a href={request.pay_url} target="_blank" rel="noreferrer noopener">
                   Bayar Sekarang
                 </a>
               </Button>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -240,9 +288,6 @@ function LifecycleTimeline({ request }: { request: MyKtaPrintRequest }) {
     { label: "Diajukan", at: request.submitted_at },
     { label: "Dibayar", at: request.paid_at },
     { label: "Dicetak", at: request.printed_at },
-    request.delivery_method === "pickup"
-      ? { label: "Siap diambil", at: request.ready_at }
-      : { label: "Dikirim", at: request.shipped_at },
     { label: "Selesai", at: request.completed_at },
     ...(request.rejected_at ? [{ label: "Ditolak", at: request.rejected_at }] : []),
   ];

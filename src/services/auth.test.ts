@@ -30,10 +30,23 @@ async function loadFreshModules() {
   const ApiError = (await import("@/services/api-client")).ApiError;
   const ensureCsrfToken = (await import("@/services/api-client")).ensureCsrfToken;
   const IS_SERVER = (await import("@/services/api-client")).IS_SERVER;
+  const memberAccountActivationEnabled = (await import("@/services/api-client"))
+    .memberAccountActivationEnabled;
+  const memberApplicationsEnabled = (await import("@/services/api-client"))
+    .memberApplicationsEnabled;
   const mzt = await import("@/services/mzt-api");
   // Same axios instance the freshly loaded modules closed over.
   const axiosInstance = (await import("axios")).default;
-  return { apiClient, ApiError, ensureCsrfToken, IS_SERVER, axios: axiosInstance, ...mzt };
+  return {
+    apiClient,
+    ApiError,
+    ensureCsrfToken,
+    IS_SERVER,
+    memberAccountActivationEnabled,
+    memberApplicationsEnabled,
+    axios: axiosInstance,
+    ...mzt,
+  };
 }
 
 /** Capture everything the real XHR adapter hands to setRequestHeader(). */
@@ -67,6 +80,25 @@ describe("R3 browser auth — no personal access token persistence", () => {
   beforeEach(() => {
     window.localStorage.clear();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps onboarding entry points disabled unless explicitly enabled", async () => {
+    vi.stubEnv("VITE_MEMBER_ACCOUNT_ACTIVATION_ENABLED", "false");
+    vi.stubEnv("VITE_MEMBER_APPLICATIONS_ENABLED", "false");
+    const { memberAccountActivationEnabled, memberApplicationsEnabled } = await loadFreshModules();
+
+    expect(memberAccountActivationEnabled()).toBe(false);
+    expect(memberApplicationsEnabled()).toBe(false);
+  });
+
+  it("enables onboarding entry points only for explicit true flags", async () => {
+    vi.stubEnv("VITE_MEMBER_ACCOUNT_ACTIVATION_ENABLED", "true");
+    vi.stubEnv("VITE_MEMBER_APPLICATIONS_ENABLED", "true");
+    const { memberAccountActivationEnabled, memberApplicationsEnabled } = await loadFreshModules();
+
+    expect(memberAccountActivationEnabled()).toBe(true);
+    expect(memberApplicationsEnabled()).toBe(true);
   });
 
   it("never writes the legacy `mzt.token` key during login", async () => {
@@ -170,6 +202,48 @@ describe("R3 browser auth — no personal access token persistence", () => {
       interceptor?.rejected?.(
         axiosError(428, { authCheck: true }, { code: "PASSWORD_CHANGE_REQUIRED" }),
       ),
+    ).rejects.toBeTruthy();
+
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  it("redirects account setup responses to the setup wizard", async () => {
+    const { apiClient } = await loadFreshModules();
+    const assignSpy = stubLocation("/dashboard");
+    const interceptor = apiClient.interceptors.response.handlers?.[0];
+    const error = axiosError(
+      428,
+      { authCheck: false },
+      { code: "ACCOUNT_SETUP_REQUIRED", message: "Complete account setup." },
+    );
+
+    await expect(interceptor?.rejected?.(error)).rejects.toBe(error);
+
+    expect(assignSpy).toHaveBeenCalledOnce();
+    expect(assignSpy).toHaveBeenCalledWith("/account/setup");
+  });
+
+  it("keeps applicant authentication failures out of the member login flow", async () => {
+    const { apiClient } = await loadFreshModules();
+    const assignSpy = stubLocation("/pendaftar");
+    const interceptor = apiClient.interceptors.response.handlers?.[0];
+
+    await expect(
+      interceptor?.rejected?.(axiosError(401, { authCheck: false, url: "/applicant/application" })),
+    ).rejects.toBeTruthy();
+
+    expect(assignSpy).toHaveBeenCalledOnce();
+    expect(assignSpy).toHaveBeenCalledWith("/pendaftar/login");
+    expect(assignSpy).not.toHaveBeenCalledWith("/login");
+  });
+
+  it("does not redirect member requests from the applicant portal to member login", async () => {
+    const { apiClient } = await loadFreshModules();
+    const assignSpy = stubLocation("/pendaftar");
+    const interceptor = apiClient.interceptors.response.handlers?.[0];
+
+    await expect(
+      interceptor?.rejected?.(axiosError(401, { authCheck: false, url: "/user" })),
     ).rejects.toBeTruthy();
 
     expect(assignSpy).not.toHaveBeenCalled();

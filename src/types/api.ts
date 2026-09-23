@@ -14,6 +14,7 @@ export interface ApiEnvelope<T> {
 export type AppRole =
   | "dashboard"
   | "anggota"
+  | "profil"
   | "event"
   | "berita"
   | "tampilan"
@@ -52,6 +53,7 @@ export interface AuthUser {
   data?: UserProfileData | null;
   /** Phase 1 — force a password change on first login. */
   must_change_password?: boolean;
+  account_setup_required?: boolean;
 }
 
 export interface AccountResetAuditItem {
@@ -73,7 +75,6 @@ export interface AccountResetAudit {
 }
 
 export interface AccountResetResult {
-  temporary_password: "mzt1234";
   must_change_password: true;
 }
 
@@ -265,6 +266,11 @@ export type OrderStatus =
 
 /** Payment status (mirrors app/Enums/PaymentStatus.php). */
 export type PaymentStatus = "pending" | "waiting_verification" | "paid" | "rejected" | "refund";
+export type EventPaymentChoice = "pay_now" | "pay_at_venue";
+
+export interface EventRegistrationRequest {
+  payment_choice: EventPaymentChoice;
+}
 
 /** Shape of an `orders` row (Phase 2A — root aggregate of EMS). */
 export interface Order {
@@ -281,6 +287,10 @@ export interface Order {
   total_amount: number | string;
   status_registrasi: OrderStatus;
   payment_status: PaymentStatus;
+  payment_choice?: EventPaymentChoice;
+  payment_amount?: number | string | null;
+  payment_source?: string | null;
+  paid_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -372,6 +382,49 @@ export interface CheckInDuplicate {
   first_scanned_by: number | null;
 }
 
+export type ScannerAttendanceStatus = "not_present" | "present";
+
+export interface ScannerLookupRequest {
+  identifier: string;
+  id_event: number;
+  id_tanggal: number;
+}
+
+export interface ScannerLookupResult {
+  ticket: {
+    id: number;
+    uuid: string;
+    nomor_ticket: string;
+    status: TicketStatus;
+  };
+  participant: {
+    id: number;
+    id_anggota: string;
+    name: string;
+  };
+  event: {
+    id_event: number;
+    event_name: string;
+  };
+  payment: {
+    choice: EventPaymentChoice;
+    status: PaymentStatus;
+    amount: number | string | null;
+    source: string | null;
+    paid_at: string | null;
+  };
+  attendance: {
+    status: ScannerAttendanceStatus;
+    scanned_at: string | null;
+    scanned_by: number | null;
+    gate: string | null;
+  };
+}
+
+export interface OnsiteAdmissionRequest extends CheckInRequest {
+  amount: number;
+}
+
 export interface TransactionRecord {
   id: number;
   id_anggota: string;
@@ -421,6 +474,76 @@ export interface ContactRequest {
   pesan: string;
 }
 
+export interface AccountActivationCheckRequest {
+  name: string;
+  tanggal_lahir: string;
+}
+
+export interface AccountActivationVerifyRequest {
+  challenge_token: string;
+  tempat_lahir: string;
+  tahun_masuk: string;
+}
+
+export interface AccountActivationResult {
+  challenge_token?: string;
+  id_anggota?: string;
+}
+
+export type MemberApplicationStatus =
+  "pending_email" | "submitted" | "under_review" | "approved" | "rejected";
+
+export interface MemberApplicationDuplicate {
+  id_users?: number;
+  id_anggota?: string;
+  name: string;
+  tanggal_lahir: string;
+  no_hp?: string | null;
+}
+
+export interface MemberApplication {
+  uuid: string;
+  application_number?: string;
+  name: string;
+  email: string;
+  no_hp: string;
+  alamat: string;
+  pekerjaan: string;
+  niqobah: string;
+  tempat_lahir: string;
+  tanggal_lahir: string;
+  tahun_masuk: string;
+  tahun_keluar: string;
+  foto: string | null;
+  status: MemberApplicationStatus;
+  id_anggota?: string | null;
+  rejection_reason?: string | null;
+  possible_duplicates?: MemberApplicationDuplicate[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ApplicantUser {
+  email: string;
+  application: MemberApplication;
+}
+
+export interface ApplicantLoginRequest {
+  email: string;
+  application_number: string;
+}
+
+export interface ApplicantLoginResponse {
+  success: boolean;
+  message?: string;
+  applicant?: ApplicantUser;
+  data?: { applicant?: ApplicantUser; application?: MemberApplication };
+}
+
+export interface MemberApplicationsResponse {
+  applications: MemberApplication[];
+}
+
 /* ------------------------------------------------------------ portal (Phase 1) */
 
 /** Shape of GET /api/profile (Portal Alumni). */
@@ -453,6 +576,11 @@ export interface ProfileUpdateRequest {
 /** Payload for PUT /password. */
 export interface PasswordChangeRequest {
   current_password: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface AccountSetupCompleteRequest {
   password: string;
   password_confirmation: string;
 }
@@ -613,7 +741,13 @@ export interface PaymentItem {
     payment_status: string;
     event?: { id: number; judul_event: string; slug: string } | null;
   } | null;
-  proofs: { id: number; id_payment: number; file_path: string; original_name: string | null; file_size: number | null }[];
+  proofs: {
+    id: number;
+    id_payment: number;
+    file_path: string;
+    original_name: string | null;
+    file_size: number | null;
+  }[];
 }
 
 export interface VerificationQueueParams {
@@ -723,10 +857,7 @@ export interface KtaManualReviewResult {
   message: string;
 }
 
-export type KtaVerifyResponse =
-  | KtaVerifiedResult
-  | KtaChallengeResult
-  | KtaManualReviewResult;
+export type KtaVerifyResponse = KtaVerifiedResult | KtaChallengeResult | KtaManualReviewResult;
 
 /* ---------------------------------- Physical KTA print request (v3.0) */
 
@@ -742,36 +873,40 @@ export type KtaPrintStatus =
 
 export type KtaDeliveryMethod = "pickup" | "delivery";
 
+export interface KtaPaymentBreakdown {
+  base_amount?: number | string | null;
+  gateway_fee?: number | string | null;
+  payment_amount: number | string | null;
+}
+
 /** Public projection of a print request (masked identity, no raw PII). */
-export interface KtaPrintRequest {
+export interface KtaPrintRequest extends KtaPaymentBreakdown {
   id: number;
   reference: string;
   status: KtaPrintStatus;
-  delivery_method: KtaDeliveryMethod;
+  delivery_method?: KtaDeliveryMethod | null;
   payment_status: string;
-  payment_amount: number | string | null;
   pay_url: string | null;
   submitted_at: string | null;
   paid_at: string | null;
   printed_at: string | null;
-  ready_at: string | null;
-  shipped_at: string | null;
+  ready_at?: string | null;
+  shipped_at?: string | null;
   completed_at: string | null;
   rejection_reason: string | null;
 }
 
-export interface MyKtaPrintRequest {
+export interface MyKtaPrintRequest extends KtaPaymentBreakdown {
   reference: string;
   status: KtaPrintStatus;
-  delivery_method: KtaDeliveryMethod;
+  delivery_method?: KtaDeliveryMethod | null;
   payment_status: string;
-  payment_amount: number | string | null;
   pay_url: string | null;
   submitted_at: string | null;
   paid_at: string | null;
   printed_at: string | null;
-  ready_at: string | null;
-  shipped_at: string | null;
+  ready_at?: string | null;
+  shipped_at?: string | null;
   completed_at: string | null;
   rejected_at: string | null;
   updated_at: string | null;
@@ -787,22 +922,17 @@ export interface MyKtaPrintRequestResponse {
 
 export interface KtaPrintRequestCreate {
   print_token: string;
-  delivery_method: KtaDeliveryMethod;
-  recipient_name?: string;
-  recipient_phone?: string;
-  shipping_address?: string;
 }
 
 /** Admin queue row — masked identity only. */
-export interface KtaPrintRequestAdminRow {
+export interface KtaPrintRequestAdminRow extends KtaPaymentBreakdown {
   id: number;
   reference: string;
   nama_masked: string;
   id_anggota_masked: string;
   status: KtaPrintStatus;
-  delivery_method: KtaDeliveryMethod;
+  delivery_method?: KtaDeliveryMethod | null;
   payment_status: string;
-  payment_amount: number | string | null;
   submitted_at: string | null;
   updated_at: string | null;
 }
@@ -817,11 +947,30 @@ export interface KtaPrintRequestAuditLog {
 }
 
 export interface KtaPrintRequestAdminDetail extends KtaPrintRequestAdminRow {
-  recipient_name: string | null;
-  recipient_phone: string | null;
-  shipping_address: string | null;
+  recipient_name?: string | null;
+  recipient_phone?: string | null;
+  shipping_address?: string | null;
   notes: string | null;
   logs: KtaPrintRequestAuditLog[];
+}
+
+export interface KtaPriceSetting {
+  amount: number;
+  updated_at: string | null;
+  updated_by?: string | null;
+}
+
+export interface KtaPriceHistoryItem {
+  id: number;
+  old_amount: number;
+  new_amount: number;
+  actor: string | null;
+  created_at: string;
+}
+
+export interface KtaPriceSettingsResponse {
+  setting: KtaPriceSetting;
+  history: KtaPriceHistoryItem[];
 }
 
 export interface KtaPrintRequestQueueResponse {

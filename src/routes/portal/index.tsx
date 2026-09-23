@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CalendarDays, Newspaper } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarDays, CalendarX, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EventCard } from "@/features/events/event-card";
 import { NewsCard } from "@/features/news/news-card";
@@ -102,11 +104,27 @@ function PortalHome() {
               <CalendarDays className="size-5 text-primary" aria-hidden />
               <h2 className="font-display text-lg font-semibold">Event Terdekat</h2>
             </div>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              {events.slice(0, 2).map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
+            {events.isPending ? (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2" role="status">
+                <Skeleton className="h-72 rounded-3xl" />
+                <Skeleton className="h-72 rounded-3xl" />
+              </div>
+            ) : events.isError ? (
+              <EmptyState
+                className="mt-3 py-8"
+                icon={AlertTriangle}
+                title="Event gagal dimuat"
+                action={<Button onClick={events.refetch}>Coba lagi</Button>}
+              />
+            ) : events.data.length === 0 ? (
+              <EmptyState className="mt-3 py-8" icon={CalendarX} title="Belum ada event" />
+            ) : (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                {events.data.slice(0, 2).map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            )}
           </section>
 
           <section>
@@ -114,11 +132,27 @@ function PortalHome() {
               <Newspaper className="size-5 text-primary" aria-hidden />
               <h2 className="font-display text-lg font-semibold">Berita Terbaru</h2>
             </div>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              {news.slice(0, 2).map((item) => (
-                <NewsCard key={item.id} item={item} />
-              ))}
-            </div>
+            {news.isPending ? (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2" role="status">
+                <Skeleton className="h-72 rounded-3xl" />
+                <Skeleton className="h-72 rounded-3xl" />
+              </div>
+            ) : news.isError ? (
+              <EmptyState
+                className="mt-3 py-8"
+                icon={AlertTriangle}
+                title="Berita gagal dimuat"
+                action={<Button onClick={news.refetch}>Coba lagi</Button>}
+              />
+            ) : news.data.length === 0 ? (
+              <EmptyState className="mt-3 py-8" icon={Newspaper} title="Belum ada berita" />
+            ) : (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                {news.data.slice(0, 2).map((item) => (
+                  <NewsCard key={item.id} item={item} />
+                ))}
+              </div>
+            )}
           </section>
         </div>
       </div>

@@ -1,8 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, Loader2, MapPin, Ticket } from "lucide-react";
+import {
+  ArrowLeft,
+  Banknote,
+  CalendarDays,
+  CreditCard,
+  Loader2,
+  MapPin,
+  Ticket,
+} from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/features/events/event-card";
 import { mediaUrl } from "@/services/api-client";
@@ -10,6 +21,7 @@ import { registerEvent } from "@/services/mzt-api";
 import { eventStatus, formatDateShort, parsePrice } from "@/services/public-content";
 import { currentUserQuery, myOrdersQuery, publicEventQuery } from "@/services/queries";
 import { cn } from "@/lib/utils";
+import type { EventPaymentChoice } from "@/types/api";
 
 export const Route = createFileRoute("/events/$id")({
   head: () => ({
@@ -166,6 +178,7 @@ const REGISTER_ERROR: Record<number, string> = {
 
 function RegisterPanel({ eventId, isPrivate }: { eventId: number; isPrivate: boolean }) {
   const queryClient = useQueryClient();
+  const [paymentChoice, setPaymentChoice] = useState<EventPaymentChoice>("pay_now");
   // Session probe on a public page — the query is `authCheck`-flagged so an
   // anonymous visitor gets a clean 401 instead of a hard redirect to /login.
   const { data: user } = useQuery(currentUserQuery());
@@ -178,7 +191,7 @@ function RegisterPanel({ eventId, isPrivate }: { eventId: number; isPrivate: boo
   const alreadyRegistered = (orders ?? []).some((order) => order.id_event === eventId);
 
   const mutation = useMutation({
-    mutationFn: () => registerEvent(eventId),
+    mutationFn: () => registerEvent(eventId, paymentChoice),
     onSuccess: (payload) => {
       queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       toast.success(payload?.message ?? "Registration successful");
@@ -223,13 +236,57 @@ function RegisterPanel({ eventId, isPrivate }: { eventId: number; isPrivate: boo
   }
 
   return (
-    <Button
-      className="mt-6 w-full rounded-full"
-      onClick={() => mutation.mutate()}
-      disabled={mutation.isPending}
-    >
-      {mutation.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-      Register now
-    </Button>
+    <div className="mt-6 space-y-4">
+      <div>
+        <p className="text-sm font-semibold">Pilih pembayaran</p>
+        <RadioGroup
+          value={paymentChoice}
+          onValueChange={(value) => setPaymentChoice(value as EventPaymentChoice)}
+          className="mt-3"
+          disabled={mutation.isPending}
+        >
+          <Label
+            htmlFor="pay-now"
+            className={cn(
+              "flex cursor-pointer items-start gap-3 rounded-xl border p-3",
+              paymentChoice === "pay_now" && "border-primary bg-primary-soft",
+            )}
+          >
+            <RadioGroupItem id="pay-now" value="pay_now" className="mt-0.5" />
+            <CreditCard className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+            <span>
+              <span className="block text-sm font-medium">Bayar Sekarang</span>
+              <span className="block text-xs text-muted-foreground">
+                Selesaikan pembayaran sebelum datang.
+              </span>
+            </span>
+          </Label>
+          <Label
+            htmlFor="pay-at-venue"
+            className={cn(
+              "flex cursor-pointer items-start gap-3 rounded-xl border p-3",
+              paymentChoice === "pay_at_venue" && "border-primary bg-primary-soft",
+            )}
+          >
+            <RadioGroupItem id="pay-at-venue" value="pay_at_venue" className="mt-0.5" />
+            <Banknote className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+            <span>
+              <span className="block text-sm font-medium">Bayar di Tempat</span>
+              <span className="block text-xs text-muted-foreground">
+                Petugas mencatat pembayaran saat kedatangan.
+              </span>
+            </span>
+          </Label>
+        </RadioGroup>
+      </div>
+      <Button
+        className="w-full rounded-full"
+        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending}
+      >
+        {mutation.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+        Daftar event
+      </Button>
+    </div>
   );
 }

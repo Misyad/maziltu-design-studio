@@ -1,10 +1,11 @@
-import { createFileRoute, Link, Outlet, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   BadgeCheck,
   CalendarDays,
   ClipboardCheck,
+  ClipboardList,
   Gauge,
   LayoutDashboard,
   LogOut,
@@ -70,13 +71,22 @@ import {
   MEMBER_ADMIN_ROLES,
   STAFF_ROLES,
   requireRoles,
+  requireUser,
 } from "@/lib/auth";
 import { homePathFor } from "@/lib/roles";
 import { ORG } from "@/constants/content";
 
 export const Route = createFileRoute("/dashboard")({
-  beforeLoad: ({ context, location }) =>
-    requireRoles(context.queryClient, DASHBOARD_ROLES, location.href),
+  ssr: false,
+  beforeLoad: async ({ context, location }) => {
+    const user = await requireUser(context.queryClient, location.href);
+    const roles = user.roles ?? [];
+    if (roles.some((role) => DASHBOARD_ROLES.includes(role))) return user;
+    if (roles.includes("anggota") || roles.includes("profil")) {
+      throw redirect({ to: "/portal", replace: true });
+    }
+    return requireRoles(context.queryClient, DASHBOARD_ROLES, location.href);
+  },
   component: DashboardLayout,
 });
 
@@ -104,6 +114,12 @@ const NAV_ITEMS: readonly NavItem[] = [
     roles: STAFF_ROLES,
   },
   { to: "/dashboard/operations", label: "Operasional", icon: Gauge, roles: STAFF_ROLES },
+  {
+    to: "/dashboard/members/registrations",
+    label: "Pendaftaran",
+    icon: ClipboardList,
+    roles: MEMBER_ADMIN_ROLES,
+  },
   { to: "/dashboard/members", label: "Members", icon: Users, roles: STAFF_ROLES },
   { to: "/dashboard/events", label: "Events", icon: CalendarDays, roles: STAFF_ROLES },
   {
@@ -112,7 +128,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     icon: QrCode,
     roles: ATTENDANCE_ROUTE_ROLES,
   },
-  { to: "/dashboard/checkin", label: "Check-In", icon: ScanLine, roles: CHECKIN_ROLES },
+  { to: "/dashboard/scanner", label: "Check-In", icon: ScanLine, roles: CHECKIN_ROLES },
   { to: "/dashboard/news", label: "News", icon: Newspaper, roles: STAFF_ROLES },
   { to: "/dashboard/transactions", label: "Transactions", icon: ReceiptText, roles: FINANCE_ROLES },
   { to: "/dashboard/activity", label: "Activity", icon: Activity, roles: FINANCE_ROLES },

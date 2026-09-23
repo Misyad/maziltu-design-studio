@@ -60,7 +60,7 @@ describe("KtaPrintRequestBlock", () => {
     expect(screen.queryByTestId("kta-print-open")).not.toBeInTheDocument();
   });
 
-  it("submits a pickup request without address fields", async () => {
+  it("submits only the print token", async () => {
     const user = userEvent.setup();
     vi.spyOn(apiClient, "get").mockResolvedValue({
       data: { success: true, data: { request: null } },
@@ -79,25 +79,7 @@ describe("KtaPrintRequestBlock", () => {
 
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(post.mock.calls[0]?.[0]).toBe("/public/kta/print-request");
-    expect(post.mock.calls[0]?.[1]).toMatchObject({
-      print_token: TOKEN,
-      delivery_method: "pickup",
-    });
-  });
-
-  it("delivery mode reveals the address fields", async () => {
-    const user = userEvent.setup();
-    vi.spyOn(apiClient, "get").mockResolvedValue({
-      data: { success: true, data: { request: null } },
-    } as never);
-
-    renderBlock(<KtaPrintRequestBlock printToken={TOKEN} status="active" />);
-
-    await user.click(await screen.findByTestId("kta-print-open"));
-    expect(screen.queryByLabelText("Alamat pengiriman")).not.toBeInTheDocument();
-
-    await user.click(screen.getByTestId("kta-print-delivery"));
-    expect(screen.getByLabelText("Alamat pengiriman")).toBeInTheDocument();
+    expect(post.mock.calls[0]?.[1]).toEqual({ print_token: TOKEN });
   });
 
   it("shows an existing request status with a payment link instead of the form", async () => {
@@ -163,11 +145,11 @@ describe("KtaPrintRequestBlock", () => {
         success: true,
         data: {
           request: pendingRequest({
-            status: "siap_diambil",
+            status: "selesai",
             payment_status: "paid",
             paid_at: "2026-09-16T01:00:00Z",
             printed_at: "2026-09-17T02:00:00Z",
-            ready_at: "2026-09-17T03:00:00Z",
+            completed_at: "2026-09-17T03:00:00Z",
           }),
         },
       },
@@ -179,6 +161,6 @@ describe("KtaPrintRequestBlock", () => {
     expect(timeline).toHaveTextContent("Diajukan");
     expect(timeline).toHaveTextContent("Dibayar");
     expect(timeline).toHaveTextContent("Dicetak");
-    expect(timeline).toHaveTextContent("Siap diambil");
+    expect(timeline).toHaveTextContent("Selesai");
   });
 });

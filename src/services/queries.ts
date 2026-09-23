@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import {
   fetchAccountResetAudit,
   fetchActivityLog,
+  fetchApplicantMe,
   fetchAttendance,
   fetchAttendanceSummary,
   fetchCarousel,
@@ -16,8 +17,10 @@ import {
   fetchGateMonitoring,
   fetchIdCard,
   fetchMember,
+  fetchMemberApplication,
   fetchMemberRoleTargets,
   fetchMemberRoles,
+  fetchMemberApplications,
   fetchMembers,
   fetchMe,
   fetchMyKtaPrintRequest,
@@ -53,6 +56,7 @@ import {
   fetchKtaCards,
   fetchKtaCard,
   fetchKtaPrintRequestCard,
+  fetchKtaPriceSettings,
 } from "@/services/mzt-api";
 import type { AuditTimelineParams, VerificationQueueParams } from "@/types/api";
 import type {
@@ -64,6 +68,9 @@ import type {
 
 export const queryKeys = {
   currentUser: ["current-user"] as const,
+  applicantMe: ["applicant", "me"] as const,
+  memberApplications: ["member-applications"] as const,
+  memberApplication: (uuid: string) => ["member-applications", uuid] as const,
   me: ["me"] as const,
   dashboardStats: ["dashboard", "stats"] as const,
   dashboardCalendar: ["dashboard", "calendar"] as const,
@@ -116,7 +123,25 @@ export const currentUserQuery = () =>
   queryOptions({
     queryKey: queryKeys.currentUser,
     queryFn: fetchCurrentUser,
-    retry: 0, // unauthenticated probes must fail fast (no 3x retry on 401)
+    retry: 0,
+  });
+
+export const applicantMeQuery = () =>
+  queryOptions({ queryKey: queryKeys.applicantMe, queryFn: fetchApplicantMe, retry: 0 });
+
+export const memberApplicationsQuery = () =>
+  queryOptions({
+    queryKey: queryKeys.memberApplications,
+    queryFn: fetchMemberApplications,
+    retry: 0,
+  });
+
+export const memberApplicationQuery = (uuid: string) =>
+  queryOptions({
+    queryKey: queryKeys.memberApplication(uuid),
+    queryFn: () => fetchMemberApplication(uuid),
+    enabled: Boolean(uuid),
+    retry: 0,
   });
 
 export const dashboardStatsQuery = () =>
@@ -299,7 +324,10 @@ export const orderQuery = (uuid: string) =>
   queryOptions({ queryKey: queryKeys.order(uuid), queryFn: () => fetchOrder(uuid) });
 
 export const myTicketQuery = (orderUuid: string) =>
-  queryOptions({ queryKey: ["tickets", "my", orderUuid] as const, queryFn: () => fetchMyTicket(orderUuid) });
+  queryOptions({
+    queryKey: ["tickets", "my", orderUuid] as const,
+    queryFn: () => fetchMyTicket(orderUuid),
+  });
 
 export const ticketQuery = (uuid: string) =>
   queryOptions({ queryKey: ["tickets", uuid] as const, queryFn: () => fetchTicket(uuid) });
@@ -318,7 +346,10 @@ export const verificationQueueQuery = (params: VerificationQueueParams) =>
   });
 
 export const paymentDetailQuery = (uuid: string) =>
-  queryOptions({ queryKey: queryKeysVerification.paymentDetail(uuid), queryFn: () => fetchPaymentDetail(uuid) });
+  queryOptions({
+    queryKey: queryKeysVerification.paymentDetail(uuid),
+    queryFn: () => fetchPaymentDetail(uuid),
+  });
 
 export const queryKeysAuditTimeline = (params: AuditTimelineParams) =>
   ["audit-timeline", params] as const;
@@ -336,15 +367,16 @@ export const queryKeysKtaPrint = {
   own: (printToken: string) => ["kta-print", "own", printToken] as const,
   queue: (params: {
     status?: string | null;
-    delivery_method?: string | null;
     q?: string | null;
     page?: number | null;
     per_page?: number | null;
   }) => ["kta-print", "queue", params] as const,
   detail: (id: number | string) => ["kta-print", "detail", id] as const,
+  settings: ["kta-print", "settings"] as const,
   cards: ["kta-print", "cards"] as const,
   card: (idUsers: number | string) => ["kta-print", "cards", idUsers] as const,
-  requestCard: (requestId: number | string) => ["kta-print", "requests", requestId, "card"] as const,
+  requestCard: (requestId: number | string) =>
+    ["kta-print", "requests", requestId, "card"] as const,
 };
 
 export const ktaPrintOwnQuery = (printToken: string) =>
@@ -356,7 +388,6 @@ export const ktaPrintOwnQuery = (printToken: string) =>
 
 export const ktaPrintQueueQuery = (params: {
   status?: string | null;
-  delivery_method?: string | null;
   q?: string | null;
   page?: number | null;
   per_page?: number | null;
@@ -388,5 +419,12 @@ export const ktaPrintRequestCardQuery = (requestId: number | string) =>
   queryOptions({
     queryKey: queryKeysKtaPrint.requestCard(requestId),
     queryFn: () => fetchKtaPrintRequestCard(requestId),
+    retry: 0,
+  });
+
+export const ktaPriceSettingsQuery = () =>
+  queryOptions({
+    queryKey: queryKeysKtaPrint.settings,
+    queryFn: fetchKtaPriceSettings,
     retry: 0,
   });

@@ -13,6 +13,14 @@ export const API_BASE_URL =
 export const SSR_API_BASE_URL =
   (import.meta.env["SSR_API_BASE_URL"] as string | undefined) ?? API_BASE_URL;
 
+export function memberAccountActivationEnabled(): boolean {
+  return import.meta.env["VITE_MEMBER_ACCOUNT_ACTIVATION_ENABLED"] !== "false";
+}
+
+export function memberApplicationsEnabled(): boolean {
+  return import.meta.env["VITE_MEMBER_APPLICATIONS_ENABLED"] !== "false";
+}
+
 /**
  * True when this module is evaluated inside a server (Node/Nitro) runtime.
  * `typeof window` diverges between the browser and the server bundle, so this
@@ -34,6 +42,15 @@ const LEGACY_TOKEN_KEY = "mzt.token";
 export interface AuthCheckConfig extends AxiosRequestConfig {
   /** When true, a 401 response is left to the caller (no /login redirect). */
   authCheck?: boolean;
+}
+
+function requestPath(error: AxiosError): string {
+  const url = error.config?.url ?? "";
+  try {
+    return new URL(url, API_ORIGIN).pathname.replace(/^\/api(?=\/)/, "");
+  } catch {
+    return url;
+  }
 }
 
 function responseCode(error: AxiosError): string | undefined {
@@ -77,16 +94,35 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     if (typeof window !== "undefined") {
       const isProbe = (error.config as AuthCheckConfig | undefined)?.authCheck;
+      const path = requestPath(error);
+      const isApplicantRequest = path.startsWith("/applicant/");
+      const isApplicantPage = window.location.pathname.startsWith("/pendaftar");
       if (error.response?.status === 401) {
-        window.localStorage.removeItem(LEGACY_TOKEN_KEY);
-        if (!isProbe && !window.location.pathname.startsWith("/login")) {
+        if (!isApplicantRequest) window.localStorage.removeItem(LEGACY_TOKEN_KEY);
+        if (!isProbe && isApplicantRequest && window.location.pathname !== "/pendaftar/login") {
+          window.location.assign("/pendaftar/login");
+        } else if (
+          !isProbe &&
+          !isApplicantRequest &&
+          !isApplicantPage &&
+          !window.location.pathname.startsWith("/login")
+        ) {
           window.location.assign("/login");
         }
       }
       if (
         error.response?.status === 428 &&
+        responseCode(error) === "ACCOUNT_SETUP_REQUIRED" &&
+        !isProbe &&
+        !isApplicantRequest &&
+        window.location.pathname.replace(/\/+$/, "") !== "/account/setup"
+      ) {
+        window.location.assign("/account/setup");
+      } else if (
+        error.response?.status === 428 &&
         responseCode(error) === "PASSWORD_CHANGE_REQUIRED" &&
         !isProbe &&
+        !isApplicantRequest &&
         window.location.pathname.replace(/\/+$/, "") !== "/portal/ubah-password"
       ) {
         window.location.assign("/portal/ubah-password");
@@ -217,7 +253,10 @@ export async function apiPost<T>(url: string, body?: unknown): Promise<T> {
 /** PUT returning the raw envelope (some Phase 1 endpoints use PUT). */
 export async function apiPutRaw<T>(url: string, body?: unknown): Promise<T> {
   try {
-    const response = await apiClient.put<T>(url, body);
+    const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+    const response = isFormData
+      ? await apiClient.put<T>(url, body, { headers: { "Content-Type": "multipart/form-data" } })
+      : await apiClient.put<T>(url, body);
     return response.data;
   } catch (error) {
     throw toApiError(error);

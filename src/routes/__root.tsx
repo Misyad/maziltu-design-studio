@@ -131,6 +131,8 @@ function RootComponent() {
       return (
         pathname.startsWith("/dashboard") ||
         pathname.startsWith("/portal") ||
+        pathname.startsWith("/account") ||
+        pathname.startsWith("/pendaftar") ||
         pathname.startsWith("/login")
       );
     },

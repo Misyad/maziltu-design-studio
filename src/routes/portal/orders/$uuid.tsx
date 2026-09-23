@@ -15,7 +15,7 @@ import { ApiError } from "@/services/api-client";
 import { downloadTicketPdf, uploadPayment } from "@/services/mzt-api";
 import { myTicketQuery, orderQuery, queryKeys } from "@/services/queries";
 import { formatDateShort } from "@/services/public-content";
-import type { OrderStatus, PaymentStatus, TicketStatus } from "@/types/api";
+import type { EventPaymentChoice, OrderStatus, PaymentStatus, TicketStatus } from "@/types/api";
 
 export const Route = createFileRoute("/portal/orders/$uuid")({
   component: PortalOrderDetail,
@@ -38,6 +38,11 @@ const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   refund: "Refund",
 };
 
+const PAYMENT_CHOICE_LABEL: Record<EventPaymentChoice, string> = {
+  pay_now: "Bayar sekarang",
+  pay_at_venue: "Bayar di tempat",
+};
+
 const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
   draft: "Draft",
   issued: "Tersedia",
@@ -47,7 +52,15 @@ const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
   revoked: "Dibatalkan",
 };
 
-function PaymentUploadForm({ orderUuid, paymentStatus }: { orderUuid: string; paymentStatus: PaymentStatus }) {
+function PaymentUploadForm({
+  orderUuid,
+  paymentStatus,
+  paymentChoice,
+}: {
+  orderUuid: string;
+  paymentStatus: PaymentStatus;
+  paymentChoice: EventPaymentChoice | undefined;
+}) {
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
 
@@ -72,6 +85,22 @@ function PaymentUploadForm({ orderUuid, paymentStatus }: { orderUuid: string; pa
     },
   });
 
+  if (paymentChoice === "pay_at_venue" && paymentStatus !== "paid") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Pembayaran di Tempat</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Badge variant="outline">Belum bayar</Badge>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Tunjukkan tiket kepada petugas. Nominal dan pembayaran dicatat saat kedatangan.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (paymentStatus === "waiting_verification") {
     return (
       <Card>
@@ -80,7 +109,9 @@ function PaymentUploadForm({ orderUuid, paymentStatus }: { orderUuid: string; pa
         </CardHeader>
         <CardContent>
           <p className="text-sm font-medium">Menunggu verifikasi</p>
-          <p className="text-xs text-muted-foreground">Bukti pembayaran telah diunggah dan sedang diverifikasi oleh finance.</p>
+          <p className="text-xs text-muted-foreground">
+            Bukti pembayaran telah diunggah dan sedang diverifikasi oleh finance.
+          </p>
         </CardContent>
       </Card>
     );
@@ -111,7 +142,9 @@ function PaymentUploadForm({ orderUuid, paymentStatus }: { orderUuid: string; pa
         </CardHeader>
         <CardContent className="space-y-4">
           {paymentStatus === "rejected" && (
-            <p className="text-sm text-destructive">Pembayaran sebelumnya ditolak. Silakan unggah bukti baru.</p>
+            <p className="text-sm text-destructive">
+              Pembayaran sebelumnya ditolak. Silakan unggah bukti baru.
+            </p>
           )}
           <div className="space-y-2">
             <Label htmlFor="payment_proof">Bukti Pembayaran (JPG, PNG, PDF, max 5 MB)</Label>
@@ -240,19 +273,45 @@ function PortalOrderDetail() {
           </div>
           <div>
             <dt className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Metode Pembayaran
+            </dt>
+            <dd className="mt-1 font-medium">
+              {order.payment_choice ? PAYMENT_CHOICE_LABEL[order.payment_choice] : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               Pembayaran
             </dt>
             <dd className="mt-1 font-medium">{PAYMENT_STATUS_LABEL[order.payment_status]}</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Total
+              Nominal
             </dt>
             <dd className="mt-1 inline-flex items-center gap-1.5 font-semibold">
               <Ticket className="size-4 text-primary" aria-hidden />
-              {formatAmount(order.total_amount)}
+              {formatAmount(order.payment_amount ?? order.total_amount)}
             </dd>
           </div>
+          {order.payment_source ? (
+            <div>
+              <dt className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Sumber Pembayaran
+              </dt>
+              <dd className="mt-1 font-medium">{order.payment_source}</dd>
+            </div>
+          ) : null}
+          {order.paid_at ? (
+            <div>
+              <dt className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Dibayar
+              </dt>
+              <dd className="mt-1 font-medium">
+                {new Date(order.paid_at).toLocaleString("id-ID")}
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               Nomor Order
@@ -262,7 +321,11 @@ function PortalOrderDetail() {
         </CardContent>
       </Card>
 
-      <PaymentUploadForm orderUuid={order.uuid} paymentStatus={order.payment_status} />
+      <PaymentUploadForm
+        orderUuid={order.uuid}
+        paymentStatus={order.payment_status}
+        paymentChoice={order.payment_choice}
+      />
 
       <Card>
         <CardHeader>
@@ -270,7 +333,13 @@ function PortalOrderDetail() {
             <QrCode className="size-4" aria-hidden />
             Tiket
             {ticket && (
-              <Badge variant={ticket.status === "revoked" || ticket.status === "cancelled" ? "outline" : "default"}>
+              <Badge
+                variant={
+                  ticket.status === "revoked" || ticket.status === "cancelled"
+                    ? "outline"
+                    : "default"
+                }
+              >
                 {TICKET_STATUS_LABEL[ticket.status]}
               </Badge>
             )}
@@ -296,7 +365,9 @@ function PortalOrderDetail() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Diterbitkan</p>
-                  <p className="text-xs">{ticket.issued_at ? formatDateShort(ticket.issued_at) : "—"}</p>
+                  <p className="text-xs">
+                    {ticket.issued_at ? formatDateShort(ticket.issued_at) : "—"}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -305,10 +376,14 @@ function PortalOrderDetail() {
                 </Button>
               </div>
               {(ticket.status === "revoked" || ticket.status === "cancelled") && (
-                <p className="text-xs text-destructive">Tiket dibatalkan dan tidak dapat digunakan untuk check-in.</p>
+                <p className="text-xs text-destructive">
+                  Tiket dibatalkan dan tidak dapat digunakan untuk check-in.
+                </p>
               )}
               {ticket.status === "finished" && (
-                <p className="text-xs text-muted-foreground">Tiket telah digunakan — kehadiran tercatat.</p>
+                <p className="text-xs text-muted-foreground">
+                  Tiket telah digunakan — kehadiran tercatat.
+                </p>
               )}
             </div>
           ) : ticketError ? (
