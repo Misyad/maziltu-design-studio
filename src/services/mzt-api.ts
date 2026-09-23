@@ -35,6 +35,7 @@ import type {
   LoginRequest,
   LoginResponse,
   Member,
+  MemberRoleManagement,
   NewsItem,
   OperationalEvent,
   OperationalSummary,
@@ -146,7 +147,12 @@ export const fetchGateMonitoring = (eventId: number | string, params?: GateMonit
 /* NOTE: detail / update / delete always key on `id_users`, never `id`. */
 
 export const fetchMembers = () => apiGet<Member[]>("/members");
+export const fetchMemberRoleTargets = () => apiGet<Member[]>("/members/role-targets");
 export const fetchMember = (idUsers: number | string) => apiGet<Member>(`/members/${idUsers}`);
+export const fetchMemberRoles = (idUsers: number | string) =>
+  apiGet<MemberRoleManagement>(`/members/${idUsers}/roles`);
+export const updateMemberRoles = (idUsers: number | string, roles: string[]) =>
+  apiPut<MemberRoleManagement>(`/members/${idUsers}/roles`, { roles });
 export const createMember = (form: FormData) => apiPost<Member>("/members", form);
 export const updateMember = (idUsers: number | string, form: FormData) =>
   apiPost<Member>(`/members/${idUsers}`, form);

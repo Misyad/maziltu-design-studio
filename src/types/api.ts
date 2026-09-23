@@ -209,6 +209,12 @@ export interface DashboardEvent {
   tanggal: string;
 }
 
+export interface MemberRoleManagement {
+  required_roles: string[];
+  assigned_roles: string[];
+  optional_roles: string[];
+}
+
 export interface Member {
   id: number;
   id_users: number;

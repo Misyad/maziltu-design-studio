@@ -16,6 +16,8 @@ import {
   fetchGateMonitoring,
   fetchIdCard,
   fetchMember,
+  fetchMemberRoleTargets,
+  fetchMemberRoles,
   fetchMembers,
   fetchMe,
   fetchMyKtaPrintRequest,
@@ -81,8 +83,10 @@ export const queryKeys = {
   gateMonitoring: (eventId: number | string, params: GateMonitoringParams) =>
     ["dashboard", "operations", "events", eventId, "gates", params] as const,
   members: ["members"] as const,
+  memberRoleTargets: ["members", "role-targets"] as const,
   accountResetAudit: ["members", "account-reset-audit"] as const,
   member: (idUsers: number | string) => ["members", idUsers] as const,
+  memberRoles: (idUsers: number | string) => ["members", idUsers, "roles"] as const,
   events: ["events"] as const,
   event: (id: number | string) => ["events", id] as const,
   eventTanggal: (id: number | string) => ["events", id, "tanggal"] as const,
@@ -173,6 +177,13 @@ export const gateMonitoringQuery = (eventId: number | string, params: GateMonito
 export const membersQuery = () =>
   queryOptions({ queryKey: queryKeys.members, queryFn: fetchMembers });
 
+export const memberRoleTargetsQuery = () =>
+  queryOptions({
+    queryKey: queryKeys.memberRoleTargets,
+    queryFn: fetchMemberRoleTargets,
+    retry: 0,
+  });
+
 export const accountResetAuditQuery = () =>
   queryOptions({
     queryKey: queryKeys.accountResetAudit,
@@ -182,6 +193,14 @@ export const accountResetAuditQuery = () =>
 
 export const memberQuery = (idUsers: number | string) =>
   queryOptions({ queryKey: queryKeys.member(idUsers), queryFn: () => fetchMember(idUsers) });
+
+export const memberRolesQuery = (idUsers: number | string) =>
+  queryOptions({
+    queryKey: queryKeys.memberRoles(idUsers),
+    queryFn: () => fetchMemberRoles(idUsers),
+    enabled: Boolean(idUsers),
+    retry: 0,
+  });
 
 export const eventsQuery = () => queryOptions({ queryKey: queryKeys.events, queryFn: fetchEvents });
 

@@ -28,6 +28,9 @@ interface DataTableProps<T> {
   search?: (row: T, query: string) => boolean;
   emptyState?: React.ReactNode;
   rowKey: (row: T) => string | number;
+  onRowSelect?: (row: T) => void;
+  rowSelectionLabel?: (row: T) => string;
+  selectedRowKey?: string | number | null;
   pageSize?: number;
   className?: string;
 }
@@ -39,6 +42,9 @@ export function DataTable<T>({
   search,
   emptyState,
   rowKey,
+  onRowSelect,
+  rowSelectionLabel,
+  selectedRowKey,
   pageSize = 10,
   className,
 }: DataTableProps<T>) {
@@ -143,15 +149,42 @@ export function DataTable<T>({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pageRows.map((row) => (
-                <TableRow key={rowKey(row)}>
-                  {columns.map((column) => (
-                    <TableCell key={column.key} className={column.className}>
-                      {column.cell(row)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
+              {pageRows.map((row) => {
+                const key = rowKey(row);
+                return (
+                  <TableRow
+                    key={key}
+                    data-state={selectedRowKey === key ? "selected" : undefined}
+                    className={onRowSelect ? "cursor-pointer" : undefined}
+                    onClick={(event) => {
+                      if (!onRowSelect) return;
+                      if (
+                        (event.target as HTMLElement).closest("button, a, input, select, textarea")
+                      ) {
+                        return;
+                      }
+                      onRowSelect(row);
+                    }}
+                  >
+                    {columns.map((column, index) => (
+                      <TableCell key={column.key} className={column.className}>
+                        {onRowSelect && index === 0 ? (
+                          <button
+                            type="button"
+                            className="-m-2 block w-[calc(100%+1rem)] p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={rowSelectionLabel?.(row) ?? "Select row"}
+                            onClick={() => onRowSelect(row)}
+                          >
+                            {column.cell(row)}
+                          </button>
+                        ) : (
+                          column.cell(row)
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
 
