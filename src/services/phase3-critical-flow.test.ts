@@ -65,11 +65,31 @@ describe("PHASE 3 — Critical Flow: contract & integration", () => {
         uuid: "ord-uuid",
         nomor_order: "ORD-1",
         status_registrasi: "registered" as const,
+        payment_choice: "pay_now",
+        payment_status: "pending",
       };
-      const raw = { success: true, message: "registered", data: order };
+      const payment = {
+        id: 10,
+        uuid: "payment-uuid",
+        nomor_payment: "PAY-1",
+        id_order: 1,
+        provider: "paymenku",
+        payment_url: "https://checkout.paymenku.com/pay/1",
+        base_amount: 100000,
+        gateway_fee: 2500,
+        gateway_total: 102500,
+        expires_at: "2026-09-25T10:00:00Z",
+        status: "pending" as const,
+        created_at: "2026-09-25T09:00:00Z",
+        updated_at: "2026-09-25T09:00:00Z",
+      };
+      const raw = {
+        success: true,
+        message: "registered",
+        data: { ...order, payment, checkout_error: null },
+      };
       const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue({ data: raw });
 
-      // apiPostRaw is used, so raw envelope is returned directly
       const res = await registerEvent(42, "pay_now");
       expect(postSpy).toHaveBeenCalledWith(
         "/events/42/register",
@@ -77,6 +97,25 @@ describe("PHASE 3 — Critical Flow: contract & integration", () => {
         expect.anything(),
       );
       expect(res).toEqual(raw);
+      expect(res.data?.payment).toEqual(payment);
+      expect(res.data?.checkout_error).toBeNull();
+    });
+
+    it("preserves nullable payment and checkout_error for venue registration", async () => {
+      const { registerEvent } = await import("@/services/mzt-api");
+      const raw = {
+        success: true,
+        data: {
+          uuid: "venue-order",
+          payment_choice: "pay_at_venue",
+          payment_status: "pending",
+          payment: null,
+          checkout_error: null,
+        },
+      };
+      vi.spyOn(apiClient, "post").mockResolvedValue({ data: raw });
+
+      await expect(registerEvent(42, "pay_at_venue")).resolves.toEqual(raw);
     });
 
     it("duplicate registration surfaces as ApiError 409", async () => {
@@ -102,6 +141,20 @@ describe("PHASE 3 — Critical Flow: contract & integration", () => {
       const order: Partial<Order> = { uuid: "a" } as Order;
       vi.spyOn(apiClient, "get").mockResolvedValueOnce({ data: envelope(order) });
       await expect(fetchOrder("a")).resolves.toEqual(order);
+    });
+
+    it("checkoutOrder posts idempotently to /orders/{uuid}/checkout and returns payment", async () => {
+      const { checkoutOrder } = await import("@/services/mzt-api");
+      const payment = {
+        provider: "paymenku",
+        payment_url: "https://paymenku.com/pay/1",
+        status: "pending",
+      };
+      const raw = { success: true, data: { payment } };
+      const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue({ data: raw });
+
+      await expect(checkoutOrder("order-uuid")).resolves.toEqual(raw);
+      expect(postSpy).toHaveBeenCalledWith("/orders/order-uuid/checkout", undefined, {});
     });
   });
 
@@ -306,7 +359,13 @@ describe("PHASE 3 — Critical Flow: contract & integration", () => {
         await import("@/services/mzt-api");
       const result: ScannerLookupResult = {
         ticket: { id: 1, uuid: "t1", nomor_ticket: "T-1", status: "issued" },
-        participant: { id: 1, id_anggota: "MZT001", name: "Anggota" },
+        participant: {
+          id: 1,
+          id_anggota: "MZT001",
+          name: "Anggota",
+          foto: null,
+          niqobah: "Malang",
+        },
         event: { id_event: 2, event_name: "Reuni" },
         payment: {
           choice: "pay_at_venue",
@@ -325,11 +384,27 @@ describe("PHASE 3 — Critical Flow: contract & integration", () => {
       const post = vi
         .spyOn(apiClient, "post")
         .mockResolvedValueOnce({ data: { success: true, data: result } })
+        .mockResolvedValueOnce({ data: { success: true, data: result } })
         .mockResolvedValueOnce({ data: { success: true, data: result } });
-      const lookupPayload = { identifier: "T-1", id_event: 2, id_tanggal: 3 };
+      const ticketLookupPayload = {
+        identifier: "T-1",
+        identifier_type: "ticket" as const,
+        id_event: 2,
+        id_tanggal: 3,
+      };
+      const memberLookupPayload = {
+        identifier: "001234",
+        identifier_type: "member_card" as const,
+        id_event: 2,
+        id_tanggal: 3,
+      };
       const onsitePayload = { ticket_uuid: "t1", id_tanggal: 3, gate: "A", amount: 25000 };
 
-      await expect(lookupScannerParticipant(lookupPayload)).resolves.toEqual({
+      await expect(lookupScannerParticipant(ticketLookupPayload)).resolves.toEqual({
+        success: true,
+        data: result,
+      });
+      await expect(lookupScannerParticipant(memberLookupPayload)).resolves.toEqual({
         success: true,
         data: result,
       });
@@ -337,8 +412,9 @@ describe("PHASE 3 — Critical Flow: contract & integration", () => {
         success: true,
         data: result,
       });
-      expect(post).toHaveBeenNthCalledWith(1, "/checkin/lookup", lookupPayload, {});
-      expect(post).toHaveBeenNthCalledWith(2, "/checkin/onsite", onsitePayload, {});
+      expect(post).toHaveBeenNthCalledWith(1, "/checkin/lookup", ticketLookupPayload, {});
+      expect(post).toHaveBeenNthCalledWith(2, "/checkin/lookup", memberLookupPayload, {});
+      expect(post).toHaveBeenNthCalledWith(3, "/checkin/onsite", onsitePayload, {});
     });
   });
 

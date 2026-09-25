@@ -265,11 +265,35 @@ export type OrderStatus =
   "draft" | "registered" | "confirmed" | "checked_in" | "finished" | "cancelled";
 
 /** Payment status (mirrors app/Enums/PaymentStatus.php). */
-export type PaymentStatus = "pending" | "waiting_verification" | "paid" | "rejected" | "refund";
+export type PaymentStatus =
+  | "pending"
+  | "waiting_verification"
+  | "paid"
+  | "rejected"
+  | "refund"
+  | "expired"
+  | "cancelled"
+  | "failed";
 export type EventPaymentChoice = "pay_now" | "pay_at_venue";
 
 export interface EventRegistrationRequest {
   payment_choice: EventPaymentChoice;
+}
+
+export interface EventGatewayPayment {
+  id: number;
+  uuid: string;
+  nomor_payment: string;
+  id_order: number;
+  provider: string;
+  payment_url: string | null;
+  base_amount: number | string;
+  gateway_fee: number | string;
+  gateway_total: number | string;
+  expires_at: string | null;
+  status: PaymentStatus;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Shape of an `orders` row (Phase 2A — root aggregate of EMS). */
@@ -293,6 +317,23 @@ export interface Order {
   paid_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface EventRegistrationData extends Order {
+  payment: EventGatewayPayment | null;
+  checkout_error: string | null;
+}
+
+export interface EventRegistrationResponse extends ApiEnvelope<EventRegistrationData> {
+  data?: EventRegistrationData;
+}
+
+export interface OrderCheckoutData {
+  payment: EventGatewayPayment;
+}
+
+export interface OrderCheckoutResponse extends ApiEnvelope<OrderCheckoutData> {
+  data?: OrderCheckoutData;
 }
 
 /** Attendance day for an event (Tanggal_event row). */
@@ -384,8 +425,11 @@ export interface CheckInDuplicate {
 
 export type ScannerAttendanceStatus = "not_present" | "present";
 
+export type ScannerIdentifierType = "ticket" | "member_card";
+
 export interface ScannerLookupRequest {
   identifier: string;
+  identifier_type: ScannerIdentifierType;
   id_event: number;
   id_tanggal: number;
 }
@@ -401,6 +445,8 @@ export interface ScannerLookupResult {
     id: number;
     id_anggota: string;
     name: string;
+    foto: string | null;
+    niqobah: string | null;
   };
   event: {
     id_event: number;

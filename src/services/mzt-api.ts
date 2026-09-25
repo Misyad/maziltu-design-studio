@@ -279,12 +279,14 @@ export const deleteEvent = (id: number | string) => apiDelete<unknown>(`/events/
    Backend replies with `{ success, message, data }` and non-2xx on rejection
    (409 duplicate / 403 closed / full), so callers must handle ApiError.status. */
 export const registerEvent = (id: number | string, paymentChoice: EventPaymentChoice) =>
-  apiPostRaw<{ success: boolean; message?: string; data?: Order }>(`/events/${id}/register`, {
+  apiPostRaw<import("@/types/api").EventRegistrationResponse>(`/events/${id}/register`, {
     payment_choice: paymentChoice,
   });
 
 export const fetchMyOrders = () => apiGet<Order[]>("/my-orders");
 export const fetchOrder = (uuid: string) => apiGet<Order>(`/orders/${uuid}`);
+export const checkoutOrder = (uuid: string) =>
+  apiPostRaw<import("@/types/api").OrderCheckoutResponse>(`/orders/${uuid}/checkout`);
 
 export const uploadPayment = (uuid: string, form: FormData) =>
   apiPostRaw<{ success: boolean; message?: string; data?: Order }>(`/orders/${uuid}/payment`, form);

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { TicketQr } from "@/features/tickets/ticket-qr";
 import { OPERATIONS_ROLES, requireRoles } from "@/lib/auth";
 import { ApiError } from "@/services/api-client";
 import { downloadTicketPdf, reissueTicket, revokeTicket } from "@/services/mzt-api";
@@ -111,13 +112,10 @@ function TicketDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
+          <TicketQr ticket={ticket} />
           <div>
             <p className="text-xs text-muted-foreground">UUID</p>
             <p className="font-mono text-xs">{ticket.uuid}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">QR Payload</p>
-            <p className="font-mono text-xs">{ticket.qr_payload}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Order</p>

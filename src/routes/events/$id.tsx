@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { safePaymenkuUrl } from "@/features/payments/payment";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -178,6 +179,7 @@ const REGISTER_ERROR: Record<number, string> = {
 
 function RegisterPanel({ eventId, isPrivate }: { eventId: number; isPrivate: boolean }) {
   const queryClient = useQueryClient();
+  const navigate = Route.useNavigate();
   const [paymentChoice, setPaymentChoice] = useState<EventPaymentChoice>("pay_now");
   // Session probe on a public page — the query is `authCheck`-flagged so an
   // anonymous visitor gets a clean 401 instead of a hard redirect to /login.
@@ -194,7 +196,39 @@ function RegisterPanel({ eventId, isPrivate }: { eventId: number; isPrivate: boo
     mutationFn: () => registerEvent(eventId, paymentChoice),
     onSuccess: (payload) => {
       queryClient.invalidateQueries({ queryKey: ["my-orders"] });
-      toast.success(payload?.message ?? "Registration successful");
+      const order = payload.data;
+      if (!order) {
+        toast.error("Pendaftaran berhasil, tetapi detail order tidak tersedia.");
+        return;
+      }
+
+      const goToOrder = () =>
+        navigate({ to: "/portal/orders/$uuid", params: { uuid: order.uuid } });
+      const checkoutUrl = safePaymenkuUrl(order.payment?.payment_url);
+      const amount = Number(order.total_amount);
+
+      if (
+        (order.payment_choice ?? paymentChoice) === "pay_now" &&
+        amount > 0 &&
+        !order.checkout_error &&
+        checkoutUrl
+      ) {
+        window.location.assign(checkoutUrl);
+        return;
+      }
+
+      if (order.checkout_error) {
+        toast.error(
+          "Pendaftaran berhasil, tetapi checkout belum dapat dimulai. Coba lagi dari order.",
+        );
+      } else if ((order.payment_choice ?? paymentChoice) === "pay_at_venue") {
+        toast.success("Pendaftaran berhasil. Pembayaran dilakukan di tempat.");
+      } else if (!Number.isFinite(amount) || amount <= 0) {
+        toast.success("Pendaftaran event gratis berhasil.");
+      } else {
+        toast.warning("Pendaftaran berhasil. Lanjutkan pembayaran dari detail order.");
+      }
+      void goToOrder();
     },
     onError: (error: unknown) => {
       const status = (error as { status?: number })?.status;

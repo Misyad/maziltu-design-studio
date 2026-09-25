@@ -7,8 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/features/events/event-card";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { PAYMENT_STATUS_LABEL } from "@/features/payments/payment";
 import { myOrdersQuery } from "@/services/queries";
-import type { EventPaymentChoice, Order, OrderStatus, PaymentStatus } from "@/types/api";
+import type { EventPaymentChoice, Order, OrderStatus } from "@/types/api";
 import { formatDateShort } from "@/services/public-content";
 
 export const Route = createFileRoute("/portal/orders/")({
@@ -31,14 +32,6 @@ const ORDER_STATUS_VARIANT: Record<OrderStatus, "outline" | "secondary" | "defau
   checked_in: "default",
   finished: "default",
   cancelled: "outline",
-};
-
-const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
-  pending: "Belum bayar",
-  waiting_verification: "Menunggu verifikasi",
-  paid: "Lunas",
-  rejected: "Ditolak",
-  refund: "Refund",
 };
 
 const PAYMENT_CHOICE_LABEL: Record<EventPaymentChoice, string> = {

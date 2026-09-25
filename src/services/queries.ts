@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { shouldPollOrderPayment } from "@/features/payments/payment";
 import {
   fetchAccountResetAudit,
   fetchActivityLog,
@@ -58,7 +59,7 @@ import {
   fetchKtaPrintRequestCard,
   fetchKtaPriceSettings,
 } from "@/services/mzt-api";
-import type { AuditTimelineParams, VerificationQueueParams } from "@/types/api";
+import type { AuditTimelineParams, PaymentStatus, VerificationQueueParams } from "@/types/api";
 import type {
   AttendanceParams,
   GateMonitoringParams,
@@ -321,11 +322,24 @@ export const myOrdersQuery = () =>
 
 /** PORTAL — single order by UUID (Phase 2A). */
 export const orderQuery = (uuid: string) =>
-  queryOptions({ queryKey: queryKeys.order(uuid), queryFn: () => fetchOrder(uuid) });
-
-export const myTicketQuery = (orderUuid: string) =>
   queryOptions({
-    queryKey: ["tickets", "my", orderUuid] as const,
+    queryKey: queryKeys.order(uuid),
+    queryFn: () => fetchOrder(uuid),
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
+    refetchInterval: (query) => {
+      const order = query.state.data;
+      return order &&
+        shouldPollOrderPayment(order.payment_status, order.payment_choice, order.total_amount)
+        ? 5_000
+        : false;
+    },
+  });
+
+export const myTicketQuery = (orderUuid: string, paymentStatus?: PaymentStatus) =>
+  queryOptions({
+    queryKey: ["tickets", "my", orderUuid, paymentStatus] as const,
     queryFn: () => fetchMyTicket(orderUuid),
   });
 

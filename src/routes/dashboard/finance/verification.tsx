@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { PAYMENT_STATUS_LABEL } from "@/features/payments/payment";
 import { FINANCE_ROLES, requireRoles } from "@/lib/auth";
 import { ApiError } from "@/services/api-client";
 import { fetchPaymentDetail, verifyPayment } from "@/services/mzt-api";
@@ -41,6 +42,9 @@ const STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
   { value: "rejected", label: "Ditolak" },
   { value: "pending", label: "Pending" },
   { value: "refund", label: "Refund" },
+  { value: "expired", label: "Kedaluwarsa" },
+  { value: "cancelled", label: "Dibatalkan" },
+  { value: "failed", label: "Gagal" },
 ];
 
 function VerificationQueuePage() {
@@ -156,8 +160,8 @@ function VerificationQueuePage() {
                         <td className="px-4 py-2 text-xs">{p.order?.event_name ?? "—"}</td>
                         <td className="px-4 py-2 text-right text-xs">{String(p.amount)}</td>
                         <td className="px-4 py-2">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {p.status.replace("_", " ")}
+                          <Badge variant="outline" className="text-xs">
+                            {PAYMENT_STATUS_LABEL[p.status]}
                           </Badge>
                         </td>
                         <td className="px-4 py-2 text-right">
@@ -284,8 +288,10 @@ function DetailDialog({
               </div>
               <div>
                 <p className="text-muted-foreground">Status</p>
-                <Badge variant="outline" className="capitalize">
-                  {detail.data?.payment.status}
+                <Badge variant="outline">
+                  {detail.data?.payment.status
+                    ? PAYMENT_STATUS_LABEL[detail.data.payment.status]
+                    : "—"}
                 </Badge>
               </div>
               <div>

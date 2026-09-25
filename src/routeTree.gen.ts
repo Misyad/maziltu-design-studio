@@ -55,6 +55,7 @@ import { Route as DashboardNewsIndexRouteImport } from './routes/dashboard/news/
 import { Route as DashboardOperationsIndexRouteImport } from './routes/dashboard/operations/index'
 import { Route as DashboardProfileIndexRouteImport } from './routes/dashboard/profile/index'
 import { Route as DashboardScannerIndexRouteImport } from './routes/dashboard/scanner/index'
+import { Route as DashboardScannerDisplayRouteImport } from './routes/dashboard/scanner/display'
 import { Route as DashboardTicketsIndexRouteImport } from './routes/dashboard/tickets/index'
 import { Route as DashboardTicketsUuidRouteImport } from './routes/dashboard/tickets/$uuid'
 import { Route as DashboardTransactionsIndexRouteImport } from './routes/dashboard/transactions/index'
@@ -302,6 +303,11 @@ const DashboardScannerIndexRoute = DashboardScannerIndexRouteImport.update({
   path: '/scanner/',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const DashboardScannerDisplayRoute = DashboardScannerDisplayRouteImport.update({
+  id: '/scanner/display',
+  path: '/scanner/display',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 const DashboardTicketsIndexRoute = DashboardTicketsIndexRouteImport.update({
   id: '/tickets/',
   path: '/tickets/',
@@ -397,6 +403,7 @@ export interface FileRoutesByFullPath {
   '/pendaftar/': typeof PendaftarIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
+  '/dashboard/scanner/display': typeof DashboardScannerDisplayRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
@@ -453,6 +460,7 @@ export interface FileRoutesByTo {
   '/pendaftar': typeof PendaftarIndexRoute
   '/portal': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
+  '/dashboard/scanner/display': typeof DashboardScannerDisplayRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity': typeof DashboardActivityIndexRoute
@@ -513,6 +521,7 @@ export interface FileRoutesById {
   '/pendaftar/': typeof PendaftarIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/dashboard/finance/verification': typeof DashboardFinanceVerificationRoute
+  '/dashboard/scanner/display': typeof DashboardScannerDisplayRoute
   '/dashboard/tickets/$uuid': typeof DashboardTicketsUuidRoute
   '/portal/orders/$uuid': typeof PortalOrdersUuidRoute
   '/dashboard/activity/': typeof DashboardActivityIndexRoute
@@ -574,6 +583,7 @@ export interface FileRouteTypes {
     | '/pendaftar/'
     | '/portal/'
     | '/dashboard/finance/verification'
+    | '/dashboard/scanner/display'
     | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity/'
@@ -630,6 +640,7 @@ export interface FileRouteTypes {
     | '/pendaftar'
     | '/portal'
     | '/dashboard/finance/verification'
+    | '/dashboard/scanner/display'
     | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity'
@@ -689,6 +700,7 @@ export interface FileRouteTypes {
     | '/pendaftar/'
     | '/portal/'
     | '/dashboard/finance/verification'
+    | '/dashboard/scanner/display'
     | '/dashboard/tickets/$uuid'
     | '/portal/orders/$uuid'
     | '/dashboard/activity/'
@@ -1063,6 +1075,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardScannerIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/dashboard/scanner/display': {
+      id: '/dashboard/scanner/display'
+      path: '/scanner/display'
+      fullPath: '/dashboard/scanner/display'
+      preLoaderRoute: typeof DashboardScannerDisplayRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/tickets/': {
       id: '/dashboard/tickets/'
       path: '/tickets'
@@ -1146,6 +1165,7 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteRouteChildren {
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardFinanceVerificationRoute: typeof DashboardFinanceVerificationRoute
+  DashboardScannerDisplayRoute: typeof DashboardScannerDisplayRoute
   DashboardTicketsUuidRoute: typeof DashboardTicketsUuidRoute
   DashboardActivityIndexRoute: typeof DashboardActivityIndexRoute
   DashboardApplicationsIndexRoute: typeof DashboardApplicationsIndexRoute
@@ -1175,6 +1195,7 @@ interface DashboardRouteRouteChildren {
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardFinanceVerificationRoute: DashboardFinanceVerificationRoute,
+  DashboardScannerDisplayRoute: DashboardScannerDisplayRoute,
   DashboardTicketsUuidRoute: DashboardTicketsUuidRoute,
   DashboardActivityIndexRoute: DashboardActivityIndexRoute,
   DashboardApplicationsIndexRoute: DashboardApplicationsIndexRoute,

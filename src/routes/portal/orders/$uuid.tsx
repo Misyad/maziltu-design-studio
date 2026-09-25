@@ -1,18 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, Download, QrCode, Ticket, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Download,
+  ExternalLink,
+  Loader2,
+  QrCode,
+  Ticket,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/features/events/event-card";
 import { PageHeader } from "@/features/dashboard/page-header";
+import { PAYMENT_STATUS_LABEL, safePaymenkuUrl } from "@/features/payments/payment";
+import { TicketQr } from "@/features/tickets/ticket-qr";
 import { ApiError } from "@/services/api-client";
-import { downloadTicketPdf, uploadPayment } from "@/services/mzt-api";
+import { checkoutOrder, downloadTicketPdf } from "@/services/mzt-api";
 import { myTicketQuery, orderQuery, queryKeys } from "@/services/queries";
 import { formatDateShort } from "@/services/public-content";
 import type { EventPaymentChoice, OrderStatus, PaymentStatus, TicketStatus } from "@/types/api";
@@ -30,14 +38,6 @@ const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: "Dibatalkan",
 };
 
-const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
-  pending: "Belum bayar",
-  waiting_verification: "Menunggu verifikasi",
-  paid: "Lunas",
-  rejected: "Ditolak",
-  refund: "Refund",
-};
-
 const PAYMENT_CHOICE_LABEL: Record<EventPaymentChoice, string> = {
   pay_now: "Bayar sekarang",
   pay_at_venue: "Bayar di tempat",
@@ -52,128 +52,116 @@ const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
   revoked: "Dibatalkan",
 };
 
-function PaymentUploadForm({
+function PaymentCheckoutPanel({
   orderUuid,
   paymentStatus,
   paymentChoice,
+  totalAmount,
 }: {
   orderUuid: string;
   paymentStatus: PaymentStatus;
   paymentChoice: EventPaymentChoice | undefined;
+  totalAmount: number | string;
 }) {
   const queryClient = useQueryClient();
-  const [file, setFile] = useState<File | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const amount = Number(totalAmount);
 
   const mutation = useMutation({
-    mutationFn: () => {
-      if (!file) throw new Error("Pilih file bukti pembayaran");
-      const form = new FormData();
-      form.append("payment_proof", file);
-      return uploadPayment(orderUuid, form);
-    },
-    onSuccess: (res) => {
-      toast.success(res?.message ?? "Bukti pembayaran diunggah — Menunggu verifikasi");
+    mutationFn: () => checkoutOrder(orderUuid),
+    onSuccess: (response) => {
+      const url = safePaymenkuUrl(response.data?.payment.payment_url);
       queryClient.invalidateQueries({ queryKey: queryKeys.order(orderUuid) });
       queryClient.invalidateQueries({ queryKey: queryKeys.myOrders });
-      setFile(null);
-      const input = document.getElementById("payment_proof") as HTMLInputElement | null;
-      if (input) input.value = "";
+      if (!url) {
+        toast.error("Checkout dibuat, tetapi alamat pembayaran tidak aman atau tidak tersedia.");
+        return;
+      }
+      setCheckoutUrl(url);
+      window.location.assign(url);
     },
-    onError: (e: unknown) => {
-      const msg = e instanceof ApiError ? e.message : "Upload gagal";
-      toast.error(msg);
+    onError: (error: unknown) => {
+      toast.error(error instanceof ApiError ? error.message : "Gagal memulai checkout");
     },
   });
 
-  if (paymentChoice === "pay_at_venue" && paymentStatus !== "paid") {
+  if (paymentChoice === "pay_at_venue") {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pembayaran di Tempat</CardTitle>
         </CardHeader>
         <CardContent>
-          <Badge variant="outline">Belum bayar</Badge>
+          <Badge variant={paymentStatus === "paid" ? "default" : "outline"}>
+            {PAYMENT_STATUS_LABEL[paymentStatus]}
+          </Badge>
           <p className="mt-2 text-sm text-muted-foreground">
-            Tunjukkan tiket kepada petugas. Nominal dan pembayaran dicatat saat kedatangan.
+            {paymentStatus === "paid"
+              ? "Pembayaran di tempat telah dicatat oleh petugas."
+              : "Tunjukkan tiket kepada petugas. Nominal dan pembayaran dicatat saat kedatangan."}
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  if (paymentStatus === "waiting_verification") {
+  if (!Number.isFinite(amount) || amount <= 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pembayaran</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm font-medium">Menunggu verifikasi</p>
-          <p className="text-xs text-muted-foreground">
-            Bukti pembayaran telah diunggah dan sedang diverifikasi oleh finance.
+          <Badge>Gratis</Badge>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Event ini tidak memerlukan pembayaran.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  if (paymentStatus === "paid") {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Pembayaran</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Badge>Lunas</Badge>
-          <p className="mt-2 text-xs text-muted-foreground">Pembayaran telah diverifikasi.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (paymentStatus === "pending" || paymentStatus === "rejected") {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Upload className="size-4" aria-hidden />
-            Upload Bukti Pembayaran
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {paymentStatus === "rejected" && (
-            <p className="text-sm text-destructive">
-              Pembayaran sebelumnya ditolak. Silakan unggah bukti baru.
-            </p>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="payment_proof">Bukti Pembayaran (JPG, PNG, PDF, max 5 MB)</Label>
-            <Input
-              id="payment_proof"
-              type="file"
-              accept="image/*,.pdf"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              disabled={mutation.isPending}
-            />
-          </div>
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Pembayaran Paymenku</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Badge variant={paymentStatus === "paid" ? "default" : "outline"}>
+            {PAYMENT_STATUS_LABEL[paymentStatus]}
+          </Badge>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {paymentStatus === "paid"
+              ? "Pembayaran telah dikonfirmasi oleh sistem."
+              : paymentStatus === "waiting_verification"
+                ? "Pembayaran sedang dikonfirmasi. Halaman ini akan memperbarui status secara otomatis."
+                : paymentStatus === "pending"
+                  ? "Lanjutkan checkout Paymenku. Status order adalah sumber konfirmasi pembayaran."
+                  : "Checkout tidak tersedia untuk status pembayaran ini."}
+          </p>
+        </div>
+        {paymentChoice === "pay_now" && paymentStatus === "pending" ? (
           <Button
             onClick={() => mutation.mutate()}
-            disabled={!file || mutation.isPending}
+            disabled={mutation.isPending}
             className="rounded-full"
           >
-            {mutation.isPending ? "Mengunggah..." : "Upload Bukti"}
+            {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+            Lanjutkan pembayaran
           </Button>
-          {mutation.isError && (
-            <p className="text-sm text-destructive">
-              {(mutation.error as ApiError)?.message ?? "Upload gagal"}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return null;
+        ) : null}
+        {checkoutUrl ? (
+          <Button asChild variant="outline" className="rounded-full">
+            <a href={checkoutUrl} target="_blank" rel="noreferrer">
+              <ExternalLink className="size-4" aria-hidden />
+              Buka checkout Paymenku
+            </a>
+          </Button>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
 }
 
 function formatAmount(value: number | string): string {
@@ -184,14 +172,22 @@ function formatAmount(value: number | string): string {
 function PortalOrderDetail() {
   const { uuid } = Route.useParams();
   const { data: order, isPending, isError } = useQuery(orderQuery(uuid));
+  const ticketAvailable =
+    !!order &&
+    (order.payment_status === "paid" ||
+      order.payment_choice === "pay_at_venue" ||
+      Number(order.total_amount) <= 0);
   const {
     data: ticket,
     isPending: ticketPending,
     error: ticketError,
   } = useQuery({
-    ...myTicketQuery(uuid),
-    enabled: !!order && !isPending && !isError,
+    ...myTicketQuery(uuid, order?.payment_status),
+    enabled: ticketAvailable && !isPending && !isError,
     retry: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   });
 
   async function handleDownload() {
@@ -321,10 +317,11 @@ function PortalOrderDetail() {
         </CardContent>
       </Card>
 
-      <PaymentUploadForm
+      <PaymentCheckoutPanel
         orderUuid={order.uuid}
         paymentStatus={order.payment_status}
         paymentChoice={order.payment_choice}
+        totalAmount={order.total_amount}
       />
 
       <Card>
@@ -346,10 +343,15 @@ function PortalOrderDetail() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {ticketPending ? (
+          {!ticketAvailable ? (
+            <p className="text-sm text-muted-foreground">
+              Tiket akan tersedia setelah pembayaran dikonfirmasi.
+            </p>
+          ) : ticketPending ? (
             <Skeleton className="h-24 w-full rounded-xl" />
           ) : ticket ? (
             <div className="space-y-4">
+              <TicketQr ticket={ticket} />
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <div>
                   <p className="text-xs text-muted-foreground">Nomor Tiket</p>
@@ -358,10 +360,6 @@ function PortalOrderDetail() {
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
                   <p className="text-sm capitalize">{TICKET_STATUS_LABEL[ticket.status]}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">QR Payload</p>
-                  <p className="font-mono text-xs">{ticket.qr_payload}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Diterbitkan</p>
