@@ -12,7 +12,6 @@ const PROGRAM_LINKS = [
   { label: "Membership registry", to: "/programs" },
   { label: "Events & programs", to: "/events" },
   { label: "News & announcements", to: "/news" },
-  { label: "Photo gallery", to: "/gallery" },
 ] as const;
 
 export function SiteFooter() {

@@ -5,9 +5,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScannerOperatorPage } from "@/features/checkin/scanner-operator-page";
 import { apiClient, ApiError } from "@/services/api-client";
 import type { ScannerLookupResult } from "@/types/api";
+import { toast } from "sonner";
+
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
 
 vi.mock("@/features/checkin/camera-scanner", () => ({
-  CameraScanner: () => <div data-testid="camera-scanner" />,
+  CameraScanner: ({ rearmKey }: { rearmKey?: number }) => (
+    <div data-testid="camera-scanner" data-rearm-key={rearmKey} />
+  ),
 }));
 
 class MockBroadcastChannel {
@@ -107,6 +114,8 @@ function mockEventQueries() {
 describe("ScannerOperatorPage", () => {
   beforeEach(() => {
     MockBroadcastChannel.posted = [];
+    vi.mocked(toast.error).mockClear();
+    vi.mocked(toast.success).mockClear();
     vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
     window.localStorage.clear();
     Object.defineProperty(HTMLElement.prototype, "hasPointerCapture", {
@@ -186,6 +195,104 @@ describe("ScannerOperatorPage", () => {
         expect.objectContaining({ type: "success", status: "Check-in Berhasil" }),
       ),
     );
+  });
+
+  it.each([
+    ["MEMBER_NOT_FOUND", "ID Anggota tidak ditemukan"],
+    ["MEMBER_NOT_REGISTERED_FOR_EVENT", "Anggota belum terdaftar pada event"],
+    ["INVALID_MEMBER_ID_FORMAT", "Kode/format ID tidak valid"],
+  ])("renders the %s business outcome without a toast", async (code, title) => {
+    mockEventQueries();
+    vi.spyOn(apiClient, "post").mockRejectedValue(
+      new ApiError(
+        "Backend message",
+        code === "INVALID_MEMBER_ID_FORMAT" ? 422 : 404,
+        undefined,
+        undefined,
+        code,
+      ),
+    );
+    renderPage();
+    const user = await selectEventAndDay();
+
+    await user.click(screen.getByRole("combobox", { name: "Jenis identifier" }));
+    await user.click(await screen.findByRole("option", { name: "Kartu Anggota" }));
+    await user.type(screen.getByLabelText("Kode"), "001234");
+    await user.click(screen.getByRole("button", { name: "Cari Peserta" }));
+
+    expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
+    const result = screen.getByRole("alert");
+    expect(result).toHaveTextContent("001234");
+    expect(result).toHaveTextContent("Kartu Anggota");
+    expect(screen.getByRole("button", { name: "Coba Scan Lagi" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cari Manual" })).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unknown ticket distinct from member-card outcomes", async () => {
+    mockEventQueries();
+    vi.spyOn(apiClient, "post").mockRejectedValue(new ApiError("Tiket tidak ditemukan", 404));
+    renderPage();
+    const user = await selectEventAndDay();
+
+    await user.type(screen.getByLabelText("Kode"), "ticket-missing");
+    await user.click(screen.getByRole("button", { name: "Cari Peserta" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Pencarian peserta gagal" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Tiket tidak ditemukan");
+    expect(screen.getByRole("alert")).toHaveTextContent("Tiket");
+    expect(screen.queryByText("ID Anggota tidak ditemukan")).not.toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith("Tiket tidak ditemukan");
+  });
+
+  it("re-arms the camera and focuses manual lookup after an expected failure", async () => {
+    mockEventQueries();
+    vi.spyOn(apiClient, "post").mockRejectedValue(
+      new ApiError("Anggota tidak ditemukan", 404, undefined, undefined, "MEMBER_NOT_FOUND"),
+    );
+    renderPage();
+    const user = await selectEventAndDay();
+
+    await user.click(screen.getByRole("combobox", { name: "Jenis identifier" }));
+    await user.click(await screen.findByRole("option", { name: "Kartu Anggota" }));
+    await user.type(screen.getByLabelText("Kode"), "001234");
+    await user.click(screen.getByRole("button", { name: "Cari Peserta" }));
+    await screen.findByRole("heading", { name: "ID Anggota tidak ditemukan" });
+
+    expect(screen.getByTestId("camera-scanner")).toHaveAttribute("data-rearm-key", "0");
+    await user.click(screen.getByRole("button", { name: "Coba Scan Lagi" }));
+    expect(screen.getByTestId("camera-scanner")).toHaveAttribute("data-rearm-key", "1");
+    expect(
+      screen.queryByRole("heading", { name: "ID Anggota tidak ditemukan" }),
+    ).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Kode"), "001234");
+    await user.click(screen.getByRole("button", { name: "Cari Peserta" }));
+    await screen.findByRole("heading", { name: "ID Anggota tidak ditemukan" });
+    await user.click(screen.getByRole("button", { name: "Cari Manual" }));
+
+    expect(screen.getByLabelText("Kode")).toHaveValue("001234");
+    expect(screen.getByLabelText("Kode")).toHaveFocus();
+  });
+
+  it("renders scanned identifiers as text and toasts unexpected server failures", async () => {
+    mockEventQueries();
+    vi.spyOn(apiClient, "post").mockRejectedValue(new ApiError("Internal error", 503));
+    renderPage();
+    const user = await selectEventAndDay();
+    const unsafeIdentifier = "<img src=x onerror=alert(1)>";
+
+    await user.type(screen.getByLabelText("Kode"), unsafeIdentifier);
+    await user.click(screen.getByRole("button", { name: "Cari Peserta" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Server sedang bermasalah" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(unsafeIdentifier)).toBeInTheDocument();
+    expect(document.querySelector("img[src='x']")).toBeNull();
+    expect(toast.error).toHaveBeenCalledWith("Coba lagi beberapa saat.");
   });
 
   it("does not publish display success for a failed duplicate check-in", async () => {

@@ -79,7 +79,7 @@ export interface AccountResetResult {
 }
 
 export interface LoginRequest {
-  id_anggota: string;
+  identifier: string;
   password: string;
 }
 

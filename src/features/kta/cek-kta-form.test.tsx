@@ -284,10 +284,7 @@ describe("CekKtaForm — public KTA status page", () => {
 
     const mr = await screen.findByTestId("kta-manual-review");
     expect(mr).toHaveTextContent(/verifikasi manual/i);
-    expect(screen.getByRole("link", { name: "Daftar Sebagai Anggota" })).toHaveAttribute(
-      "href",
-      "/daftar-anggota",
-    );
+    expect(screen.getByRole("link", { name: "Hubungi Admin" })).toHaveAttribute("href", "/contact");
     expect(screen.queryByTestId("kta-result")).not.toBeInTheDocument();
   });
 

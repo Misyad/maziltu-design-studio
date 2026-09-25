@@ -90,6 +90,16 @@ describe("CameraScanner", () => {
     expect(scannerMock.clear).toHaveBeenCalledTimes(1);
   });
 
+  it("starts again when the operator re-arms the camera", async () => {
+    const onDecode = vi.fn(() => true);
+    const view = render(<CameraScanner onDecode={onDecode} rearmKey={0} />);
+
+    view.rerender(<CameraScanner onDecode={onDecode} rearmKey={1} />);
+
+    await waitFor(() => expect(scannerMock.start).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Hentikan Kamera" })).toBeInTheDocument();
+  });
+
   it("restarts and cleans up when the camera changes", async () => {
     const onDecode = vi.fn(() => false);
     const view = render(<CameraScanner onDecode={onDecode} />);

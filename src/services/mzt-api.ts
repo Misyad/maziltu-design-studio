@@ -68,9 +68,9 @@ import type { VerificationQueueParams } from "@/types/api";
 
 /* ------------------------------------------------------------------ auth */
 
-export async function login(payload: LoginRequest): Promise<LoginResponse> {
+export async function login({ identifier, password }: LoginRequest): Promise<LoginResponse> {
   await ensureCsrfToken();
-  return apiPostRaw<LoginResponse>("/login", payload);
+  return apiPostRaw<LoginResponse>("/login", { identifier, password });
 }
 
 // GET /user returns `{ success, user: {...} }` (no `data` key), so it must be

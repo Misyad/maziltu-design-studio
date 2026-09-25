@@ -1,5 +1,5 @@
 import { AlertTriangle, Camera, Loader2, XCircle } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -26,26 +26,30 @@ interface CameraDeviceOption {
 interface CameraScannerProps {
   onDecode: (identifier: string, identifierType: ScannerIdentifierType) => boolean;
   onStart?: () => void;
+  rearmKey?: number;
 }
 
-export function CameraScanner({ onDecode, onStart }: CameraScannerProps) {
+export function CameraScanner({ onDecode, onStart, rearmKey = 0 }: CameraScannerProps) {
   const [active, setActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<CameraDeviceOption[]>([]);
   const [cameraId, setCameraId] = useState("");
   const onDecodeRef = useRef(onDecode);
+  const onStartRef = useRef(onStart);
   const previousCleanupRef = useRef<Promise<void>>(Promise.resolve());
+  const previousRearmKeyRef = useRef(rearmKey);
   onDecodeRef.current = onDecode;
+  onStartRef.current = onStart;
 
-  async function activate() {
+  const activate = useCallback(async () => {
     setError(null);
     const supportError = cameraSupportError();
     if (supportError) {
       setError(supportError);
       return;
     }
-    onStart?.();
+    onStartRef.current?.();
     setLoading(true);
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
@@ -70,7 +74,13 @@ export function CameraScanner({ onDecode, onStart }: CameraScannerProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (previousRearmKeyRef.current === rearmKey) return;
+    previousRearmKeyRef.current = rearmKey;
+    void activate();
+  }, [activate, rearmKey]);
 
   useEffect(() => {
     if (!active || !cameraId) return;

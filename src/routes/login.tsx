@@ -34,7 +34,7 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-function LoginPage() {
+export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <div className="grid w-full max-w-4xl overflow-hidden rounded-[2rem] border border-border shadow-elevated lg:grid-cols-2">
@@ -47,9 +47,9 @@ function LoginPage() {
             <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white/15 font-display text-sm font-bold text-white backdrop-blur-sm">
               MZT
             </span>
-            <h1 className="mt-8 font-display text-3xl leading-tight font-bold text-white">
+            <h2 className="mt-8 font-display text-3xl leading-tight font-bold text-white">
               Welcome back to {ORG.name}
-            </h1>
+            </h2>
             <p className="mt-4 text-sm leading-relaxed text-white/85">
               Manage members, events, attendance, news and ID cards from one place.
             </p>
@@ -58,32 +58,27 @@ function LoginPage() {
         </div>
 
         <div className="flex flex-col justify-center bg-card p-8 sm:p-12">
-          <span className="font-display text-lg font-semibold">Masuk</span>
-          <p className="mt-1 mb-8 text-sm text-muted-foreground">
-            Gunakan nomor anggota dan password Anda.
+          <h1 className="font-display text-2xl font-semibold">Masuk ke Maziltu Tholiban</h1>
+          <p className="mt-2 mb-8 text-sm text-muted-foreground">
+            Gunakan email atau nomor anggota Anda.
           </p>
           <LoginForm />
-          <div className="mt-6 grid gap-2 border-t pt-5 text-center text-sm">
-            <Link to="/lupa-password" className="font-medium text-primary hover:underline">
-              Lupa password?
-            </Link>
-            {memberAccountActivationEnabled() ? (
-              <Link to="/aktivasi-akun" className="text-muted-foreground hover:text-foreground">
-                Aktivasi akun anggota lama
+          {memberApplicationsEnabled() ? (
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Belum punya akun?{" "}
+              <Link to="/daftar-anggota" className="font-semibold text-primary hover:underline">
+                Daftar sebagai anggota
               </Link>
-            ) : null}
+            </p>
+          ) : null}
+          <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 border-t pt-5 text-center text-sm">
             <Link to="/cek-kta" className="text-muted-foreground hover:text-foreground">
               Cari nomor anggota
             </Link>
-            {memberApplicationsEnabled() ? (
-              <>
-                <Link to="/daftar-anggota" className="text-muted-foreground hover:text-foreground">
-                  Daftar sebagai anggota baru
-                </Link>
-                <Link to="/pendaftar/login" className="text-muted-foreground hover:text-foreground">
-                  Masuk sebagai pendaftar
-                </Link>
-              </>
+            {memberAccountActivationEnabled() ? (
+              <Link to="/aktivasi-akun" className="text-muted-foreground hover:text-foreground">
+                Aktivasi akun
+              </Link>
             ) : null}
           </div>
         </div>

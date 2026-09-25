@@ -18,7 +18,7 @@ export function memberAccountActivationEnabled(): boolean {
 }
 
 export function memberApplicationsEnabled(): boolean {
-  return import.meta.env["VITE_MEMBER_APPLICATIONS_ENABLED"] !== "false";
+  return import.meta.env["VITE_MEMBER_APPLICATIONS_ENABLED"] === "true";
 }
 
 /**

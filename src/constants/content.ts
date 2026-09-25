@@ -16,7 +16,6 @@ import galleryCharity from "@/assets/gallery-charity.jpg";
 import galleryQuran from "@/assets/gallery-quran.jpg";
 import galleryGraduation from "@/assets/gallery-graduation.jpg";
 import galleryOffice from "@/assets/gallery-office.jpg";
-import type { GalleryImage } from "@/components/shared/masonry-gallery";
 import type { TimelineEntry } from "@/components/shared/timeline";
 
 export const ORG = {
@@ -37,7 +36,6 @@ export const NAV_LINKS = [
   { label: "Programs", to: "/programs" },
   { label: "Events", to: "/events" },
   { label: "News", to: "/news" },
-  { label: "Gallery", to: "/gallery" },
   { label: "Contact", to: "/contact" },
 ] as const;
 
@@ -266,65 +264,6 @@ export const PLACEHOLDER_NEWS: readonly PlaceholderNews[] = [
     image: aboutSpeaker,
     imageWidth: 900,
     imageHeight: 1100,
-  },
-];
-
-export const GALLERY_IMAGES: readonly GalleryImage[] = [
-  {
-    src: heroCommunity,
-    alt: "Members and teachers gathered in a school courtyard",
-    width: 1920,
-    height: 1280,
-    caption: "Annual community gathering",
-  },
-  {
-    src: galleryGraduation,
-    alt: "Students celebrating at a graduation ceremony",
-    width: 900,
-    height: 1300,
-    caption: "Graduation day",
-  },
-  {
-    src: galleryQuran,
-    alt: "Students reciting together inside a mosque",
-    width: 1200,
-    height: 800,
-    caption: "Morning recitation",
-  },
-  {
-    src: galleryCharity,
-    alt: "Volunteers distributing aid boxes to families",
-    width: 900,
-    height: 1200,
-    caption: "Community outreach",
-  },
-  {
-    src: eventGathering,
-    alt: "Large organisation gathering inside a hall",
-    width: 1400,
-    height: 900,
-    caption: "Members assembly",
-  },
-  {
-    src: aboutMentoring,
-    alt: "Teachers mentoring students in a library",
-    width: 1200,
-    height: 1400,
-    caption: "Mentoring circle",
-  },
-  {
-    src: galleryOffice,
-    alt: "Staff working in the organisation office",
-    width: 1200,
-    height: 900,
-    caption: "The secretariat",
-  },
-  {
-    src: aboutSpeaker,
-    alt: "A speaker addressing members at a conference",
-    width: 900,
-    height: 1100,
-    caption: "Committee forum",
   },
 ];
 

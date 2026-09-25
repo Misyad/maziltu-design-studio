@@ -92,6 +92,20 @@ describe("R3 browser auth — no personal access token persistence", () => {
     expect(memberApplicationsEnabled()).toBe(false);
   });
 
+  it("keeps member applications disabled when the flag is absent", async () => {
+    const env = import.meta.env as Record<string, string | boolean | undefined>;
+    const previous = env["VITE_MEMBER_APPLICATIONS_ENABLED"];
+    delete env["VITE_MEMBER_APPLICATIONS_ENABLED"];
+
+    try {
+      const { memberApplicationsEnabled } = await loadFreshModules();
+      expect(memberApplicationsEnabled()).toBe(false);
+    } finally {
+      if (previous === undefined) delete env["VITE_MEMBER_APPLICATIONS_ENABLED"];
+      else env["VITE_MEMBER_APPLICATIONS_ENABLED"] = previous;
+    }
+  });
+
   it("enables onboarding entry points only for explicit true flags", async () => {
     vi.stubEnv("VITE_MEMBER_ACCOUNT_ACTIVATION_ENABLED", "true");
     vi.stubEnv("VITE_MEMBER_APPLICATIONS_ENABLED", "true");
@@ -108,10 +122,10 @@ describe("R3 browser auth — no personal access token persistence", () => {
     });
     const csrfSpy = vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
 
-    const result = await login({ id_anggota: "MZT000001", password: "secret" });
+    const result = await login({ identifier: "MZT000001", password: "secret" });
 
     expect(csrfSpy).toHaveBeenCalled();
-    expect(spy).toHaveBeenCalledWith("/login", { id_anggota: "MZT000001", password: "secret" }, {});
+    expect(spy).toHaveBeenCalledWith("/login", { identifier: "MZT000001", password: "secret" }, {});
     expect(window.localStorage.getItem(LEGACY_TOKEN_KEY)).toBeNull();
     expect(result).toEqual({ success: true, user: { id: 1, roles: ["anggota"] } });
   });
@@ -123,7 +137,7 @@ describe("R3 browser auth — no personal access token persistence", () => {
     });
     vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
 
-    await login({ id_anggota: "MZT000001", password: "secret" });
+    await login({ identifier: "MZT000001", password: "secret" });
 
     expect(window.localStorage.getItem(LEGACY_TOKEN_KEY)).toBeNull();
     expect(window.localStorage.getItem("mzt.token")).toBeNull();
@@ -343,7 +357,7 @@ describe("Sanctum session bootstrap", () => {
     const csrfSpy = vi.spyOn(axios, "get").mockResolvedValue({ data: {} });
     vi.spyOn(apiClient, "post").mockResolvedValue({ data: { success: true, user: { id: 1 } } });
 
-    await login({ id_anggota: "MZT000001", password: "secret" });
+    await login({ identifier: "MZT000001", password: "secret" });
 
     expect(csrfSpy).toHaveBeenCalledTimes(1);
     expect(csrfSpy.mock.calls[0]?.[0]).toContain("/sanctum/csrf-cookie");
@@ -368,7 +382,7 @@ describe("Sanctum session bootstrap", () => {
       data: { success: true, user: { id: 1 } },
     });
 
-    await login({ id_anggota: "MZT000001", password: "secret" });
+    await login({ identifier: "MZT000001", password: "secret" });
 
     expect(csrfSpy).toHaveBeenCalledBefore(postSpy);
   });
@@ -393,7 +407,7 @@ describe("Sanctum session bootstrap", () => {
     const { captured, restore } = captureXhrHeaders();
     try {
       await apiClient
-        .post("/login", { id_anggota: "MZT000001", password: "x" })
+        .post("/login", { identifier: "MZT000001", password: "x" })
         .catch(() => undefined);
     } finally {
       restore();

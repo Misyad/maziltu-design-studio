@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   Banknote,
   CheckCircle2,
   ExternalLink,
@@ -7,6 +8,7 @@ import {
   QrCode,
   RotateCcw,
   ScanLine,
+  Search,
   UserRound,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -69,16 +71,63 @@ const paymentStatusLabel: Record<string, string> = {
   failed: "Gagal",
 };
 
-function lookupErrorMessage(error: unknown) {
-  if (!(error instanceof ApiError)) {
-    return "Jaringan bermasalah. Periksa koneksi lalu coba lagi.";
+interface LookupFailure {
+  title: string;
+  description: string;
+  identifier: string;
+  identifierType: ScannerIdentifierType;
+}
+
+function lookupFailureFor(error: unknown, request: ScannerLookupRequest): LookupFailure {
+  const base = {
+    identifier: request.identifier,
+    identifierType: request.identifier_type,
+  };
+
+  if (!(error instanceof ApiError) || !error.status) {
+    return {
+      ...base,
+      title: "Koneksi bermasalah",
+      description: "Periksa koneksi jaringan lalu coba lagi.",
+    };
   }
-  if (error.status === 404) return "Peserta belum terdaftar atau identifier tidak ditemukan.";
-  if (error.status === 409) return "Identifier ambigu atau status tiket/peserta tidak valid.";
-  if (error.status === 422) return "Kode, event, atau tanggal tidak valid untuk peserta ini.";
-  if (!error.status) return "Jaringan bermasalah. Periksa koneksi lalu coba lagi.";
-  if (error.status >= 500) return "Server sedang bermasalah. Coba lagi beberapa saat.";
-  return error.message || "Pencarian peserta gagal.";
+  if (request.identifier_type === "member_card" && error.code === "MEMBER_NOT_FOUND") {
+    return {
+      ...base,
+      title: "ID Anggota tidak ditemukan",
+      description: "Pastikan ID pada kartu anggota terbaca dengan benar.",
+    };
+  }
+  if (
+    request.identifier_type === "member_card" &&
+    error.code === "MEMBER_NOT_REGISTERED_FOR_EVENT"
+  ) {
+    return {
+      ...base,
+      title: "Anggota belum terdaftar pada event",
+      description: "Pendaftaran anggota tidak ditemukan untuk event yang dipilih.",
+    };
+  }
+  if (request.identifier_type === "member_card" && error.code === "INVALID_MEMBER_ID_FORMAT") {
+    return {
+      ...base,
+      title: "Kode/format ID tidak valid",
+      description: "Pindai ulang kartu anggota atau perbaiki ID melalui pencarian manual.",
+    };
+  }
+  if (error.status >= 500) {
+    return {
+      ...base,
+      title: "Server sedang bermasalah",
+      description: "Coba lagi beberapa saat.",
+    };
+  }
+
+  return {
+    ...base,
+    title: "Pencarian peserta gagal",
+    description: error.message || "Kode tidak dapat diproses. Periksa pilihan event dan tanggal.",
+  };
 }
 
 function isCheckInDuplicate(value: unknown): value is CheckInDuplicate {
@@ -109,8 +158,10 @@ export function ScannerOperatorPage() {
   const [identifier, setIdentifier] = useState("");
   const [identifierType, setIdentifierType] = useState<ScannerIdentifierType>("ticket");
   const [participant, setParticipant] = useState<ScannerLookupResult | null>(null);
-  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupFailure, setLookupFailure] = useState<LookupFailure | null>(null);
+  const [cameraRearmKey, setCameraRearmKey] = useState(0);
   const [displaySession, setDisplaySession] = useState("");
+  const identifierInputRef = useRef<HTMLInputElement>(null);
   const lookupGateRef = useRef(createLookupGate());
   const displayPublisherRef = useRef<ReturnType<typeof createDisplayPublisher> | null>(null);
 
@@ -136,23 +187,34 @@ export function ScannerOperatorPage() {
 
   const lookup = useMutation({
     mutationFn: (request: ScannerLookupRequest) => lookupScannerParticipant(request),
-    onSuccess: (response) => {
+    onSuccess: (response, request) => {
       if (response.success !== true || !response.data) {
-        const message =
-          response.message || "Peserta belum terdaftar atau identifier tidak ditemukan.";
-        setLookupError(message);
-        toast.error(message);
+        setParticipant(null);
+        setLookupFailure(
+          lookupFailureFor(
+            new ApiError(response.message || "Pencarian peserta gagal", undefined),
+            request,
+          ),
+        );
         return;
       }
       setParticipant(response.data);
       setIdentifier("");
-      setLookupError(null);
+      setLookupFailure(null);
     },
-    onError: (error) => {
-      const message = lookupErrorMessage(error);
+    onError: (error, request) => {
+      const failure = lookupFailureFor(error, request);
       setParticipant(null);
-      setLookupError(message);
-      toast.error(message);
+      setLookupFailure(failure);
+      const expectedMemberOutcome =
+        request.identifier_type === "member_card" &&
+        error instanceof ApiError &&
+        [
+          "MEMBER_NOT_FOUND",
+          "MEMBER_NOT_REGISTERED_FOR_EVENT",
+          "INVALID_MEMBER_ID_FORMAT",
+        ].includes(error.code ?? "");
+      if (!expectedMemberOutcome) toast.error(failure.description);
     },
     onSettled: () => lookupGateRef.current.finish(),
   });
@@ -266,7 +328,7 @@ export function ScannerOperatorPage() {
   function reset(publishIdle = true) {
     setParticipant(null);
     setIdentifier("");
-    setLookupError(null);
+    setLookupFailure(null);
     lookupGateRef.current.reset();
     lookup.reset();
     attendance.reset();
@@ -274,10 +336,24 @@ export function ScannerOperatorPage() {
     if (publishIdle) displayPublisherRef.current?.idle();
   }
 
+  function retryScan() {
+    reset();
+    setCameraRearmKey((current) => current + 1);
+  }
+
+  function searchManually() {
+    const failedIdentifier = lookupFailure?.identifier ?? "";
+    const failedIdentifierType = lookupFailure?.identifierType ?? "ticket";
+    reset();
+    setIdentifier(failedIdentifier);
+    setIdentifierType(failedIdentifierType);
+    identifierInputRef.current?.focus();
+    identifierInputRef.current?.select();
+  }
+
   function submitIdentifier(value: string, type: ScannerIdentifierType) {
     const trimmed = value.trim();
     if (!trimmed) {
-      setLookupError("Kode tidak boleh kosong.");
       return false;
     }
     if (
@@ -291,7 +367,7 @@ export function ScannerOperatorPage() {
     }
     displayPublisherRef.current?.idle();
     setParticipant(null);
-    setLookupError(null);
+    setLookupFailure(null);
     lookup.mutate({
       identifier: trimmed,
       identifier_type: type,
@@ -442,6 +518,7 @@ export function ScannerOperatorPage() {
                 <CameraScanner
                   onDecode={submitIdentifier}
                   onStart={() => displayPublisherRef.current?.idle()}
+                  rearmKey={cameraRearmKey}
                 />
               ) : null}
 
@@ -476,6 +553,7 @@ export function ScannerOperatorPage() {
                         aria-hidden
                       />
                       <Input
+                        ref={identifierInputRef}
                         id="scanner-identifier"
                         value={identifier}
                         onChange={(event) => setIdentifier(event.target.value)}
@@ -498,15 +576,6 @@ export function ScannerOperatorPage() {
                   Cari Peserta
                 </Button>
               </form>
-
-              {lookupError ? (
-                <p
-                  className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
-                  role="alert"
-                >
-                  {lookupError}
-                </p>
-              ) : null}
             </CardContent>
           </Card>
 
@@ -516,7 +585,44 @@ export function ScannerOperatorPage() {
               <CardDescription>Scan tidak otomatis mencatat kehadiran.</CardDescription>
             </CardHeader>
             <CardContent>
-              {!participant ? (
+              {lookupFailure ? (
+                <div
+                  className="space-y-4 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"
+                  role="alert"
+                >
+                  <div className="flex gap-3">
+                    <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden />
+                    <div className="min-w-0 space-y-1">
+                      <h2 className="font-display font-semibold">{lookupFailure.title}</h2>
+                      <p className="text-sm">{lookupFailure.description}</p>
+                    </div>
+                  </div>
+                  <dl className="grid gap-3 rounded-xl border border-amber-200 bg-white/60 p-3 text-sm">
+                    <Detail
+                      label="Jenis identifier"
+                      value={
+                        lookupFailure.identifierType === "member_card" ? "Kartu Anggota" : "Tiket"
+                      }
+                    />
+                    <Detail label="Kode yang dipindai" value={lookupFailure.identifier} mono />
+                  </dl>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" className="rounded-full" onClick={retryScan}>
+                      <RotateCcw aria-hidden />
+                      Coba Scan Lagi
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-full bg-white"
+                      onClick={searchManually}
+                    >
+                      <Search aria-hidden />
+                      Cari Manual
+                    </Button>
+                  </div>
+                </div>
+              ) : !participant ? (
                 <p className="py-6 text-sm text-muted-foreground">
                   Pindai kode untuk melihat data peserta terdaftar.
                 </p>
