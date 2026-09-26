@@ -4,7 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginForm } from "@/features/auth/login-form";
 import { LoginPage } from "@/routes/login";
-import { login } from "@/services/mzt-api";
+import { PortalAccountSetup } from "@/routes/portal/aktivasi-akun";
+import { ApiError } from "@/services/api-client";
+import {
+  completeAccountSetup,
+  fetchCurrentUser,
+  login,
+  setupAccountEmail,
+  verifyAccountEmail,
+} from "@/services/mzt-api";
 
 const navigate = vi.hoisted(() => vi.fn());
 
@@ -22,9 +30,18 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   };
 });
 
-vi.mock("@/services/mzt-api", () => ({
-  login: vi.fn(),
-}));
+vi.mock("@/services/mzt-api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/mzt-api")>();
+
+  return {
+    ...actual,
+    completeAccountSetup: vi.fn(),
+    fetchCurrentUser: vi.fn(),
+    login: vi.fn(),
+    setupAccountEmail: vi.fn(),
+    verifyAccountEmail: vi.fn(),
+  };
+});
 
 function renderWithQueryClient(component: React.ReactNode) {
   const client = new QueryClient({
@@ -99,5 +116,78 @@ describe("member login", () => {
       expect(login).toHaveBeenCalledWith({ identifier: "0000000001", password: "secret" });
     });
     expect(navigate).toHaveBeenCalled();
+  });
+});
+
+describe("legacy account setup", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("requires and submits the current password when setup is completed", async () => {
+    const user = userEvent.setup();
+    vi.mocked(setupAccountEmail).mockResolvedValue({ success: true });
+    vi.mocked(verifyAccountEmail).mockResolvedValue({ success: true });
+    vi.mocked(completeAccountSetup).mockResolvedValue({ success: true });
+    vi.mocked(fetchCurrentUser).mockResolvedValue({
+      id: 1,
+      id_anggota: "0000000001",
+      name: "Anggota",
+      email: "anggota@example.test",
+      roles: ["anggota"],
+      foto: null,
+      account_setup_required: false,
+    });
+    renderWithQueryClient(<PortalAccountSetup />);
+
+    await user.type(screen.getByLabelText("Email aktif"), "anggota@example.test");
+    await user.click(screen.getByRole("button", { name: "Kirim kode verifikasi" }));
+    expect(await screen.findByLabelText("Kode verifikasi")).toBeVisible();
+
+    await user.type(screen.getByLabelText("Kode verifikasi"), "123456");
+    await user.click(screen.getByRole("button", { name: "Verifikasi email" }));
+    expect(await screen.findByLabelText("Password saat ini")).toHaveAttribute(
+      "autocomplete",
+      "current-password",
+    );
+
+    await user.type(screen.getByLabelText("Password saat ini"), "CurrentPassword1!");
+    await user.type(screen.getByLabelText("Password baru"), "NewStrongPassword2!");
+    await user.type(screen.getByLabelText("Konfirmasi password baru"), "NewStrongPassword2!");
+    await user.click(screen.getByRole("button", { name: "Selesaikan aktivasi" }));
+
+    await waitFor(() =>
+      expect(vi.mocked(completeAccountSetup).mock.calls[0]?.[0]).toEqual({
+        current_password: "CurrentPassword1!",
+        password: "NewStrongPassword2!",
+        password_confirmation: "NewStrongPassword2!",
+      }),
+    );
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/portal", replace: true }));
+  });
+
+  it("shows an incorrect current password error on its field", async () => {
+    const user = userEvent.setup();
+    vi.mocked(setupAccountEmail).mockResolvedValue({ success: true });
+    vi.mocked(verifyAccountEmail).mockResolvedValue({ success: true });
+    vi.mocked(completeAccountSetup).mockRejectedValue(
+      new ApiError("Data tidak valid.", 422, {
+        current_password: ["Password saat ini tidak sesuai."],
+      }),
+    );
+    renderWithQueryClient(<PortalAccountSetup />);
+
+    await user.type(screen.getByLabelText("Email aktif"), "anggota@example.test");
+    await user.click(screen.getByRole("button", { name: "Kirim kode verifikasi" }));
+    await user.type(await screen.findByLabelText("Kode verifikasi"), "123456");
+    await user.click(screen.getByRole("button", { name: "Verifikasi email" }));
+    await user.type(await screen.findByLabelText("Password saat ini"), "WrongPassword1!");
+    await user.type(screen.getByLabelText("Password baru"), "NewStrongPassword2!");
+    await user.type(screen.getByLabelText("Konfirmasi password baru"), "NewStrongPassword2!");
+    await user.click(screen.getByRole("button", { name: "Selesaikan aktivasi" }));
+
+    expect(await screen.findByText("Password saat ini tidak sesuai.")).toBeVisible();
+    expect(screen.getByLabelText("Password saat ini")).toHaveAttribute("aria-invalid", "true");
   });
 });

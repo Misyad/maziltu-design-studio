@@ -2,6 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApplicationForm } from "@/features/applications/application-form";
+import { createUuidV4 } from "@/lib/utils";
 import type { MemberApplication } from "@/types/api";
 
 async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
@@ -16,6 +17,19 @@ async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Tahun keluar"), "2020");
   await user.type(screen.getByLabelText("Alamat"), "Jalan Merdeka 1");
 }
+
+describe("createUuidV4", () => {
+  it("uses getRandomValues as a UUID v4 fallback when randomUUID is unavailable", () => {
+    const getRandomValues = vi.fn((bytes: Uint8Array) => {
+      bytes.set(Array.from({ length: 16 }, (_, index) => index));
+      return bytes;
+    });
+    const cryptoApi = { getRandomValues } as unknown as Crypto;
+
+    expect(createUuidV4(cryptoApi)).toBe("00010203-0405-4607-8809-0a0b0c0d0e0f");
+    expect(getRandomValues).toHaveBeenCalledOnce();
+  });
+});
 
 describe("ApplicationForm", () => {
   afterEach(() => cleanup());
@@ -33,13 +47,37 @@ describe("ApplicationForm", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("submits all fields and the selected photo as FormData", async () => {
-    const user = userEvent.setup();
+  it("accepts only JPEG and PNG photos up to 5 MiB", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const onSubmit = vi.fn();
+    render(<ApplicationForm submitLabel="Kirim" pending={false} onSubmit={onSubmit} />);
+
+    const input = screen.getByLabelText("Foto");
+    expect(input).toHaveAttribute("accept", "image/jpeg,image/png");
+    await fillRequiredFields(user);
+    await user.upload(input, new File(["not-an-image"], "anggota.gif", { type: "image/gif" }));
+    await user.click(screen.getByRole("button", { name: "Kirim" }));
+    expect(await screen.findByText("Foto harus berformat JPEG atau PNG")).toBeVisible();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.upload(
+      input,
+      new File([new Uint8Array(5 * 1024 * 1024 + 1)], "anggota.png", { type: "image/png" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Kirim" }));
+    expect(await screen.findByText("Ukuran foto maksimal 5 MiB")).toBeVisible();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    new File(["photo"], "anggota.jpg", { type: "image/jpeg" }),
+    new File(["photo"], "anggota.jpg"),
+  ])("submits all fields and a valid photo as FormData", async (photo) => {
+    const user = userEvent.setup({ applyAccept: false });
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<ApplicationForm submitLabel="Kirim" pending={false} onSubmit={onSubmit} />);
 
     await fillRequiredFields(user);
-    const photo = new File(["photo"], "anggota.jpg", { type: "image/jpeg" });
     await user.upload(screen.getByLabelText("Foto"), photo);
     await user.click(screen.getByRole("button", { name: "Kirim" }));
 

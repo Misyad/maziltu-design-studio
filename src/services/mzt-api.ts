@@ -1,3 +1,4 @@
+import { createUuidV4 } from "@/lib/utils";
 import {
   apiClient,
   apiDelete,
@@ -121,7 +122,7 @@ export async function completeAccountSetup(payload: AccountSetupCompleteRequest)
 
 export async function submitMemberApplication(form: FormData) {
   await ensureCsrfToken();
-  if (!form.has("submission_token")) form.set("submission_token", crypto.randomUUID());
+  if (!form.has("submission_token")) form.set("submission_token", createUuidV4());
   return apiPost<{ application: MemberApplication }>("/public/member-applications", form).then(
     (data) => data.application,
   );

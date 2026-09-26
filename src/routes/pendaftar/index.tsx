@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApplicationForm } from "@/features/applications/application-form";
-import { DEFAULT_MEMBER_PASSWORD } from "@/lib/password";
 import { ApiError } from "@/services/api-client";
 import {
   resendApplicantEmail,
@@ -57,7 +56,7 @@ export const Route = createFileRoute("/pendaftar/")({
   component: ApplicantPortalPage,
 });
 
-function ApplicantPortalPage() {
+export function ApplicantPortalPage() {
   const queryClient = useQueryClient();
   const application = useQuery(applicantMeQuery());
   const status = application.data ? STATUS[application.data.status] : null;
@@ -129,6 +128,13 @@ function ApplicantPortalPage() {
             <div>
               <CardTitle>{application.data.name}</CardTitle>
               <CardDescription>{application.data.email}</CardDescription>
+              <p className="mt-3 text-xs text-muted-foreground">Nomor pendaftaran</p>
+              <p className="mt-1 break-all select-all font-mono text-base font-semibold text-foreground">
+                {application.data.application_number ?? "Belum tersedia"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Simpan nomor ini untuk masuk kembali ke portal pendaftar.
+              </p>
             </div>
             <Badge variant={application.data.status === "approved" ? "default" : "secondary"}>
               {status.label}
@@ -159,11 +165,11 @@ function ApplicantPortalPage() {
                 {application.data.id_anggota ?? "Sedang diterbitkan"}
               </p>
               <p className="mt-3 text-sm text-muted-foreground">
-                Masuk dengan nomor anggota ini dan password awal {DEFAULT_MEMBER_PASSWORD}, lalu
-                selesaikan pengaturan akun.
+                Tautan aman untuk membuat password akun dikirim ke email terverifikasi Anda. Setelah
+                membuat password, masuk menggunakan nomor anggota di atas.
               </p>
               <Button asChild className="mt-4 rounded-full">
-                <Link to="/login">Masuk sebagai anggota</Link>
+                <Link to="/login">Masuk setelah membuat password</Link>
               </Button>
             </div>
           ) : null}

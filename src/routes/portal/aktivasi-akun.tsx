@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { strongPasswordSchema } from "@/lib/password";
+import { strongPasswordChangeSchema } from "@/lib/password";
 import { ApiError } from "@/services/api-client";
 import { completeAccountSetup, setupAccountEmail, verifyAccountEmail } from "@/services/mzt-api";
 import { currentUserQuery, queryKeys } from "@/services/queries";
@@ -22,15 +22,7 @@ const codeSchema = z.object({
     .trim()
     .regex(/^\d{6}$/, "Kode verifikasi harus terdiri dari 6 digit"),
 });
-const passwordSchema = z
-  .object({
-    password: strongPasswordSchema,
-    password_confirmation: z.string().min(1, "Konfirmasi password wajib diisi"),
-  })
-  .refine((data) => data.password === data.password_confirmation, {
-    path: ["password_confirmation"],
-    message: "Konfirmasi password tidak cocok",
-  });
+const passwordSchema = strongPasswordChangeSchema;
 type EmailValues = z.infer<typeof emailSchema>;
 type CodeValues = z.infer<typeof codeSchema>;
 type SetupPasswordValues = z.infer<typeof passwordSchema>;
@@ -58,11 +50,21 @@ export function PortalAccountSetup() {
   });
   const passwordForm = useForm<SetupPasswordValues>({
     resolver: zodResolver(passwordSchema),
-    defaultValues: { password: "", password_confirmation: "" },
+    defaultValues: { current_password: "", password: "", password_confirmation: "" },
   });
 
   function handleError(error: unknown) {
     setServerError(error instanceof ApiError ? error.message : "Permintaan belum dapat diproses.");
+  }
+
+  function handlePasswordError(error: unknown) {
+    if (error instanceof ApiError && error.errors) {
+      for (const field of ["current_password", "password", "password_confirmation"] as const) {
+        const message = error.errors[field]?.[0];
+        if (message) passwordForm.setError(field, { type: "server", message });
+      }
+    }
+    handleError(error);
   }
 
   const emailMutation = useMutation({
@@ -100,7 +102,7 @@ export function PortalAccountSetup() {
       toast.success("Aktivasi akun selesai");
       await router.navigate({ to: "/portal", replace: true });
     },
-    onError: handleError,
+    onError: handlePasswordError,
   });
 
   return (
@@ -241,6 +243,13 @@ export function PortalAccountSetup() {
               onSubmit={passwordForm.handleSubmit((values) => completeMutation.mutate(values))}
               className="space-y-5"
             >
+              <PasswordField
+                id="setup-current-password"
+                label="Password saat ini"
+                autoComplete="current-password"
+                error={passwordForm.formState.errors.current_password?.message}
+                input={passwordForm.register("current_password")}
+              />
               <PasswordField
                 id="setup-new-password"
                 label="Password baru"

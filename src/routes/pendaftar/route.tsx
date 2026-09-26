@@ -2,13 +2,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { requireApplicant } from "@/lib/auth";
+import { requireApplicant, requireApplicantPortalEnabled } from "@/lib/auth";
 import { applicantLogout } from "@/services/mzt-api";
 import { applicantMeQuery } from "@/services/queries";
 
 export const Route = createFileRoute("/pendaftar")({
   ssr: false,
   beforeLoad: ({ context, location }) => {
+    requireApplicantPortalEnabled();
     if (location.pathname.replace(/\/+$/, "") === "/pendaftar/login") return;
     return requireApplicant(context.queryClient, location.href);
   },

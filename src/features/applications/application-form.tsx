@@ -7,13 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { createUuidV4 } from "@/lib/utils";
 import { ApiError } from "@/services/api-client";
 import type { MemberApplication } from "@/types/api";
 
-const photoSchema = z.custom<File>(
-  (value) => typeof File !== "undefined" && value instanceof File,
-  "Foto wajib diunggah",
-);
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
+const PHOTO_TYPES = ["image/jpeg", "image/png"];
+const photoSchema = z
+  .custom<File>(
+    (value) => typeof File !== "undefined" && value instanceof File,
+    "Foto wajib diunggah",
+  )
+  .refine(
+    (file) =>
+      typeof File !== "undefined" &&
+      file instanceof File &&
+      (file.type === "" || PHOTO_TYPES.includes(file.type)),
+    "Foto harus berformat JPEG atau PNG",
+  )
+  .refine(
+    (file) => typeof File !== "undefined" && file instanceof File && file.size <= MAX_PHOTO_SIZE,
+    "Ukuran foto maksimal 5 MiB",
+  );
 
 const baseSchema = z.object({
   name: z.string().trim().min(2, "Nama lengkap wajib diisi"),
@@ -71,7 +86,7 @@ export function ApplicationForm({
   onSubmit,
 }: ApplicationFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
-  const [submissionToken] = useState(() => crypto.randomUUID());
+  const [submissionToken] = useState(createUuidV4);
   const {
     register,
     control,
@@ -175,7 +190,7 @@ export function ApplicationForm({
             <Input
               id="application-foto"
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png"
               className="mt-2"
               aria-invalid={Boolean(errors.foto)}
               ref={ref}
@@ -194,8 +209,8 @@ export function ApplicationForm({
 
       {!application ? (
         <p className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground sm:col-span-2">
-          Setelah disetujui, anggota masuk menggunakan password awal yang ditetapkan sistem dan
-          wajib menyelesaikan pengaturan akun.
+          Setelah disetujui, tautan aman untuk membuat password akun akan dikirim ke email
+          terverifikasi Anda.
         </p>
       ) : null}
 

@@ -1,11 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { CheckCircle2 } from "lucide-react";
+import { useState } from "react";
 import { ApplicationForm } from "@/features/applications/application-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { memberApplicationsEnabled } from "@/services/api-client";
 import { submitMemberApplication } from "@/services/mzt-api";
 import { queryKeys } from "@/services/queries";
+import type { MemberApplication } from "@/types/api";
 
 export const Route = createFileRoute("/daftar-anggota")({
   head: () => ({
@@ -48,11 +51,15 @@ export function MemberApplicationPage() {
 }
 
 function MemberApplicationFormPage() {
-  const router = useRouter();
   const queryClient = useQueryClient();
+  const [submittedApplication, setSubmittedApplication] = useState<MemberApplication | null>(null);
   const mutation = useMutation({
     mutationFn: submitMemberApplication,
   });
+
+  if (submittedApplication) {
+    return <ApplicationSubmitted application={submittedApplication} />;
+  }
 
   return (
     <section className="container-page py-16 lg:py-24">
@@ -77,7 +84,7 @@ function MemberApplicationFormPage() {
               onSubmit={async (form) => {
                 const application = await mutation.mutateAsync(form);
                 queryClient.setQueryData(queryKeys.applicantMe, application);
-                await router.navigate({ to: "/pendaftar", replace: true });
+                setSubmittedApplication(application);
               }}
             />
           </CardContent>
@@ -89,6 +96,31 @@ function MemberApplicationFormPage() {
           </Link>
         </p>
       </div>
+    </section>
+  );
+}
+
+export function ApplicationSubmitted({ application }: { application: MemberApplication }) {
+  return (
+    <section className="container-page py-16 lg:py-24">
+      <Card className="mx-auto max-w-xl text-center">
+        <CardHeader>
+          <CheckCircle2 className="mx-auto size-10 text-primary" aria-hidden />
+          <CardTitle>Pendaftaran berhasil dikirim</CardTitle>
+          <CardDescription>
+            Simpan nomor pendaftaran berikut untuk masuk kembali dan memantau status pengajuan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground">Nomor pendaftaran</p>
+          <p className="mt-2 break-all select-all font-mono text-lg font-bold sm:text-2xl">
+            {application.application_number ?? "Belum tersedia"}
+          </p>
+          <Button asChild className="mt-6 rounded-full">
+            <a href="/pendaftar">Buka portal pendaftar</a>
+          </Button>
+        </CardContent>
+      </Card>
     </section>
   );
 }

@@ -627,6 +627,7 @@ export interface PasswordChangeRequest {
 }
 
 export interface AccountSetupCompleteRequest {
+  current_password: string;
   password: string;
   password_confirmation: string;
 }

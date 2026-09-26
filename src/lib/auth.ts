@@ -1,7 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { currentUserQuery } from "@/services/queries";
-import { ApiError } from "@/services/api-client";
+import { ApiError, memberApplicationsEnabled } from "@/services/api-client";
 import type { AuthUser } from "@/types/api";
 
 /**
@@ -97,6 +97,10 @@ export async function requireRoles(
     throw guardRedirect("/forbidden", from);
   }
   return user;
+}
+
+export function requireApplicantPortalEnabled(): void {
+  if (!memberApplicationsEnabled()) throw guardRedirect("/daftar-anggota");
 }
 
 export async function requireApplicant(

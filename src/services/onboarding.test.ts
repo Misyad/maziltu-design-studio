@@ -58,6 +58,7 @@ describe("onboarding API contracts", () => {
     await setupAccountEmail({ email: "anggota@example.test" });
     await verifyAccountEmail({ code: "123456" });
     await completeAccountSetup({
+      current_password: "password-sementara",
       password: "password-baru",
       password_confirmation: "password-baru",
     });
@@ -74,6 +75,7 @@ describe("onboarding API contracts", () => {
       3,
       "/account/setup/complete",
       {
+        current_password: "password-sementara",
         password: "password-baru",
         password_confirmation: "password-baru",
       },
